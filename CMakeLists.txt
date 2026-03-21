@@ -14,7 +14,18 @@ if (EXISTS ${picoVscode})
 endif()
 # ====================================================================================
 # Устанавливаем параметры платы и чипа и так далее
-set(PICO_BOARD pico2 CACHE STRING "Board type")
+set(PICO_BOARD pico CACHE STRING "Board type")
+
+# == Конфигурация  SpeccyP ==
+set (BASE_VERSION "1.5.7 ")
+set(MOS2 OFF) # компиляция под MOS2 ON
+
+# Выберите конфигурацию (раскомментировать одну строку):
+#set(SPECCY_CONFIG SPECCY)     # Базовая сборка без GSP на одной pico
+#set(SPECCY_CONFIG SPECCY_WSZERO2) # Базовая сборка без GSP для WaveShare pi zero2
+set(SPECCY_CONFIG GSP_FULL)  # Полная версия с PSRAM_BUTTER, TURBOSOUND, Z_CONTROLER
+#set(SPECCY_CONFIG GSP_LITE)  # Облегченная версия без дополнительных опций
+
 #----------------------
 # Тип платы
 #----------------------
@@ -22,18 +33,101 @@ set(M_BOARD MURM1)
 #set(M_BOARD MURM2)
 #set(M_BOARD PI_CARD)
 #set(M_BOARD WS_ZERO2)
-#set(M_BOARD PICO_DV) # Pimoroni RP2350
+
 
 if(NOT DEFINED M_BOARD)
     set(M_BOARD MURM1 )
 endif()
+
+if(NOT DEFINED SPECCY_CONFIG)
+    set(SPECCY_CONFIG SPECCY)
+endif()
 #---------------------
+###
+
+
+###
+# Определяем опции в зависимости от конфигурации 
+if(SPECCY_CONFIG STREQUAL "GSP_FULL")
+    set(SPECCY_CONFIG_DEFINITIONS 
+        
+        CPU_MHZ=378 # 378 MHz
+        FLASH_MAX_FREQ_MHZ=166
+        PSRAM_MAX_FREQ_MHZ=166
+        HDMI_DIV=1.5 # hdmi 60Hz
+
+        TEST_DEBUG #
+
+        GENERAL_SOUND 
+        TURBOSOUND
+        Z_CONTROLER
+        MIDI
+    )
+      set(GENERAL_SOUND ON)
+    
+elseif(SPECCY_CONFIG STREQUAL "GSP_LITE")
+    set(SPECCY_CONFIG_DEFINITIONS  
+
+        CPU_MHZ=378 # 378 MHz
+        FLASH_MAX_FREQ_MHZ=166
+        PSRAM_MAX_FREQ_MHZ=166
+        HDMI_DIV=1.5 # hdmi 60Hz
+
+        GENERAL_SOUND 
+        TURBOSOUND
+
+    )
+      set(GENERAL_SOUND ON)
+
+elseif(SPECCY_CONFIG STREQUAL "SPECCY_WSZERO2")
+    set(SPECCY_CONFIG_DEFINITIONS  
+
+        CPU_MHZ=252 # 378 MHz
+        FLASH_MAX_FREQ_MHZ=66
+        PSRAM_MAX_FREQ_MHZ=100
+        #HDMI_DIV=1.5 # hdmi 60Hz
+        HDMI_DIV=1.0 # hdmi 75Hz 378  60Hz 252
+        TEST_DEBUG #
+
+    )
+      set(GENERAL_SOUND OFF)
+
+
+else()
+    # По умолчанию используем SPECCY
+    set(SPECCY_CONFIG "SPECCY")
+    set(SPECCY_CONFIG_DEFINITIONS 
+
+        CPU_MHZ=378# 378 MHz
+        FLASH_MAX_FREQ_MHZ=166
+        PSRAM_MAX_FREQ_MHZ=166
+
+      #  TEST_DEBUG #
+ 
+        HDMI_DIV=1.5 # hdmi 60Hz
+
+    )
+     set(GENERAL_SOUND OFF) 
+endif()
+
+###
+if(MOS2)
+    set(PORT_VERSION "${BASE_VERSION}SE")
+elseif(GENERAL_SOUND)
+    set(PORT_VERSION "${BASE_VERSION}GS")
+ 
+else()
+    set(PORT_VERSION "${BASE_VERSION}") ##set(PORT_VERSION "${BASE_VERSION}LE")
+endif()
+
 
 # Определяем платформу на основе выбранной платы
 if(PICO_BOARD STREQUAL "pico")
     set(PICO_PLATFORM "rp2040" CACHE STRING "Chip type" FORCE)
+  set(CMAKE_BUILD_TYPE MinSizeRel CACHE STRING "Build type" FORCE) 
 elseif(PICO_BOARD STREQUAL "pico2")
     set(PICO_PLATFORM "rp2350" CACHE STRING "Chip type" FORCE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 else()
     message(FATAL_ERROR "Unsupported PICO_BOARD: ${PICO_BOARD}")
 endif()
@@ -74,10 +168,15 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 
-
-add_subdirectory(drivers/psram)
 add_subdirectory(drivers/audio_i2s)
 add_subdirectory(drivers/pico_fatfs)
+
+# Только для MURM1 добавляем psram
+if(${M_BOARD} MATCHES "MURM1")
+    add_subdirectory(drivers/psram)
+endif()
+
+
 
 file(GLOB_RECURSE SRC 
  "src/*.c"
@@ -104,25 +203,9 @@ if( ${PICO_PLATFORM} MATCHES "rp2040" )
 
 	endif()
 
+
+
 set (FATFS_SPI spi0)
-
-
-
-#pico_enable_stdio_uart(SpeccyP 0)
-#pico_enable_stdio_usb(SpeccyP 0)
-
-set(MOS2 OFF) # компиляция под MOS2 ON
-set(GENERAL_SOUND OFF)
-
-set (BASE_VERSION "1.4.0 ")
-
-if(MOS2)
-    set(PORT_VERSION "${BASE_VERSION}SE")
-elseif(GENERAL_SOUND)
-    set(PORT_VERSION "${BASE_VERSION}GS")
-else()
-    set(PORT_VERSION "${BASE_VERSION}LE")
-endif()
 
 pico_set_program_name(SpeccyP "ZX Spectrum emulator")
 pico_set_program_version(SpeccyP ${PORT_VERSION})
@@ -133,7 +216,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/s
 ###################################################
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=1501267
+CONFIG_VERSION=140326
+CPU_KHZ=CPU_MHZ*1000
+PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
+POWER_MODE_WEACT=1
+
+##LEDBLINK           #define LEDBLINK
 ###################################################
     # Дата и время компиляции
     BUILD_DATE="${BUILD_DATE}"
@@ -141,33 +229,21 @@ CONFIG_VERSION=1501267
 
 $<IF:$<BOOL:${MOS2}>,MOS2,NO_MOS2>
 
-################ НАСТРОЙКИ ДЛЯ РАБОТЫ GSP #################
-##GENERAL_SOUND 
-##TURBOSOUND 
-##Z_CONTROLER
-#RTC_SMUC  
-#RTC_NOVA 
-###########################################################
+
 #NO_GMX 
+KEY_UPDATE_MODE
+
 
 DEVICE_DEFAULT # стандартная конфигурация
 #DEVICE_HDMI90_I2S # Монитор HDMI 90Hz i2s
 # DEVICE_PI_CARD # Монитор HDMI 60Hz i2s
 
-##LEDBLINK           #define LEDBLINK
+# Конфигурация в зависимости от GSP_CONFIG
+${SPECCY_CONFIG_DEFINITIONS}
 
-CPU_MHZ=252
-CPU_KHZ=CPU_MHZ*1000
-##CPU_KHZ=378000 KHz
 
 # частота cloc'a 595  (в герцах)
 FREQ_595=50000000  #//750000000  // Например: 75 МГц 
-## HDMI OUT параметры
-#if(MY_DEVICE_HDMI90_I2S) HDMI_DIV=1.0
-#else  HDMI_DIV=1.5   
-#endif()
-
-#HDMI_DIV=1.0   # 1-> 90Hz 1.5->60Hz (cpu=378MHz)
 
 ############################################################
 ###   для эмулятора Z80 REDCODE
@@ -184,7 +260,7 @@ Z80_WITH_PRECOMPUTED_DAA
 ${PLATFORM_DEFINITIONS}
 )
 #######################################################
-#    MURM1
+#    MURM1  два вида PSRARM поддерживается
 #    PIO 0 I2S or HARD_AY_595 SM 0 SM FREE 1,2,3
 #    PIO 1 PS/2 (2) and VIDEO  TFT (0 1) PSRAM_BOARD(SM=3)
 #    
@@ -206,13 +282,8 @@ LED_BOARD=25
 PBUS_OUT_PIN=26
 PBUS_IN_PIN=27
 PBUS_PIO=pio0   #only pio 0
-
-PBUS_CS=29  # пока в резерве возможно пригодится на IN
-#define PICOBUS_BAUDRATE (1000*1000)     // Скорость шины picobus 
-
 ## Beep
 BEEP_PIN=28  # на IN
-
 #######################################################################
 
 #PS/2 клавиатура
@@ -312,10 +383,11 @@ MURM2
 LED_BOARD=25
 
 ##PicoBus ONLY GENERAL SOUND
-PBUS_OUT_PIN=9
-PBUS_IN_PIN=10
+PBUS_OUT_PIN=10
+PBUS_IN_PIN=11
 PBUS_PIO=pio0   #only pio 0
-
+## Beep
+BEEP_PIN=9  # на IN
 
 #PS/2 клавиатура
 beginPS2_PIN=2
@@ -357,17 +429,8 @@ SDCARD_PIN_MISO=4
 
 ##PSRAM
 PSRAM_DIV=2.0 #  1.4 // делитель частоты psram если 315 то 1.4 если меньше то 1.0
-PIO_PSRAM=pio1
-SM_PSRAM=3
-# PSRAM_MUTEX=1
-PSRAM_SPINLOCK=1
-PSRAM_ASYNC=1
-PSRAM_PIN_CS=8
-PSRAM_PIN_SCK=6
-PSRAM_PIN_MOSI=7
-PSRAM_PIN_MISO=4
-
 PSRAM_BUTTER_PIN_CS=8
+
 ##AUDIO PWM
 ZX_AY_PWM_R=10
 ZX_AY_PWM_L=11
@@ -461,16 +524,8 @@ SDCARD_PIN_MOSI=3
 SDCARD_PIN_MISO=4
 ##PSRAM
 PSRAM_DIV=2.0 #  1.4 // делитель частоты psram если 315 то 1.4 если меньше то 1.0
-PIO_PSRAM=pio1 
-SM_PSRAM=2
-# PSRAM_MUTEX=1
-PSRAM_SPINLOCK=1
-PSRAM_ASYNC=1
-PSRAM_PIN_CS=0
-PSRAM_PIN_SCK=6
-PSRAM_PIN_MOSI=7
-PSRAM_PIN_MISO=4
 PSRAM_BUTTER_PIN_CS=0
+
 ##AUDIO PWM на PiCard это отсутствует
 ZX_AY_PWM_R=45
 ZX_AY_PWM_L=46
@@ -521,6 +576,8 @@ set (M_VERSION ws)# версия платы
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 WS_ZERO2
 HDMI_ONLY # только HDMI
+##HDMI_DIV=1.0 #HDMI 60 Hz 378
+##HDMI_DIV=1.0 #HDMI 60 Hz 315   HDMI 90 Hz 378 
 RP2350B
 
 ##SOUND_PWM_ONLY
@@ -529,21 +586,23 @@ PICO_PIO_USE_GPIO_BASE # для использования GPIO >31 раском
 
 LED_BOARD=255  # 255 светодиод не подключен
 
+#########################################################################
 ##PicoBus ONLY GENERAL SOUND
-PBUS_OUT_PIN=26
-PBUS_IN_PIN=27
+PBUS_OUT_PIN=10
+PBUS_IN_PIN=11
 PBUS_PIO=pio0   #only pio 0
-##############################
+#define PICOBUS_BAUDRATE (1000*1000)     // Скорость шины picobus 
 
+## Beep
+BEEP_PIN=12  # на IN
 
+#######################################################################
 #PS/2 клавиатура
 beginPS2_PIN=2
 PIO_PS2=pio1 
-SM_PS2=2
+SM_PS2=3 #
 
 #VIDEO
-
-
 HDMI_PIN_ORDER_REVERSE
 
 beginVideo_PIN=32
@@ -583,16 +642,6 @@ SDCARD_PIN_MISO=40
 
 ##PSRAM
 PSRAM_DIV=2.0 #  1.4 // делитель частоты psram если 315 то 1.4 если меньше то 1.0
-PIO_PSRAM=pio1 # не используется
-SM_PSRAM=3  # не используется
-# PSRAM_MUTEX=1
-PSRAM_SPINLOCK=255 # не используется
-PSRAM_ASYNC=255 # не используется
-PSRAM_PIN_CS=255 # не используется
-PSRAM_PIN_SCK=255 # не используется
-PSRAM_PIN_MOSI=255 # не используется
-PSRAM_PIN_MISO=255 # не используется
-
 PSRAM_BUTTER_PIN_CS=47 #это PSRAM_PIN_CS для  psram бутерброд
 
 ##AUDIO PWM
@@ -607,7 +656,7 @@ BEEP=0# вывод звук бипера на пин классика ШИМ н�
 #BEEP=1 #вывод звук бипера на отдельный шим
 ##AUDIO 595  hard AY 
 PIO_AY595=pio1 
-SM_AY595=0 # не используется
+SM_AY595=3 # не используется
 CLK_AY_PIN=0 # не используется
 CLK_LATCH_595_BASE_PIN=0# и 27 # не используется
 DATA_595_PIN=0 # не используется
@@ -687,16 +736,8 @@ SDCARD_PIO_SM=0 #
 
 ##PSRAM
 PSRAM_DIV=2.0 #  1.4 // делитель частоты psram если 315 то 1.4 если меньше то 1.0
-PIO_PSRAM=pio1 
-SM_PSRAM=3  # критично при отключении pio  программы
-# PSRAM_MUTEX=1
-PSRAM_SPINLOCK=1
-PSRAM_ASYNC=1
-PSRAM_PIN_CS=255
-PSRAM_PIN_SCK=3
-PSRAM_PIN_MOSI=3
-PSRAM_PIN_MISO=3
 PSRAM_BUTTER_PIN_CS=255 #это PSRAM_PIN_CS для платы murm1 psram бутерброд
+
 ##AUDIO PWM
 ZX_AY_PWM_R=26 # не используется
 ZX_AY_PWM_L=27 # не используется
@@ -883,18 +924,21 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_clocks
         hardware_pwm
         hardware_flash
-
-      #  hardware_adc
-
        tinyusb_host 
        tinyusb_board
-
-
-       psram
        audio_i2s
-
        pico_fatfs
 )
+
+# Условная линковка библиотек
+if(${M_BOARD} MATCHES "MURM1")
+    # Для MURM1 добавляем psram 
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        psram
+    )
+endif()
+
+
 
 
 if(MOS2)

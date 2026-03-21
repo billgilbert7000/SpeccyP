@@ -193,7 +193,7 @@
 ---
 
 ## 🔗 Полезные ссылки
-
+- [ZX_MURMULATOR](https://t.me/ZX_MURMULATOR) — телеграм канал
 - [Сайт проекта murmulator.ru](https://murmulator.ru) — подробности по используемым платам и дополнительная информация
 - [Репозиторий эмулятора Z80](https://github.com/redcode/Z80)
 

@@ -23,7 +23,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ******************************************************************************/
-
 /**
  * @file psram_spi.h
  *
@@ -628,3 +627,4 @@ void deinit_psram_board();
 #ifdef __cplusplus
 }
 #endif
+

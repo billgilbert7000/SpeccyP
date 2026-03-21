@@ -2,8 +2,9 @@
 #include "inttypes.h"
 #include "stdbool.h"
 
+bool Read_Info_FDI(char *file_name, char *disk_name, bool open_file);
 bool ReadCatalog(char *file_name,char *disk_name, bool open_file);
-bool ReadCatalog_b(char *file_name, bool open_file);
+//bool ReadCatalog_b(char *file_name, bool open_file);
 bool ReadCatalog_scl(char *file_name, char *disk_name,  bool open_file);
 void MenuTRDOS ();
 //-------------------

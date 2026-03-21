@@ -41,7 +41,7 @@ void config_defain(void)
 //conf.shift_img=12589;///(((16+40)*224)+48);
 
         conf.version =CONFIG_VERSION;
-        conf.tft=2;// st7789
+        conf.tft=TFT_9345I;// st7789
 
         conf.tft_invert=0;// TFT_INV=0 или 1
 
@@ -59,7 +59,7 @@ void config_defain(void)
         conf.trdos_version = 0;// версия TR-DOS
         conf.cpu_version = 0; // версия cpu z80
 
-        conf.type_sound = 1;// soft turbo sound
+        conf.type_sound = 3;// 1 = soft turbo sound 3 = i2s turbo sound
         conf.vol_ay = DEFAULT_VOLUME_PWM; //громкость soft AY
         conf.vol_i2s = DEFAULT_VOLUME_I2S; //громкость i2s
         conf.vol_load = 16; //громкость аудио загрузки
@@ -186,7 +186,8 @@ __attribute__((aligned(4))) uint8_t RAM[16384*8]; //Реальная памят�
 // fdd & trdos
  uint32_t sclDataOffset;
 //unsigned char* track0;
- char track0 [0x0900];
+uint8_t track0 [0x0900];
+
  bool write_protected;
  uint8_t DriveNum;
  uint8_t sound_track;
@@ -428,7 +429,7 @@ void config_save(const char *filename) {
     f_printf(&fil, "pallete = %u\n\n", conf.pallete);
     
     f_printf(&fil, "# Конвертация SCL (0-OFF, 1-ON)\n");
-    f_printf(&fil, "sclConverted = %s\n\n", conf.sclConverted ? "true" : "false");
+    f_printf(&fil, "FileAutorunType = %s\n\n", conf.FileAutorunType ? "true" : "false");
 
     // Хранилище
     f_printf(&fil, "[Storage]\n");

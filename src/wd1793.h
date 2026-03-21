@@ -16,12 +16,27 @@
 #define  BUFFERSIZEFACTOR (BUFFERSIZE/SECTORLENGTH)
 #define  DEFULTDISKPOS 0xFFFFU
 
-//#define  REVOLUTION_TIME 6U //6U in .h
-//#define  TIME_PER_SECTOR 1U //1U
+//##########################################################
+// FDD контекст
+typedef struct {
+    uint32_t data_offset;         // смещение начала данных (всегда 4096)
+	uint8_t sector_n;             // размер сектора код 
+    uint32_t sector_size;         // размер сектора (из заголовка)
+    uint8_t sectors_per_track;    // секторов на дорожку
+    uint8_t heads;                // количество головок
+    uint16_t cylinders;           // количество цилиндров
+	uint32_t total_sectors;       // всего секторов в образе
+	uint32_t tracks_count;        // всего треков (cylinders * heads)
+    bool valid;                   // флаг валидности FDI
+	uint8_t sector_f;             // флаг контрольной суммы
+	uint16_t extra_len;
+} FDD_CTX;
+
+extern FDD_CTX fdd;
 
 //Один такт Z80 = 0.2857142857142857 us
 // boot  ENLIGHT очень чувствителен к этому числу если оно маленькое!
-#define  BYTE_READ_TIME 	42//64 32      32uS    112 тактов Z80 64U
+#define  BYTE_READ_TIME 	64//42//64 32      32uS    112 тактов Z80 64U
 
 #define ADDRESS_READ_TIME   32//32
 
@@ -127,7 +142,7 @@ void WD1793_Write(uint8_t Address, uint8_t Value);
 //void WD1793_IndexCounter(void);
 
 bool OpenTRDFile(char* sn, uint8_t  drv);
-//uint8_t GetWD1793_Status();
+bool OpenFDI_File(char *sn,uint8_t  drv);
 
 void SCL_read_sector(void);
 #endif // _WD1793_H_

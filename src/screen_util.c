@@ -430,6 +430,19 @@ uint8_t MenuBox_help(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, cha
    // if (mode_kbms)  sleep_ms(DELAY_KEY); // задержка если это не ps/2
     if (!decode_key_joy()) continue;
 
+#ifndef MOS2
+#ifdef KEY_UPDATE_MODE
+           if (KEY_BOOT)
+           {
+               draw_img(0, 0);
+               MessageBox("  switching to firmware update mode ", "", CL_WHITE, CL_RED, 2);
+               reset_usb_boot(0, 0);
+           }
+#endif               
+#endif
+
+
+
     if (kb_st_ps2.u[1] & KB_U1_ENTER) // enter
     {  
       wait_enter();
@@ -439,12 +452,9 @@ uint8_t MenuBox_help(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, cha
     {
        wait_esc();
        return 0xff;
-    }
- /*    if (F1) // F1
-    {
-       kb_st_ps2.u[3] = 0x00;
-      return 0xff;
-    } */
+    } 
+
+
   }
 }
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -779,9 +789,9 @@ yPos=yPos+10;
     else { draw_text(xPos+1,yPos+8+10*i,m_text[i],CL_INK,CL_PAPER);continue;}
     
   }
-  if (conf.tft==0) draw_text(xPos+100,yPos+8+10*0,"*",CL_INK,CL_PAPER);
-  if (conf.tft==1) draw_text(xPos+100,yPos+8+10*2,"*",CL_INK,CL_PAPER);
-  if (conf.tft==2) draw_text(xPos+100,yPos+8+10*1,"*",CL_INK,CL_PAPER);
+  if (conf.tft==TFT_9345) draw_text(xPos+100,yPos+8+10*0,"*",CL_INK,CL_PAPER);//0 ili9341  
+  if (conf.tft==TFT_9345I) draw_text(xPos+100,yPos+8+10*1,"*",CL_INK,CL_PAPER);//2 ili9341 ips 
+  if (conf.tft==TFT_7789) draw_text(xPos+100,yPos+8+10*2,"*",CL_INK,CL_PAPER);//2 st7789 
 
   if (conf.tft_rotate  == 0) draw_text(xPos+100,yPos+8+10*3,"0",CL_INK,CL_PAPER);
   else  draw_text(xPos+100,yPos+8+10*3,"180",CL_INK,CL_PAPER);
@@ -1190,13 +1200,16 @@ wait_enter(); // ожидание отпускания enter
 
       case 6:// версия TR-DOS
          x = MenuBox(140, 100, 16, 2, "Version", menu_trdos, 2, conf.trdos_version , 1);
-        conf.trdos_version  = x;
+         if (x!=0xff) conf.trdos_version  = x;
          break;
 
       case 7:// версия Z80
          x = MenuBox(155, 100, 12, 5, "Z80 CPU", menu_cpu_version, 5, conf.cpu_version , 1);
+       if (x!=0xff)
+       {
        conf.cpu_version  = x;
        select_cpu_z80(z1);
+       }
        break;
 
        case 8:// Save config

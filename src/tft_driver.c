@@ -794,13 +794,13 @@ void init_TFT()
  
   switch (conf.tft)
  {
- case 0:
+ case TFT_9345:
   TFT_ILI9341_begin();
   break;
- case 1:
+ case TFT_7789:
   TFT_ST7789_begin();
   break;
- case 2:
+ case TFT_9345I:
   TFT_ILI9341_IPS();
    break;
  default:

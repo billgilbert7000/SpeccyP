@@ -37,8 +37,9 @@ void g_delay_ms(int delay);
 
 //#define KEY_BOOT (kb_st_ps2.u[2]&KB_U2_PRT_SCR) //кнопка перехода в BOOT режим
 //#define KEY_BOOT (kb_st_ps2.u[2]&KB_U2_SCROLL_LOCK) //кнопка перехода в BOOT режим
+//#define KEY_BOOT (((kb_st_ps2.u[1] & KB_U1_L_CTRL) || (kb_st_ps2.u[1] & KB_U1_R_CTRL)) && (kb_st_ps2.u[2]&KB_U2_END) ) //кнопка перехода в BOOT режим CTRL+END
+#define KEY_BOOT kb_st_ps2.u[2]&KB_U2_END  //кнопка перехода в BOOT режим END  в меню HELP [F1]
 
-#define KEY_BOOT (((kb_st_ps2.u[1] & KB_U1_L_CTRL) || (kb_st_ps2.u[1] & KB_U1_R_CTRL)) && (kb_st_ps2.u[2]&KB_U2_END) ) //кнопка перехода в BOOT режим CTRL+DELETE
 #define KEY_CTRL_F7 (((kb_st_ps2.u[1] & KB_U1_L_CTRL) || (kb_st_ps2.u[1] & KB_U1_R_CTRL)) && (kb_st_ps2.u[3]&KB_U3_F7) ) //кнопка  CTRL+F7
 #define KEY_CTRL_F8 (((kb_st_ps2.u[1] & KB_U1_L_CTRL) || (kb_st_ps2.u[1] & KB_U1_R_CTRL)) && (kb_st_ps2.u[3]&KB_U3_F8) ) //кнопка  CTRL+F8
 
@@ -71,6 +72,6 @@ void g_delay_ms(int delay);
 
 //#define CLEAR_INFO	 draw_rect(17+FONT_W*14,16,182,214,COLOR_PIC_BG,true) 
 //#define CLEAR_INFO	 draw_rect(17+FONT_W*14,16+20,182,214-20,COLOR_PIC_BG,true) 
-#define CLEAR_INFO	 draw_rect(95,35,312-95,230-35,COLOR_PIC_BG,true)
+#define CLEAR_INFO	 draw_rect(95,39,312-95,230-39,COLOR_BACKGOUND,true)
 
 #endif

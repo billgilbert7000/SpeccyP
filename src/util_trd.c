@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------
 #include "util_z80.h"
 #include "util_sd.h"
-#include "ff.h"//#include "VFS.h"
+#include "ff.h"
 #include <fcntl.h>
 #include <string.h>
 #include "zx_emu/Z80.h"
@@ -10,8 +10,175 @@
 
 #include "config.h"  
 
+#include "fdi_stream.h"
 
 
+//-----------------------------------------
+/*
++00 (3) Ключевая метка 'FDI'.
++03 (1) Флаг защиты записи (0 - write enabled, 1 - write disabled).
++04 (2) Число цилиндров.
++06 (2) Число поверхностей.
++08 (2) Смещение текста (короткий комментарий к диску).
++0A (2) Смещение данных.
++0C (2) Длина дополнительной информации в заголовке. В этой версии = 0.
++0E "Длина дополнительной информации". Формат еще не определен (резерв для дальнейшей модернизации).
++0E + "длина дополнительной информации".
++0E+extra_len: [ЗАГОЛОВКИ ТРЕКОВ] ← НАЧАЛО ЗДЕСЬ!
+*/
+//-----------------------------------------
+// Глобальный контекст
+static fdi_stream_ctx_t fdi_ctx;
+static fdi_file_io_t fdi_io = {
+    .open = fatfs_open,
+    .close = fatfs_close,
+    .seek = fatfs_seek,
+    .read = fatfs_read,
+    .tell = fatfs_tell,
+    .size = fatfs_size
+};
+
+
+
+// Инициализация
+bool init_fdi(const char *filename) {
+    fdi_stream_result_t res = fdi_stream_open(&fdi_ctx, &fdi_io, filename);
+    if (res != FDI_STREAM_OK) {
+     //   printf("FDI open error: %d\n", res);
+        return false;
+    }
+    
+  //  printf("FDI: %d cyls, %d heads\n", fdi_ctx.cylinders, fdi_ctx.heads);
+  //  printf("Desc: %s\n", fdi_ctx.dsc);
+    
+    return true;
+}
+/*
+// Чтение сектора для WD1793
+bool read_sector(uint8_t track, uint8_t side, uint8_t sector_num, uint8_t *buffer) {
+    // Загружаем трек (если не загружен или другой)
+    static uint8_t last_track = 0xFF;
+    static uint8_t last_side = 0xFF;
+    
+  //  if (last_track != track || last_side != side) 
+	{
+        if (fdi_stream_load_track(&fdi_ctx, track, side) != FDI_STREAM_OK) {
+			
+            return false;
+        }
+        last_track = track;
+        last_side = side;
+    }
+    
+    // Получаем информацию о секторе
+    fdi_sector_info_t *sec = fdi_stream_get_sector(&fdi_ctx, sector_num);
+    if (!sec) {
+		
+        return false;
+    }
+    
+    // Читаем данные сектора
+    if (fdi_stream_read_sector_data(&fdi_ctx, sec, buffer, sec->size) != FDI_STREAM_OK) {
+        return false;
+    }
+    
+    // Для эмуляции WD1793 важны флаги
+    if (sec->flags & FDI_FL_DELETED_DATA) {
+        // Сектор с удаленными данными (метка F8)
+        // wd1793_set_deleted_data(true);
+    }
+    
+    uint8_t crc_bit = 1 << (sec->n & 3);
+    if (!(sec->flags & crc_bit)) {
+        // Ошибка CRC
+        // wd1793_set_crc_error(true);
+    }
+    
+    return true;
+}
+
+// Получить размер сектора
+uint16_t get_sector_size(uint8_t track, uint8_t side, uint8_t sector_num) {
+    if (fdi_stream_load_track(&fdi_ctx, track, side) != FDI_STREAM_OK) {
+        return 0;
+    }
+    
+    fdi_sector_info_t *sec = fdi_stream_get_sector(&fdi_ctx, sector_num);
+    return sec ? sec->size : 0;
+}
+*/
+//##########################################################
+
+
+// Info FDI
+bool Read_Info_FDI(char *file_name, char *disk_name, bool open_file)
+{
+	CLEAR_INFO; // clear
+	#define POS_X 24 + FONT_W * 14
+    #define POS_Y 49
+
+	int x = POS_X;
+	int y = POS_Y;
+
+// Открыть образ
+       if (init_fdi(file_name)) 
+	  {
+    //  draw_text(24 + FONT_W * 14, 39, "FDI FILES TEST", CL_LT_RED, COLOR_BACKGOUND); y = y + FONT_H;
+    //  draw_text(x,y,temp_msg+32,CL_GREEN ,CL_BLACK);y = y + FONT_H;
+      snprintf(temp_msg,sizeof temp_msg,"FDI: %d cyls, %d heads", fdi_ctx.cylinders, fdi_ctx.heads);
+      draw_text(x,y,temp_msg,CL_LT_BLUE ,CL_BLACK); y = y + FONT_H*2;
+	  snprintf(temp_msg, sizeof temp_msg, fdi_ctx.dsc); 
+      draw_text_len(x,y,temp_msg,CL_GREEN ,CL_BLACK,32);y = y + FONT_H;
+      draw_text_len(x,y,temp_msg+32,CL_GREEN ,CL_BLACK,32);y = y + FONT_H*2;
+      draw_text_len(x,y,"[ENTER] Mount to disk A:",CL_GRAY ,CL_BLACK,32);y = y + FONT_H*2;
+	  draw_text_len(x,y,"[SPACE] Mount to disk A and run",CL_GRAY ,CL_BLACK,32);
+	  fdi_stream_close(&fdi_ctx);
+      return true;
+	  }
+	  fdi_stream_close(&fdi_ctx);
+      draw_text(24 + FONT_W * 14, 39, "FDI ERROR", CL_LT_RED, COLOR_BACKGOUND);
+      return false;
+      // закрыть файл ошибка
+
+	}
+//----------
+/*
+Размер заголовка одного трека = 7 + (sectors_per_track * 7) байт
+Где:
+7 байт — фиксированный заголовок трека:
+4 байта: смещение трека (track_offset)
+2 байта: зарезервировано (всегда 0)
+1 байт: количество секторов на треке (sectors_per_track)
+sectors_per_track * 7 байт — массив описаний секторов:
+Каждый сектор описывается 7 байтами (C, H, R, N, flags, data_offset)  
+
+ Значение полей C, H, R, N
+Поле	Название	Описание	Типичные значения
+C	Cylinder	Номер цилиндра (дорожки)	0-79 (для 40/80 дорожечных дисков)
+H	Head	Номер головки (стороны)	0 или 1
+R	Record	Номер сектора на дорожке	1-16 (обычно)
+N	Number	Код размера сектора	0,1,2,3 (см. таблицу ниже)
+
+ Кодировка размера сектора (N)
+N	Размер сектора	Применение
+0	128 байт	Ранние 8-дюймовые диски, некоторые защищенные форматы
+1	256 байт	Стандарт TR-DOS, большинство 5.25" дисков
+2	512 байт	PC-совместимые дискеты, MS-DOS
+3	1024 байт	PC-98, некоторые защищенные форматы
+4	2048 байт	Редко, спец. форматы
+5	4096 байт	Очень редко
+// Размер сектора в байтах
+uint16_t sector_size = 128 << N;  // 128 * (2^N)
+
+В FDI файле для каждого сектора сохраняются:
+sec_info[0] = C  // цилиндр
+sec_info[1] = H  // головка
+sec_info[2] = R  // номер сектора
+sec_info[3] = N  // код размера
+sec_info[4] = flags  // флаги (удаленные данные, CRC)
+sec_info[5..6] = data_offset  // смещение данных сектора
+
+*/
 
 //------------------------------------------
 // Чтение каталога все файлы
@@ -134,6 +301,7 @@ return false;
 }
 //------------------------------------------
 // Чтение каталога только basic
+/*
 bool ReadCatalog_b(char *file_name, bool open_file)
 {
 	
@@ -234,6 +402,7 @@ bool ReadCatalog_b(char *file_name, bool open_file)
 	f_close(&f);
 	return true;
 }
+*/	
 //-------------------------------------------------------------------------------
 /* for (int x = 0; x < 2; x++)
 	{
@@ -457,8 +626,6 @@ CLEAR_INFO;
 bool Run_file_scl(char *file_name,  bool open_file)
 {    
 	 file_type[0]= SCL;// scl     
-//	 printf(" Run_file_scl\n");
-	//unsigned char* track0;
 
     // Reset track 0 info
     memset(track0,0,2304);
@@ -519,7 +686,7 @@ bool Run_file_scl(char *file_name,  bool open_file)
     }
 
    uint8_t boot_name[16] = {0x62, 0x6F, 0x6F, 0x74 ,0x20 ,0x20 ,0x20, 0x20, 0x42, 0xFC, 0x01 ,0xFC, 0x01, 0x02, 0x09,0x00};
-  uint16_t s = (numberOfFiles << 4) ;
+   uint16_t s = (numberOfFiles << 4) ;
 for (int i = 0; i < 16; i++) {
      track0[s + i] = boot_name[i]; 
 }
@@ -530,7 +697,6 @@ for (int i = 0; i < 16; i++) {
     track0[2275] = 22; // Disk Type
     track0[2276] = (uint8_t)numberOfFiles+1; // File Count
     uint16_t freeSectors = 2560 - (startTrack << 4) + startSector;
-    // printf("Free Sectors: %d\n",freeSectors);
     track0[2277] = freeSectors & 0x00ff;
     track0[2278] = freeSectors >> 8;
     track0[2279] = 0x10; // TR-DOS ID
@@ -541,27 +707,9 @@ for (int i = 0; i < 16; i++) {
 
 //--------------------------------------------------------------------------
        f_close(&f);
-       conf.sclConverted = 0;
-		//strncpy(conf.DiskName[Drive], current_lfn, 16);
+     //    conf.FileAutorunType = 0;
 		 OpenTRDFile(file_name, 0);
-
-/* 
-#if defined(TRDOS_0) 
- OpenTRDFile(file_name, 0);
-#else
- load_image_TRDOS(file_name,0);
-#endif
- */
-
-
-
-
-
-	sclDataOffset =  (9 + (numberOfFiles * 14));	
-    
- //printf("OpenTRDFile\n");
- //printf("track0[] = %d\n", track0[2275]);
-
+	     sclDataOffset =  (9 + (numberOfFiles * 14));	
 
 	return true;
 }

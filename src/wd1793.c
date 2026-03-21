@@ -19,12 +19,14 @@
 //#include "wd1793.h"
 #include "boot.h"
 
+#include "fdi_stream.h"
+uint8_t sectors_per_track;
 
-//#define  MIN(a,b) ((a<b)?(a):(b))
-
-
+  FDD_CTX fdd = {0};
+//#########################################################
 //uint8_t DiskBuf[256];
-uint8_t DiskBuf[256];
+//uint8_t DiskBuf[1024];
+#define DiskBuf sd_buffer
 //uint32_t Delay; //in timer ticks
 
 //volatile uint32_t Counter_WG93;
@@ -39,7 +41,7 @@ uint8_t BufferUpdated = 0;
 uint16_t FormatCounter = 0;
 uint8_t NewDrive = 5;
 uint8_t OldDrive =5;
-FIL fTRD;
+FIL fileTRD;
 
 FATFS fss;
 DIR dir;
@@ -54,7 +56,7 @@ uint16_t CurrentDiskPos = DEFULTDISKPOS; // Big enough to be outside of disk
 WD1793_struct WD1793;
 
 uint8_t Requests = 0; // выдает состояние контроллера 
-uint8_t SIDE = 0;
+//uint8_t SIDE = 0;
 uint8_t DRV = 5;
 uint8_t Prevwd1793_PortFF = 0xff;
 
@@ -104,40 +106,85 @@ Command CommandTable[16] = {
 	i=0 - intrq не выдается
 	i=1 - intrq выдается.
 */
+static uint8_t last_track=0xff;
+static uint8_t last_side=0xff;
 
+//#############################################################################
 bool OpenTRDFile(char *sn,uint8_t  drv){
+	
+last_track =0xff;
+last_side=0xff;
 
+fdd.sector_size = 256;
+fdd.data_offset = 0;
+fdd.sectors_per_track = 16;
+fdd.cylinders = 80;
+fdd.heads =2;
 
-
-
-
-//	printf("Selected TRDOS image: %s\n",sn);
-//	memcpy(disk,sn,160);
 	 strcpy(conf.Disks[drv & 0x03],sn);
 
 strncpy(dir_patch_info,conf.Disks[drv & 0x03],(DIRS_DEPTH*(LENF+16)) );
 
-	//memcpy(Path,file_name,3);
-	 f_open(&fTRD,sn,FA_READ );   
- //f_open(&fTRD,sn,FA_READ ); 
-//f_close(&fTRD);
+	 f_open(&fileTRD,sn,FA_READ );   
 
-if (conf.sclConverted != 0) // ЭТО НЕ SCL файл!
+
+//if (conf.sclConvertde != 0) // ЭТО НЕ SCL файл!
+if (file_type[drv] == TRD)
 {
-// определение на нормальност TRD файла
- if (sd_file_size(&fTRD)<655360) file_type[drv]=TRDS; // нестандарт
- else file_type[drv]=TRD; // стандарт
+// определение на нормальность TRD файла
+ if (sd_file_size(&fileTRD)<655360) file_type[drv]=TRDS; // нестандарт
+// else file_type[drv]=TRD; // стандарт
 }
 
-//if ((dir_file_info.fattrib&AM_RDO) == AM_RDO)  file_attr[drv]=file_type[drv] | 0x80; // Read Only
- // file_attr[drv]= finfo.fattrib; // Read Only
 
 	DRV =5;
 	NewDrive = drv;
 	NoDisk = 0;
 	return true;
 }
+//#############################################################################
 
+static fdi_stream_ctx_t fdi_ctx;
+static fdi_file_io_t fdi_io = {
+    .open = fatfs_open,
+    .close = fatfs_close,
+    .seek = fatfs_seek,
+    .read = fatfs_read,
+    .tell = fatfs_tell,
+    .size = fatfs_size
+};
+
+//
+
+
+bool OpenFDI_File(char *sn,uint8_t  drv){
+
+file_type[drv] = FDI;
+last_track =0xff;
+last_side=0xff;
+//fdd.sector_size = 256;
+fdd.data_offset = 0;
+//fdd.sectors_per_track = 16;
+//fdd.cylinders = 80;
+//fdd.heads =2;
+
+	 strcpy(conf.Disks[drv & 0x03],sn);
+
+strncpy(dir_patch_info,conf.Disks[drv & 0x03],(DIRS_DEPTH*(LENF+16)) );
+
+    fdi_stream_result_t res = fdi_stream_open(&fdi_ctx, &fdi_io, sn);
+
+fdd.cylinders = fdi_ctx.cylinders;
+fdd.heads = fdi_ctx.heads;
+//fdd.sector_size = 256;
+
+
+	DRV =5;
+	NewDrive = drv;
+	NoDisk = 0;
+	return true;
+}
+//#############################################################################
 void WD1793_Write(uint8_t Address, uint8_t Value){ // Z80 write to port 
 	// 0 - 0x1F  1 - 0x3F  2 - 0x5F  3 - 0x7F  
 	switch (Address & 0x03){
@@ -198,98 +245,6 @@ return;
 	}
 } */
 //=====================================================================================
-  uint8_t WD1793_GetIndexMark_E(){
-      static	uint8_t    DskIndexCounter=1;
-	  DskIndexCounter--;
-           if ((DskIndexCounter & 0x0E) > 0) return 1;//*DataIO |= 0x02; //0x0000 0010
-		return 0;   
-	  if (DskIndexCounter==0)//250
-	  { 
-	//	DskIndexCounter== 0;
-		return 0;
-	  }
-	//  DskIndexCounter== 1;
-       return 1;
-
-	//return IndexCounter; 
-}    
-  uint8_t WD1793_GetIndexMarkQQQQQQQQ(){//!!!!!!!!!!!!!!!!!
-      static	uint8_t    DskIndexCounter=2;
-	  DskIndexCounter--;
-  //   return (DskIndexCounter & 0x01);
-
-
-	  if (DskIndexCounter==0)//250
-	  { 
-		DskIndexCounter= 128;//2
-		return 0;
-	  }
-	//  DskIndexCounter= 1;
-       return 1;
-
-	//return IndexCounter; 
-}    
- uint8_t WD1793_GetIndexMark0(){
-    //  static	uint64_t    t0=0;
-	  static	uint64_t    t1=0;
-	//uint64_t  t0=(time_us_64()-t1);
-
-	uint64_t  t0=(time_us_64()-old_t);
-	  
-	if(t0 >=  200000)  // 5 Гц  200000 микросекунд
-	{
-	//	t1 = time_us_64();// предыдущее время
-old_t = time_us_64();// предыдущее время
-		return 0;
-	  }
-	  
-       return 1;
-
-	//return IndexCounter; 
-}    
-//
-/* 
- uint8_t WD1793_GetIndexMark(){
-	  static	uint64_t    t1=0;
-      
-	  if (t2<250) 
-	  {
-		t2++;
-		t1 = time_us_64();// предыдущее время
-		return 0;
-	  }
-	 
-	uint64_t  t0=(time_us_64()-t1);
-
-//	uint64_t  t0=(time_us_64()-old_t);
-	
-	if(t0 <  2000)  // 5 Гц  200000 микросекунд
-	{
-	//	t1 = time_us_64();// предыдущее время
-//old_t = time_us_64();// предыдущее время
-		return 1;
-	  }
-	  t1 = time_us_64();// предыдущее время
-       return 0;
-
-	//return IndexCounter; 
-}   
-
- */
-
-//================================================================
-/* void StartTimePeriod(){ // Задание нового тамера с нуля
-	TimerValue = Counter_WG93;
-} */
-//===============================================================
-/* uint16_t HasTimePeriodExpired(uint16_t period){
-	//uint32_t t = GetTimerValue();
-	if(Counter_WG93 - TimerValue >= period){
-		TimerValue = Counter_WG93;
-		return 1;
-	}
-	return 0;
-} */
 uint16_t HasTimePeriodExpired_old(uint16_t period){
 	static uint16_t t = 0;	
 	if(t >=  period){
@@ -311,53 +266,6 @@ uint16_t HasTimePeriodExpired(uint64_t period)
 	}
 	return 0;
 }
-
-//================================================================
-/* 
-uint16_t GetTimerValue()
-{
-	uint16_t value;
-	//cli();
-	value = Counter_WG93;
-	//sei();
-	return value;
-} */
-//==========================================================================
-/* uint8_t WD1793_GetCurrentSector()
-{
-	uint8_t sector;
-	
-	sector = ((IndexCounter << 8) | (GetTimerValue()>>8))/92U;
-	
-	
-	if(sector > 15)
-	{
-		sector = 15;
-	}
-	
-	// 1,9,2,10,3,11,4,12,5,13,6,14,7,15,8,16
-	return ((sector & 1) << 3 | (sector >> 1)) + 1; 
-} */
-//===========================================================================
-
-/* uint8_t WD1793_GetCurrentSector(){ // узнать сектор по текущему времени
-	uint8_t sector;
-//	uint32_t get_time = GetTimerValue();
-	//cli();
-//	sector = ((IndexCounter << 8) | (get_time>>8))/92U; //
-    sector = (IndexCounter << 8) ;
-
-	////printf("[274]sec:%d IndC:%d GTV:%d\n", sector, IndexCounter, get_time);
-	//sei();
- 	if(sector > 15){
-		sector = 15;
-	} 
-	////printf("[242]GetCurSec %d\n",sector, ((sector & 1) << 3) | (sector >> 1) + 1);
-	// 1,9,2,10,3,11,4,12,5,13,6,14,7,15,8,16
-		return ((sector & 1) << 3 | (sector >> 1)) + 1; 
-}
-   */
-
 //========================================================================================
 void printError(char* msg, uint8_t code){
 
@@ -389,115 +297,83 @@ void printError(char* msg, uint8_t code){
 
 void WD1793_FlushBuffer(){
 	
+	if (file_type[0] == FDI) return;
+
 	if (BufferUpdated==1)
 	{ 
 			
           //    msg_bar=15;//WRITE TR:
           //   wait_msg = 3000; 
 				
-res = f_open(&fTRD,(const char *)conf.Disks[DRV],FA_READ | FA_WRITE);
+res = f_open(&fileTRD,(const char *)conf.Disks[DRV],FA_READ | FA_WRITE);
 	
- /* if (res){
-			printError("[354]Open file Read Only: ", res);
-		//	return;
-		res = f_open(&fTRD,(const char *)conf.Disks[DRV],FA_READ );
-		} 
- */
-		f_lseek(&fTRD, pos << 8); // return to start of sector on SD Card
+ 
+		f_lseek(&fileTRD, pos << 8); // return to start of sector on SD Card
 
+		res = f_write(&fileTRD,DiskBuf, BUFFERSIZE, &br);
 
-
-     //???   res =f_write(&fTRD,DiskBuf,BUFFERSIZE, &br);
-		res = f_write(&fTRD,DiskBuf, BUFFERSIZE, &br);
-	//	if (res){BUFFERSIZE
-	//		printError("[253]Writing error: ", res);
-	//		return;
-
-	res =f_sync(&fTRD);// да это сработало! синхронизация файлов на SD
+	res =f_sync(&fileTRD);// да это сработало! синхронизация файлов на SD
 	       
 		}
- ///   else 
-///	{
-	///	res = f_open(&fTRD,(const char *)conf.Disks[DRV],FA_READ );
-	///	f_lseek(&fTRD, pos << 8); // return to start of sector on SD Card
-		//res =f_read(&fTRD,DiskBuf,BUFFERSIZE,br);
-	///	res = f_read(&fTRD, DiskBuf, BUFFERSIZE, &br);
-	//	res =f_sync(&fTRD);// да это сработало! синхронизация файлов на SD
-	        
-///	}
 
 	BufferUpdated = 0;
 		
 
 }
 
-// position is address/256
-uint16_t ComputeDiskPosition(uint8_t Sector, uint8_t Track, uint8_t Side){
-
-
- if (file_type[DRV]== 1) // SCL
- { 
-	uint16_t addr = (((uint16_t)Track * DISKSIDES + (uint16_t)Side) * SECTORPERTRACK + (uint16_t)Sector);
-	
-  // уменьшаем номер трека на 1 так как первый трек берется из буфера
-// 4096kb  1 трек
- //addr = ( addr + sclDataOffset);// -4096;
-//printf("[274] CompDiskPos Addr 0x%04X_%04X   %d\n", (uint16_t)(addr>>8), (uint16_t)(addr<<8),sclDataOffset);
-//printf("[275] CompDiskPos Addr: %d sclDataOffset: %d\n", (uint16_t)(addr),sclDataOffset);
-   return addr;
- }
-else
- //if (file_type == 0) //TRD
- { 
-	uint16_t addr = (((uint16_t)Track * DISKSIDES + (uint16_t)Side) * SECTORPERTRACK + (uint16_t)Sector);
-//	printf("[274] CompDiskPos Addr 0x%04X_%04X\n", (uint16_t)(addr>>8), (uint16_t)(addr<<8));
-   return addr;
- }
-
-
+// position is address 
+uint32_t ComputeDiskPosition(uint8_t Sector, uint8_t Track, uint8_t Side)
+{
+		switch (file_type[DRV])
+		{
+		case SCL:
+			return (((uint16_t)Track * fdd.heads + (uint16_t)Side) * fdd.sectors_per_track + (uint16_t)Sector);
+			break;
+		case TRD:
+		case TRDS:
+			return (((uint16_t)Track * fdd.heads + (uint16_t)Side) * fdd.sectors_per_track + (uint16_t)Sector);
+//		case FDI:
+//			return (((uint16_t)Track * fdd.heads + (uint16_t)Side) * fdd.sectors_per_track + (uint16_t)Sector);			
+		default:
+			return 0;
+		}
 }
-/* void SetDiskPosition(uint16_t pos){
-	if(pos < CurrentDiskPos || pos >= (CurrentDiskPos + BUFFERSIZEFACTOR)){
-		pos &= ~(BUFFERSIZEFACTOR-1); // round position to buffer size
-		if(pos != (CurrentDiskPos + BUFFERSIZEFACTOR)){ // move position if only it is needed but it saves only 100 mcs
-			f_lseek(&fTRD, (uint32_t)pos << 8);
-		}
-		res = f_read(&fTRD, DiskBuf, BUFFERSIZE, &br);
-		if (res !=0){
-			printError("Reading error: ", res);					
-		}
-		//printf("\n[332]R:512 %d pos:%d\n",br,pos);
-		CurrentDiskPos = pos;
-	}
-	////printf("[297]SetDiskPos %d\n",pos);
-} */
-void SetDiskPosition(uint16_t pos){
-			f_lseek(&fTRD, (uint32_t)pos << 8);
-	    	res = f_read(&fTRD, DiskBuf, BUFFERSIZE, &br);
-	    	if (res !=0) printError("Reading error: ", res);	
-	        CurrentDiskPos = pos;	
-            }
+
+void SetDiskPosition(uint16_t pos)
+{
+
+if (file_type[0] == FDI) return;
+
+	f_lseek(&fileTRD, (uint32_t)pos << 8);
+	res = f_read(&fileTRD, DiskBuf, fdd.sector_size, &br);
+	if (res != 0)
+		printError("Reading error: ", res);
+	CurrentDiskPos = pos;
+}
 //============================================================
-void SetDiskPositionSCL(uint16_t pos){
-
-//printf("[SCL]RD SEC %d, TRK %d, SIDE %i - %ld\n", WD1793.SectorRegister, WD1793.TrackRegister, SIDE, (uint32_t) (pos));
-                        SCL_read_sector();
-
-		CurrentDiskPos = pos;
-	}
-
+void SetDiskPositionSCL(uint16_t pos)
+{
+	SCL_read_sector();
+	CurrentDiskPos = pos;
+}
 //============================================================
 void WD1793_Reset(uint8_t drive){
+	
+	if (file_type[0] == FDI) 
+	{
+
+	//	fdi_stream_open(&fdi_ctx, &fdi_io, (const char *)conf.Disks[0]);
+		NoDisk = 0;
+		return;
+	}
+	
 	uint16_t i, prev_space;
 	uint8_t d, j; // drive index in config
 
-   // res = vfs_init(); 	
-	//no_sd  =init_filesystem();// монтирование и инициализация SD
-
 	WD1793_FlushBuffer();
-	res =f_sync(&fTRD);// да это сработало! синхронизация файлов на SD
+	res =f_sync(&fileTRD);// да это сработало! синхронизация файлов на SD
 	CurrentDiskPos = DEFULTDISKPOS;
-	res = f_open(&fTRD,(const char *)conf.Disks[drive & 0x03],FA_READ );
+	res = f_open(&fileTRD,(const char *)conf.Disks[drive & 0x03],FA_READ );
    
 	if (res){
 		NoDisk = 1;
@@ -608,7 +484,7 @@ void WD1793_CmdDelay()
 void SCL_read_sector(void)
 {
 		
-  if (( WD1793.TrackRegister == 0) && (SIDE == 0)) // если Track = 0  и Side = 0
+  if (( WD1793.TrackRegister == 0) && (WD1793.Side == 0)) // если Track = 0  и Side = 0
         {
 			
 			if (WD1793.SectorRegister < 10) //   меньше 9 сектора 123456789 нулевого сектора нет
@@ -623,10 +499,7 @@ void SCL_read_sector(void)
                 for (int i = 0; i < 256; i++) DiskBuf[i] = boot256[i];    
             }
 
-           /*    if (WD1793.SectorRegister == 11) //  11 сектор копирование boot
-            {
-                for (int i = 0; i < 256; i++) DiskBuf[i] = boot512[256 + i];    
-            } */
+
             if (WD1793.SectorRegister > 11)
             {
                 for (int i = 0; i < 256; i++)
@@ -635,8 +508,8 @@ void SCL_read_sector(void)
  		}		
 			else		
 				{
-			    f_lseek(&fTRD, (uint32_t)((( pos-16) << 8)+ sclDataOffset) );
-				res = f_read(&fTRD, DiskBuf, BUFFERSIZE, &br);
+			    f_lseek(&fileTRD, (uint32_t)((( pos-16) << 8)+ sclDataOffset) );
+				res = f_read(&fileTRD, DiskBuf, BUFFERSIZE, &br);
 				if (res) printError("Reading error: ", res);	
 				}
 }				
@@ -647,23 +520,15 @@ if(!HasTimePeriodExpired(BYTE_READ_TIME)) return;  // pause
 if(SectorPos != 0 && Requests & _BV(rqDRQ))
 	{
 		WD1793.StatusRegister |= _BV(stsLostData);	
-		//	printf("[SCL]RD SEC %d, TRK %d, SIDE %i - %ld\n", WD1793.SectorRegister, WD1793.TrackRegister, SIDE, (uint32_t) (pos<<8));	
-		//	printf("[7777]RD:  TRK %d SEC %d, \n", WD1793.TrackRegister, WD1793.SectorRegister );
 	}
 
-	if (SectorPos >= SECTORLENGTH){
+	if (SectorPos >= fdd.sector_size){
 	 	if(WD1793.Multiple)
 		{
-		//	if(BufferPos != 0 && !(BufferPos)) 
-			if(BufferPos != 0 )
-			{
-			//	printf("[SCL]RD SEC %d, TRK %d, SIDE %i - %ld\n", WD1793.SectorRegister, WD1793.TrackRegister, SIDE, (uint32_t) (pos));
-
-                    SCL_read_sector();
-
-			}
+			if(BufferPos != 0 )  SCL_read_sector();
 			SectorPos = 0;
-			if(++WD1793.RealSector > SECTORPERTRACK){
+			if(++WD1793.RealSector > fdd.sectors_per_track)
+			{
 				CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
 				return;
 			}
@@ -675,7 +540,7 @@ if(SectorPos != 0 && Requests & _BV(rqDRQ))
 	}
 	        
 
-	WD1793.DataRegister = DiskBuf[BufferPos];
+	WD1793.DataRegister = DiskBuf[BufferPos];//чтение байта из сектора
 	Requests |= _BV(rqDRQ);
 	WD1793.StatusRegister |= _BV(stsDRQ); // Запрос данных
 	BufferPos++;
@@ -690,24 +555,18 @@ void WD1793_CmdReadingSectorTRD(){
 	 	WD1793.StatusRegister |= _BV(stsLostData);	
 	 }
 
-	
-
-
-	if (SectorPos >= SECTORLENGTH){
-	//	printf("[TRD]RD  WD1793.Multiple) %d, SectorPos %x\n", WD1793.Multiple, SectorPos);
-	//	printf("[TRD]RD SEC %d, TRK %d, SIDE %i, Multiple %x\n", WD1793.SectorRegister, WD1793.TrackRegister, SIDE, WD1793.Multiple);
+	if (SectorPos >= fdd.sector_size){
 		if(WD1793.Multiple)
 		{
-	//		if(BufferPos != 0 && !(BufferPos))
 		if(BufferPos != 0 )
 			{
-			//	printf("[TRD1]RD SEC %d, TRK %d, SIDE %i, Multiple %x\n", WD1793.SectorRegister, WD1793.TrackRegister, SIDE, WD1793.Multiple);
-	l_povtor:			res = f_read(&fTRD, DiskBuf, BUFFERSIZE, &br);
+	l_povtor:	
+	    	res = f_read(&fileTRD, DiskBuf, fdd.sector_size, &br);
 	               if (res) goto l_povtor;
 			//	if (res) printError("Reading error: ", res);	
 			}
 			SectorPos = 0;
-			if(++WD1793.RealSector > SECTORPERTRACK){
+			if(++WD1793.RealSector > fdd.sectors_per_track){
 				CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
 				return;
 			}
@@ -726,24 +585,92 @@ void WD1793_CmdReadingSectorTRD(){
 	SectorPos++;
 }
 //-------------------------------------------------------------------------
-void WD1793_CmdReadingSector(){
-
-  //  if ((conf.sclConverted == 0) && (GET_DRIVE() == 0)) // если SCL файл на диске A:
- // if ((conf.sclConverted == 0)) // если SCL файл на диске A:
- if (file_type[DRV] == SCL) // если SCL файл на диске A:
+// Чтение сектора для FDI
+bool FDI_read_sector(uint8_t track, uint8_t side, uint8_t sector_num)
+ {
 	
-	  {
+    // Загружаем трек (если не загружен или другой)
+
+  //  gpio_put(LED_BOARD, 1);
+    if (last_track != track || last_side != side) 
+	{
+        if (fdi_stream_load_track(&fdi_ctx, track, side) != FDI_STREAM_OK)  return false;
+        last_track = track;
+        last_side = side;
+    }
+    
+    // Получаем информацию о секторе
+    fdi_sector_info_t *sec = fdi_stream_get_sector(&fdi_ctx, sector_num);
+    if (!sec) return false;
+	fdd.sector_size = sec->size;
+	fdd.sector_n = sec->n;
+	fdd.sector_f = sec->flags;
+    // Читаем данные сектора
+    if (fdi_stream_read_sector_data(&fdi_ctx, sec, DiskBuf, fdd.sector_size) != FDI_STREAM_OK) return false;
+
+    // Для эмуляции WD1793 важны флаги
+    if (sec->flags & FDI_FL_DELETED_DATA) {
+        // Сектор с удаленными данными (метка F8)
+        // wd1793_set_deleted_data(true);
+    }
+    
+    uint8_t crc_bit = 1 << (sec->n & 3);
+    if (!(sec->flags & crc_bit)) {
+        // Ошибка CRC
+        // wd1793_set_crc_error(true);
+    }
+    
+
+    return true;
+}
+
+//-------------------------------------------------------------------------
+void WD1793_CmdReadingSectorFDI(){
+if(!HasTimePeriodExpired(BYTE_READ_TIME)) return;  // pause
+if(SectorPos != 0 && Requests & _BV(rqDRQ))
+	{
+		WD1793.StatusRegister |= _BV(stsLostData);	
+	}
+
+	if (SectorPos >= fdd.sector_size){
+	 	if(WD1793.Multiple)
+		{
+			if(BufferPos != 0 ) FDI_read_sector(WD1793.TrackRegister, WD1793.Side, WD1793.SectorRegister);
+			SectorPos = 0;
+			if(++WD1793.RealSector > sectors_per_track ) // если больше чем секторов есть
+			{
+				CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
+				return;
+			}  
+			CurrentCommand = WD1793_CmdStartReadingSector;
+			return;
+		}
+		CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
+		return;
+	}        
+	WD1793.DataRegister = DiskBuf[BufferPos];//чтение байта из сектора
+	Requests |= _BV(rqDRQ);
+	WD1793.StatusRegister |= _BV(stsDRQ); // Запрос данных
+	BufferPos++;
+	SectorPos++;
+}
+//-------------------------------------------------------------------------
+void WD1793_CmdReadingSector()
+{
+	switch (file_type[DRV])
+	{
+	case SCL:
 		WD1793_CmdReadingSectorSCL();
 		return;
-	  }
-    else
-      {
+	case TRD:
+	case TRDS:
 		WD1793_CmdReadingSectorTRD();
+	case FDI:
+		WD1793_CmdReadingSectorFDI();	
 		return;
-	  }
-
+	}
 }
-//---------------------------------------------------------------
+//###############################################################
 void WD1793_CmdWritingSector()
 {
 	if (!HasTimePeriodExpired_old(BYTE_WRITE_TIME ))
@@ -760,90 +687,71 @@ void WD1793_CmdWritingSector()
 	Requests |= _BV(rqDRQ);
 	WD1793.StatusRegister |= _BV(stsDRQ); // Запрос данных
 //************************************************ */
-	           // read-only!
-         if (file_type[DRV]==SCL) // scl disk A
-           {  
-			 WD1793.StatusRegister = 0b01000000; // OpWrProt защита записи
-          //   BufferUpdated = 0;// отключить запись на SD
-             CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
-			   msg_bar=10;//SCL files Read Only! 
-               wait_msg = 3000;    
-             return;
-            }
-           if (file_type[DRV]==TRDS) // non standart trd 
-           {  
-			 WD1793.StatusRegister = 0b01000000; // OpWrProt защита записи
-          //   BufferUpdated = 0;// отключить запись на SD
-             CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
-			   msg_bar=11;//TRD the file is non-standard Read Only
-               wait_msg = 3000;    
-             return;
-            }
+// read-only!
+int msg_code = 0;
 
-             if ((file_attr[DRV]&AM_RDO)==AM_RDO) // read only
-            {  
-			 WD1793.StatusRegister = 0b01000000; // OpWrProt защита записи
-         //   BufferUpdated = 0;// отключить запись на SD
-             CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
-			   msg_bar=12;//This file is Read Only
-               wait_msg = 3000;    
-             return;
-            }
+if (file_type[DRV] == SCL) {
+    msg_code = 10;  // SCL files Read Only!
+}
+else if (file_type[DRV] == TRDS) {
+    msg_code = 10;  // TRD the file is non-standard Read Only
+}
+else if (file_type[DRV] == FDI) {
+    msg_code = 10;  // TRD the file is non-standard Read Only
+}
+else if ((file_attr[DRV] & AM_RDO) == AM_RDO) {
+    msg_code = 10;  // This file is Read Only
+}
+
+if (msg_code != 0) {
+    WD1793.StatusRegister = 0b01000000; // OpWrProt защита записи
+    CurrentCommand = WD1793_CmdStartIdle; // Вызов D0 Принудительное прерывание - %1101 iiii
+   // msg_bar = msg_code;
+	msg_bar = 10;  // This file is Read Only
+    wait_msg = 3000;
+    return;
+}
 
 	/******************************* */
 
-
-	//BufferUpdated = 1;// включить запись на SD
 	BufferPos++;
 	SectorPos++;
 
-	if (SectorPos >= SECTORLENGTH)
+	if (SectorPos >= fdd.sector_size)
 	{
 		BufferUpdated = 1;// включить запись на SD
 		CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
 	}
 }
-
+//#######################################################################################
 // форматирование
 void WD1793_CmdWritingTrack() // Calling from WD1793_Cmd_WriteTrack() //F0 base command
 {
-	// read-only!
-	if (file_type[DRV] == SCL) // scl disk A
-	{
-		WD1793.StatusRegister = 0b01000000;	  // OpWrProt защита записи
-	 //	BufferUpdated = 0;					  // отключить запись на SD
-		CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
-		msg_bar = 10;// SCL files Read Only
-		wait_msg = 3000;
-		return;
-	}
+//************************************************ */
+// read-only!
+int msg_code = 0;
 
-	if (file_type[DRV] == TRDS) // non standart trd
-	{
-		WD1793.StatusRegister = 0b01000000;	  // OpWrProt защита записи
-	//	BufferUpdated = 0;					  // отключить запись на SD
-		CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
-		msg_bar = 11;// TRD the file is non-standard Read Only
-		wait_msg = 3000;
-		return;
-	}
+if (file_type[DRV] == SCL) {
+    msg_code = 10;  // SCL files Read Only!
+}
+else if (file_type[DRV] == TRDS) {
+    msg_code = 11;  // TRD the file is non-standard Read Only
+}
+else if ((file_attr[DRV] & AM_RDO) == AM_RDO) {
+    msg_code = 12;  // This file is Read Only
+}
 
-	if ((file_attr[DRV] & AM_RDO) == AM_RDO) // read only
-	{
-		WD1793.StatusRegister = 0b01000000;	  // OpWrProt защита записи
-	//	BufferUpdated = 0;					  // отключить запись на SD
-		CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
-		msg_bar = 12;//This file is Read Only 
-		wait_msg = 3000;
-		return;
-	}
-
+if (msg_code != 0) {
+    WD1793.StatusRegister = 0b01000000; // OpWrProt защита записи
+    CurrentCommand = WD1793_CmdStartIdle; // Вызов D0 Принудительное прерывание - %1101 iiii
+    msg_bar = msg_code;
+    wait_msg = 3000;
+    return;
+}
+/********************************/
 	if ((WD1793.TrackRegister == 0) && (WD1793.Side == 0))
 	{
-	
-		if (!HasTimePeriodExpired_old(BYTE_WRITE_TIME)) return;		   // 32us
-			
-	//	BufferUpdated = 0; // 1 включить запись на SD при форматировании  стирание 0 дорожки
+		if (!HasTimePeriodExpired_old(BYTE_WRITE_TIME)) return;		   // 32us	
 	}
 
 	//else
@@ -883,16 +791,14 @@ void WD1793_CmdWritingTrack() // Calling from WD1793_Cmd_WriteTrack() //F0 base 
 
 	Requests |= _BV(rqDRQ);
 	WD1793.StatusRegister |= _BV(stsDRQ); // Запрос данных
-//	BufferUpdated = 0; // отключить запись на SD
 }
 //------------------------------------------------------------------------
 uint8_t sector_table[] = {1,9,2,10,3,11,4,12,5,13,6,14,7,15,8,16};
-//------------------------------------------------------------------------	        
-void WD1793_CmdReadingAddress(){
-	if(!HasTimePeriodExpired(ADDRESS_READ_TIME)) // 32us 
- //if(!HasTimePeriodExpired_old(250)) // 32us 
-	return;
-DiskSector = (DiskSector+1)&0x0f;
+//------------------------------------------------------------------------	
+void ReadingAddressFDI() // Команда чтения адреса по стандарту FDI
+{	
+	      uint8_t crc_bit = 1 << (fdd.sector_f & 3);
+    DiskSector = (DiskSector+1)&0x0f;
 
 	if((SectorPos != 0) && Requests & _BV(rqDRQ))
 	{
@@ -902,8 +808,6 @@ DiskSector = (DiskSector+1)&0x0f;
 
 	if (BufferPos >= 6){
 		CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
-	//printf("[ReadingAddress]RD  TrackRegister %d WD1793.DataRegister %d \n", WD1793.TrackRegister,WD1793.DataRegister);
-//	printf("[TRD]RD SEC %d, TRK %d, SIDE %i, Multiple %x\n", WD1793.SectorRegister, WD1793.TrackRegister, SIDE, WD1793.Multiple);
 		return;
 	}
 		
@@ -912,22 +816,88 @@ DiskSector = (DiskSector+1)&0x0f;
 	//WD1793.DataRegister = WD1793.TrackRegister+GET_SIDE();  // для проверки что двухсторонний диск при форматировании
        WD1793.DataRegister = WD1793.TrackRegister;  // для нормальной работы процедуры
 	//	WD1793.SectorRegister =  WD1793.TrackRegister;
+		break;
+		       
+		case 1: // N side always 0
+		WD1793.DataRegister = WD1793.Side;
+		break;
+		       
+		case 2: // N sector (0-128)
 
-	//printf("[ReadingAddres]RD  TRK %d\n", WD1793.TrackRegister);
+	//	WD1793.DataRegister =  sector_table[DiskSector]; // вычисленный сектор из таблицы
+       WD1793.DataRegister =  WD1793.SectorRegister; //   сектор  
+	
+	//  WD1793.DataRegister = DiskSector+1;// номера секторов по порядку
+	 //  DiskSector = (DiskSector+1)&0x0f;
+	
+	//  DiskSector = (DiskSector+1); if (DiskSector>16)  DiskSector =0;
+	//	WD1793.DataRegister = 1;
+	//	WD1793.SectorRegister = sector_table[DiskSector];; // узнать сектор 
+	//	WD1793.DataRegister =  WD1793_GetCurrentSector(); // узнать сектор по текущему времени
+
+		break;
+		       
+		case 3: // sector size 0-128 1-256 2-512 3-1024
+		WD1793.DataRegister = fdd.sector_n; // 
+		break;
+		       
+		case 4: // checksum
+
+		/* if (fdd.sector_f & FDI_FL_GOOD_CRC_1024) WD1793.DataRegister = 0x00;
+        else  */
+       //  sector->crc wd93_crc_simple(buffer,sector->size)
 
 
+
+    if (!(fdd.sector_f & crc_bit)) {
+        // Ошибка CRC - данные читаются, но флаг ошибки устанавливается
+        WD1793.DataRegister = 0x00;;  // Бит 3 = CRC error
+	}
+           else
+
+		WD1793.DataRegister = 0x00; 
+
+		case 5:
+
+    if (!(fdd.sector_f & crc_bit)) {
+        // Ошибка CRC - данные читаются, но флаг ошибки устанавливается
+        WD1793.DataRegister = 0x00;;  // Бит 3 = CRC error
+	}
+           else
+
+		WD1793.DataRegister = 0xff; 
+		break;
+	}
+}
+//----------------------------------------------------------------------
+void ReadingAddressTRD() // Команда чтения адреса по стандарту TRD
+{	
+    DiskSector = (DiskSector+1)&0x0f;
+
+	if((SectorPos != 0) && Requests & _BV(rqDRQ))
+	{
+		//if (err_timeout--) return;
+		WD1793.StatusRegister |= _BV(stsLostData);
+	}	 
+
+	if (BufferPos >= 6){
+		CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
+		return;
+	}
+		
+	switch(BufferPos){
+		case 0: // N track (0-128)
+	//WD1793.DataRegister = WD1793.TrackRegister+GET_SIDE();  // для проверки что двухсторонний диск при форматировании
+       WD1793.DataRegister = WD1793.TrackRegister;  // для нормальной работы процедуры
+	//	WD1793.SectorRegister =  WD1793.TrackRegister;
 		break;
 		       
 		case 1: // N side always 0
 		WD1793.DataRegister = 0;
-	//printf("[ADR] TRK %d, SIDE %i = %ld\n",  WD1793.TrackRegister, GET_SIDE(), (uint32_t) (pos));
 		break;
 		       
 		case 2: // N sector (0-128)
-	//	WD1793.DataRegister = WD1793.SectorRegister-1; // узнать сектор 
-	//    WD1793.DataRegister =DiskSector+1; // вычисленный сектор по времкени индексного отверстия диска
-	 
-	   WD1793.DataRegister =  sector_table[DiskSector]; // вычисленный сектор из таблицы
+    	   WD1793.DataRegister =  sector_table[DiskSector]; // вычисленный сектор из таблицы
 	 //  WD1793.DataRegister = DiskSector+1;// номера секторов по порядку
 	 //  DiskSector = (DiskSector+1)&0x0f;
 	
@@ -947,6 +917,14 @@ DiskSector = (DiskSector+1)&0x0f;
 		WD1793.DataRegister = 0;
 		break;
 	}
+}
+//-------------------------------------
+void WD1793_CmdReadingAddress()
+{
+	if(!HasTimePeriodExpired(ADDRESS_READ_TIME)) return; // 32us 
+ 
+	if (file_type[DRV]==FDI) ReadingAddressFDI();
+    else ReadingAddressTRD();
 
 	BufferPos++;
 	Requests |= _BV(rqDRQ); // Set rqDRQ
@@ -958,8 +936,6 @@ void WD1793_Cmd_Restore(){ // 00 Restore 	Восстановление 					- %0
 	WD1793.TrackRegister = 0;
 	WD1793.RealTrack = 0;
 	WD1793.Direction = 0;
-
-//	Delay = STEP_TIME; // 3ms 6000 in procedure WD1793_Cmd_Restore()
 	NextCommand = WD1793_CmdType1Status;
 	CurrentCommand = WD1793_CmdDelay;
 	CmdType = 1;
@@ -971,8 +947,6 @@ void WD1793_Cmd_Seek(){// 10 Seak		Поиск/Позиционирование 	
 	else
 	WD1793.Direction = 0;
 
-//	Delay = abs(WD1793.TrackRegister - WD1793.DataRegister) * 800;// 1400;
-//	printf("[Seek]RD  TrackRegister %d WD1793.DataRegister %d \n", WD1793.TrackRegister,WD1793.DataRegister);
 	WD1793.TrackRegister = WD1793.DataRegister;
 	WD1793.RealTrack =  WD1793.DataRegister;
 
@@ -1000,8 +974,7 @@ void WD1793_Cmd_Step(){// 20 30 40 50 60 70 Step		Шаг в предыдущем
 	if (WD1793.Direction == 1 && WD1793.TrackRegister > 0){
 		WD1793.TrackRegister--;
 	}
-	////printf("[1018]Step %s to track %i\n", WD1793.Direction ? "in" : "out", WD1793.TrackRegister);
-	//Delay = STEP_TIME; // 3ms 6000 in procedure WD1793_Cmd_Step()
+
 	NextCommand = WD1793_CmdType1Status;
 	CurrentCommand = WD1793_CmdDelay;
 	CmdType = 1;
@@ -1019,35 +992,43 @@ void WD1793_CmdStartReadingSector()
 //-------------------------------------------------------------------------------------
 void WD1793_Cmd_ReadSector() // 80	90	Чтение сектора               	- %100m seca
 { 
-    if (file_type[DRV]==SCL) // SCL
-{
+	switch (file_type[DRV])
+{    
+	case SCL:
 	WD1793.Multiple = WD1793.CommandRegister & 0x10;
-	pos = ComputeDiskPosition(WD1793.SectorRegister - 1, WD1793.TrackRegister, SIDE);
+	pos = ComputeDiskPosition(WD1793.SectorRegister - 1, WD1793.TrackRegister, WD1793.Side);
 	WD1793.RealSector = WD1793.SectorRegister;
-
 	BufferPos = 0;// Position in buffer
 	SetDiskPositionSCL(pos);							 // пример [332]R:512 512 pos:0
-
 	SectorPos = 0;
 	CurrentCommand = WD1793_CmdStartReadingSector;
 	CmdType = 2;
-	
-}
+	return;
 
-	else 
-	{
+	case TRD:
+	case TRDS:
 	WD1793.Multiple = WD1793.CommandRegister & 0x10;
-	pos = ComputeDiskPosition(WD1793.SectorRegister - 1, WD1793.TrackRegister, SIDE);
+	pos = ComputeDiskPosition(WD1793.SectorRegister - 1, WD1793.TrackRegister, WD1793.Side);
 	WD1793.RealSector = WD1793.SectorRegister;
-
 	BufferPos = 0;// Position in buffer
 	SetDiskPosition(pos);							 // пример [332]R:512 512 pos:0
-
 	SectorPos = 0;
 	CurrentCommand = WD1793_CmdStartReadingSector;
 	CmdType = 2;
-	
-	}
+    return;
+
+	case FDI:
+	WD1793.Multiple = WD1793.CommandRegister & 0x10;
+	// вычисление позиции в файле для FDI не нужно там подругому
+	WD1793.RealSector = WD1793.SectorRegister;// номер сектора
+	BufferPos = 0;// Position in buffer
+    // читаем один сектор
+    FDI_read_sector(WD1793.TrackRegister, WD1793.Side, WD1793.SectorRegister);
+	SectorPos = 0;
+	CurrentCommand = WD1793_CmdStartReadingSector;
+	CmdType = 2;
+	return;
+}	
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void WD1793_CmdStartWritingSector(){
@@ -1062,16 +1043,13 @@ void WD1793_CmdStartWritingSector(){
 void WD1793_Cmd_WriteSector(){// A0 B0		Запись сектора               	- %101m sec0
 	WD1793.Multiple = WD1793.CommandRegister & 0x00;
 	CmdType = 2;
-	pos = ComputeDiskPosition(WD1793.SectorRegister-1, WD1793.TrackRegister, SIDE);
+	pos = ComputeDiskPosition(WD1793.SectorRegister-1, WD1793.TrackRegister, WD1793.Side);
 	BufferPos = (pos & (BUFFERSIZEFACTOR-1)) << 8;
 	SetDiskPosition(pos);
 	SectorPos = 0;
-	//Delay = BYTE_READ_TIME; // 32us 
 	NextCommand = WD1793_CmdStartWritingSector;
 	CurrentCommand = WD1793_CmdDelay;
 	CmdType = 2;	
-	
-	//printf("[1115]WR SEC %i, TRK %i, SIDE %i - %ld\n", WD1793.SectorRegister, WD1793.TrackRegister, SIDE, (uint32_t) (pos<<8));
 
 }
 
@@ -1082,7 +1060,7 @@ void WD1793_Cmd_ReadAddress(){// C0		Чтение адреса                	-
 	CmdType = 3;
 	
 }
-
+// для TRD и SCL не реализованно
 void WD1793_Cmd_ReadTrack(){// E0		Чтение дорожки               	- %1110 0e00
 	CurrentCommand = WD1793_CmdStartIdle; // Вызов D0		Принудительное прерывание   	- %1101 iiii
 	CmdType = 3;
@@ -1108,10 +1086,8 @@ void WD1793_CmdStartNewCommand(){
 	WD1793_FlushBuffer();
 	if (DRV != NewDrive){ // Mount image only if drive is changed
 		DRV = NewDrive;
-
 		WD1793_Reset(DRV);
 	}
-		//	printf("CommandTable: %d\n",i);
 	CommandTable[i]();
 
 }
@@ -1129,7 +1105,7 @@ bit out(PortFF)
 //####################################################################################
 void WD1793_Execute(void){
 	
-//	printf("[ReadSector] SEC %i, TRK %i, SIDE %i - %ld\n", WD1793.SectorRegister, WD1793.TrackRegister, SIDE, (uint32_t) (pos<<8));	
+//	printf("[ReadSector] SEC %i, TRK %i, SIDE %i - %ld\n", WD1793.SectorRegister, WD1793.TrackRegister, WD1793.Side, (uint32_t) (pos<<8));	
 
 //WD1793_GetIndexMark();
 
@@ -1137,7 +1113,7 @@ if(Prevwd1793_PortFF != wd1793_PortFF){
 	Prevwd1793_PortFF = wd1793_PortFF;
 	//printf("wd1793_PortFF: %x\n",wd1793_PortFF);
 		NewDrive = GET_DRIVE();  // (wd1793_PortFF & 0b11)
-		SIDE = GET_SIDE(); 		 // (~wd1793_PortFF & 0x000010000) >> 4
+		WD1793.Side = GET_SIDE(); 		 // (~wd1793_PortFF & 0x000010000) >> 4
      //   NoDisk = 1;
 //printf("NewDrive: %x %x \n",NewDrive, DRV);
 
@@ -1170,14 +1146,14 @@ if(Prevwd1793_PortFF != wd1793_PortFF){
 }
 //#######################################################################
 void WD1793_Init(void){
-   old_t = time_us_64();// текущее время	
+   old_t = time_us_64()+999;// текущее время	
     wd1793_PortFF =0b00001000;
 	Prevwd1793_PortFF = 0xff;// 0xff;//wd1793_PortFF;
 	NewDrive = 0 ;//  // (wd1793_PortFF & 0b11)
-		SIDE = 0;// // (~wd1793_PortFF & 0x000010000) >> 4
+		WD1793.Side = 0;// // (~wd1793_PortFF & 0x000010000) >> 4
 		NoDisk = 0;
 	Requests = 0; // clear DRQ and INTRQ
-	tindex = time_us_64();//???
+	tindex = time_us_64()+1000;;//???
 }
 
 #endif

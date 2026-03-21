@@ -11,19 +11,24 @@
 
 #include "picobus/picobus.h"
 
-// ========== КОНФИГУРАЦИЯ ==========
-//#define PICOBUS_BAUDRATE (1000*1000)     // Скорость шины picobus 
-//#define LINKOUT_PIN     = 20;
-//#define LINKIN_PIN      = 21;
-/* const uint8_t LINKOUT_PIN     = 20;
-const uint8_t LINKIN_PIN      = 21;
-#define PIO_picobus pio0 */
+bool picobus_busy=true;
 //################################################################
-//uint8_t tx_buffer[64];// буфер picobus
-//int linkout_sm;
-//int linkin_sm;
-// gpio_put(LED_BOARD, 0);
-//################################################################
+/*
+// макросы для CS PICOBUS
+#if (PBUS_CS == 255)
+//занятость шины picobus  while (picobus_busy) { busy_wait_us(100);} // ожидание свободной шины picobus 
+#define PBUS_CS_0 picobus_busy=true
+#define PBUS_CS_1 picobus_busy=false
+#else
+// Активация CS
+#define PBUS_CS_0 sio_hw->gpio_clr = 1u << PBUS_CS
+// Деактивация CS
+#define PBUS_CS_1 sio_hw->gpio_set = 1u << PBUS_CS
+#endif
+
+#endif
+*/
+
 // Инициализация/переинициализация picobus
 void init_picobus(void)
 {
@@ -36,9 +41,13 @@ void init_picobus(void)
  //   printf("receive_buffer .....");
  //  receive_buffer( rx_buffer, 2); // получаем 2 байта
 PBUS_CS_0;
-    const uint8_t init_msg[] = { PICOBUS_CONNECT , PICOBUS_CONNECT}; // команда инициализации если вдруг picobus работает
-    send_buffer(init_msg, sizeof(init_msg));
-    if (receive_acked_byte(&value) == LINK_BYTE_NONE) send_init_sequence(); // Инициализация передачи
+ //   const uint8_t init_msg[] = { PICOBUS_CONNECT , PICOBUS_CONNECT}; // команда инициализации если вдруг picobus работает
+ 
+ //   send_buffer(init_msg, sizeof(init_msg));
+
+
+  //  if (receive_acked_byte(&value) == LINK_BYTE_NONE)
+     send_init_sequence(); // Инициализация передачи
 PBUS_CS_1;
  /*    const uint8_t init_msg[] = { PICOBUS_CONNECT,PICOBUS_CONNECT }; // команда инициализации если вдруг picobus работает
  repeat:    
@@ -62,41 +71,31 @@ PBUS_CS_1;
 void (out_GSP)(uint8_t command_bus,uint8_t value)
 {
 PBUS_CS_0;
-
         tx_buffer[0] = command_bus;
         tx_buffer[1] =  value;
-        send_buffer(tx_buffer, 2);
+        send_buffer(tx_buffer, 2);  
 PBUS_CS_1;
 }
 //################################################################################
 uint8_t (in_GSP)(uint8_t command_bus)
 {
-PBUS_CS_0;
+PBUS_CS_0;  
         tx_buffer[0] = command_bus;
         send_buffer( tx_buffer, 2);
         receive_buffer(tx_buffer , 1 );
 PBUS_CS_1;
-      //  printf("IN(0xBB) : 0x%02X\n",  tx_buffer[0] );
     return tx_buffer[0];
 }
 //################################################################################
 void sys_GS(uint8_t command_sys)
 {
-PBUS_CS_0;    
+PBUS_CS_0;      
         tx_buffer[0] = 0;
         tx_buffer[1] =  command_sys;
-    //    gpio_put(LED_BOARD, 0);  
-
-  
         send_buffer(tx_buffer, 2);
-//gpio_put(LED_BOARD, 1); 
 PBUS_CS_1;
        if (command_sys==0)   receive_buffer(tx_buffer , 64 ); // получение инфы от GS
-       if (command_sys==1) return; // сброс GS
-        
-
-     //   printf("Read : 0x%02X 0x%02X 0x%02X 0x%02X  \n",  tx_buffer[0] , tx_buffer[1],  tx_buffer[2] , tx_buffer[3] );
-  //  return tx_buffer[0];
+       if (command_sys==1)   return; // сброс GS
 }
 //################################################################################
 

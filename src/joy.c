@@ -1,8 +1,7 @@
 #include "config.h"  
 #include "zx_emu/zx_machine.h"
 #include "joy.h"
-
-//ZX_Input_t zx_input;
+#include "tusb.h"
 
 volatile int us_val=0;
 
@@ -92,11 +91,7 @@ bool decode_joy()
     data_joy = d_joy_get_data(); 
    joy_key_ext = data_joy;
 
-//    data_joy =  joy_k;;
-  //  if (joy_connected)
- //   {
-
-    if (data_joy != old_data_joy)
+   if (data_joy != old_data_joy)
         {
             old_data_joy = data_joy;
         //    if (is_menu_mode) sleep_ms(DELAY_JOY);
@@ -125,30 +120,11 @@ START 0x80   1000 0000
 //================================================================================
 bool decode_joy_to_keyboard(void)
 { 
- task_usb();
-static int16_t delay_key;
- //  if (joy_connected)   
- //  {
+ tuh_task(); // tinyusb host task
+   static int16_t delay_key;
+
    data_joy = d_joy_get_data();// если есть денди джой
- //  if (is_menu_mode) sleep_ms(DELAY_JOY);
- /*   }
-   else 
-   {
-    data_joy = joy_k;// только usb джой или нет джоя
-   if (joy_k != 0 ) 
-   {
-  
-   //if (is_menu_mode) 
-   sleep_ms(DELAY_JOY);
-   }
-   } */
-/*          if (data_joy == 0)// кнопки джойстика не нажаты
-        {
-          //  delay_key=DELAY_KEY;
-            old_data_joy = 0;
-            return false;
-        } */
- 
+
         if ((data_joy  == 0x84) || (data_joy  == 0x88))
 {
         old_data_joy = data_joy;
@@ -191,28 +167,8 @@ static int16_t delay_key;
         else
             kb_st_ps2.u[1] &= ~KB_U1_SPACE;
 
-/*        if (data_joy != old_data_joy)// если кнопка отпушена или нажата другая 
-        {
-            delay_key=DELAY_KEY;
-            
-        }
- */
-        old_data_joy = data_joy;
+            old_data_joy = data_joy;
         return true;
-
-    /*     else // кнопка всё еще нажата  то увеличиваем скорость
-        {
-           delay_key--;
-           if (delay_key < 0) delay_key = 0;  // максимальная скорость  
-              
-        }
-        old_data_joy = data_joy;
-        return true; */
-//--------------------------------------------- 
-
-
-
-
 }
 //================================================================================
 

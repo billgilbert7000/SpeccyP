@@ -17,8 +17,6 @@
 bool init_usb_hid(void);
 bool decode_key (bool menu_mode);
 bool decode_key_joy();
-void keyboard (void);
-void task_usb(void);
 void wait_enter(void);
 void wait_esc(void);
 

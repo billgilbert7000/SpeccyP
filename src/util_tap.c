@@ -628,3 +628,248 @@ void load_to_zx(uint16_t adr, uint16_t len)
 			return;
 		}
 	}
+//#############################################################################
+int tape_file_status =-1; //tape file descriptor
+uint8_t blockChecksum=0;
+size_t bytesRead;
+size_t bytesToRead;
+
+
+
+static uint8_t tapePhase;
+static uint64_t tapeStart;
+static uint32_t tapePulseCount;
+static uint16_t tapeBitPulseLen;   
+static uint8_t tapeBitPulseCount;	 
+static uint32_t tapebufByteCount;
+static uint32_t tapeBlockByteCount;
+static uint16_t tapeHdrPulses;
+static uint32_t tapeBlockLen;
+static uint8_t* tape;
+static uint8_t tapeEarBit;
+static uint8_t tapeBitMask; 
+
+
+// ============================================================================
+// Функция чтения состояния ленты (эмуляция аудио сигнала с кассеты)
+// Вызывается эмулятором при каждой инструкции IN для получения бита EAR
+// ============================================================================
+uint8_t __not_in_flash_func(TAP_Read)(){
+#ifndef DEBUG_DISABLE_LOADERS
+	// Проверяем, активна ли загрузка с ленты
+	if(TapeStatus!=TAPE_LOADING) return false;
+	
+	// Получаем количество тактов, прошедших с начала текущего импульса
+	uint64_t tapeCurrent = 4;//dt_cpu - tapeStart;
+	
+	// Обработка различных фаз аудио сигнала
+	switch (tapePhase) {
+	
+	// ФАЗА 1: Длинные синхроимпульсы (Pilot Tone)
+	// В реальной кассете - непрерывный тон длительностью ~2-3 секунды
+	case TAPE_PHASE_SYNC:
+		if (tapeCurrent > TAPE_SYNC_LEN) {  // Длительность одного импульса ~2168 тактов
+			tapeStart=dt_cpu;
+			tapeEarBit ^= 1;                // Инверсия сигнала - создаём прямоугольный импульс
+			tapePulseCount++;
+			if (tapePulseCount>tapeHdrPulses) { // Завершили серию синхроимпульсов
+				tapePulseCount=0;
+				tapePhase=TAPE_PHASE_SYNC1;     // Переход к первому синхроимпульсу данных
+			}
+		}
+		break;
+		
+	// ФАЗА 2: Первый короткий синхроимпульс (Sync Pulse 1)
+	// Маркер начала блока данных - 667 тактов
+	case TAPE_PHASE_SYNC1:
+		if (tapeCurrent > TAPE_SYNC1_LEN) {
+			tapeStart=dt_cpu;
+			tapeEarBit ^= 1;                // Завершаем первый синхроимпульс
+			tapePhase=TAPE_PHASE_SYNC2;     // Переход ко второму синхроимпульсу
+		}
+		break;
+		
+	// ФАЗА 3: Второй короткий синхроимпульс (Sync Pulse 2)
+	// Маркер начала блока данных - 735 тактов
+	case TAPE_PHASE_SYNC2:
+		if (tapeCurrent > TAPE_SYNC2_LEN) {
+			tapeStart=dt_cpu;
+			tapeEarBit ^= 1;                // Завершаем второй синхроимпульс
+			// Определяем длительность импульса для первого бита данных
+			if (tape[tapebufByteCount] & tapeBitMask) 
+				tapeBitPulseLen=TAPE_BIT1_PULSELEN;   // 1710 тактов для "1"
+			else 
+				tapeBitPulseLen=TAPE_BIT0_PULSELEN;   // 855 тактов для "0"
+			tapePhase=TAPE_PHASE_DATA;      // Переход к фазе передачи данных
+		}
+		break;
+		
+	// ФАЗА 4: Передача данных (Data Phase)
+	// Каждый бит кодируется двумя импульсами разной длины
+	case TAPE_PHASE_DATA:
+		if (tapeCurrent >= tapeBitPulseLen) {
+			tapeStart=dt_cpu;
+			tapeEarBit ^= 1;                // Инверсия сигнала - завершаем текущий импульс
+			tapeBitPulseCount++;
+			
+			// Каждый бит данных требует 2 импульса
+			if (tapeBitPulseCount==2) {
+				tapeBitPulseCount=0;
+				// Переходим к следующему биту (циклический сдвиг маски)
+				tapeBitMask = (tapeBitMask >>1 | tapeBitMask <<7);
+				
+				// Если обработали все 8 бит - переходим к следующему байту
+				if (tapeBitMask==0x80) {
+					tapebufByteCount++;      // Счётчик в текущем буфере
+					tapeBlockByteCount++;    // Счётчик в текущем блоке
+					tapeTotByteCount++;      // Общий счётчик в файле
+					
+					// Если буфер исчерпан - читаем следующую страницу с SD карты
+					if(tapebufByteCount>=BUFF_PAGE_SIZE){
+						im_z80_stop = true;  // Останавливаем эмуляцию Z80
+					
+					//	tape_file_status = sd_read_file(&sd_file,sd_buffer,BUFF_PAGE_SIZE,&bytesRead);
+					
+						im_z80_stop = false;
+						if (tape_file_status!=FR_OK){
+
+						//	sd_close_file(&sd_file);
+							
+							tap_loader_active = false;
+							tapebufByteCount=0;
+							TapeStatus=TAPE_STOPPED;
+							return false;
+						}
+						tapebufByteCount=0;  // Сброс указателя буфера
+					}
+					
+					// Проверка - достигли ли конца текущего блока
+					if(tapeBlockByteCount==(tapeBlockLen-2)){
+						tapeTotByteCount+=2;
+						tapebufByteCount=0;
+						tapePhase=TAPE_PHASE_PAUSE;  // Пауза между блоками
+						tapeEarBit=false;            // Уровень тишины во время паузы
+						break;
+					}
+					
+					// Проверка - достигли ли конца файла
+					if (tapeTotByteCount >= tapeFileSize){
+						tapePhase=TAPE_PHASE_PAUSE;
+						TapeStatus=TAPE_LOADED;      // Загрузка завершена
+						return false;
+					}
+				}
+				
+				// Определяем длительность импульса для следующего бита
+				if (tape[tapebufByteCount] & tapeBitMask) 
+					tapeBitPulseLen=TAPE_BIT1_PULSELEN;
+				else 
+					tapeBitPulseLen=TAPE_BIT0_PULSELEN;
+			}
+		}
+		break;
+		
+	// ФАЗА 5: Пауза между блоками (Pause)
+	// В реальной кассете - тишина ~1-3 секунды между программами
+	case TAPE_PHASE_PAUSE:
+		if (tapeTotByteCount <= tapeFileSize) {
+			if (tapeCurrent > TAPE_BLK_PAUSELEN) {
+				// Переход к следующему блоку
+				tapeCurrentBlock++;
+				
+			//	TapeBlock* tblock = (TapeBlock*)&temp_buffer_y[sizeof(TapeBlock)*tapeCurrentBlock];
+			TapeBlock* tblock = (TapeBlock*)&sd_buffer[sizeof(TapeBlock)*tapeCurrentBlock];
+			//	sd_seek_file(&sd_file,tblock->FPos);
+				tapeBlockLen=tblock->Size + 2;
+
+				bytesToRead = tapeBlockLen<BUFF_PAGE_SIZE ? tapeBlockLen : BUFF_PAGE_SIZE;
+				
+			//	tape_file_status = sd_read_file(&sd_file,sd_buffer,bytesToRead,&bytesRead);
+				
+				if (tape_file_status != FR_OK){
+					
+				//	sd_close_file(&sd_file);
+					
+					tap_loader_active = false;
+					tapebufByteCount=0;
+					TapeStatus=TAPE_STOPPED;
+					return false;
+				}
+				tapeStart=dt_cpu;
+				tapePulseCount=0;
+				tapePhase=TAPE_PHASE_SYNC;          // Возврат к синхроимпульсам
+				tapebufByteCount=2;
+				tapeBlockByteCount=0;
+				// Выбор длительности серии синхроимпульсов:
+				// - Для заголовка (Flag=0) - длинная серия ~8063 импульсов
+				// - Для данных (Flag≠0) - короткая серия ~3223 импульсов
+				if (tblock->Flag) 
+					tapeHdrPulses=TAPE_HDR_SHORT;
+				else 
+					tapeHdrPulses=TAPE_HDR_LONG;
+			}
+		}
+		if (tapeTotByteCount >= tapeFileSize){
+			TapeStatus=TAPE_LOADED;                 // Загрузка завершена
+			tap_loader_active=TAPE_OFF;
+			break;
+		}
+		return false;
+	} 
+  
+	return tapeEarBit;  // Возвращаем текущее состояние сигнала EAR
+#endif
+}
+
+
+// ============================================================================
+// Управление воспроизведением ленты
+// ============================================================================
+void TAP_Play(){
+#ifndef DEBUG_DISABLE_LOADERS
+	switch (TapeStatus) {
+	case TAPE_STOPPED:
+		// Инициализация всех параметров аудио сигнала
+	   	tapePhase=TAPE_PHASE_SYNC;        // Начинаем с синхроимпульсов
+	   	tapePulseCount=0;                 // Счётчик импульсов
+	   	tapeEarBit=false;                // Начальный уровень сигнала
+	   	tapeBitMask=0x80;                // Начинаем со старшего бита
+	   	tapeBitPulseCount=0;             // Счётчик полупериодов бита
+	   	tapeBitPulseLen=TAPE_BIT0_PULSELEN;  // Начальная длительность
+	   	tapeHdrPulses=TAPE_HDR_LONG;     // Длинная серия для заголовка
+
+		//TapeBlock* tblock = (TapeBlock*)&temp_buffer_y[sizeof(TapeBlock)*tapeCurrentBlock];
+		TapeBlock* tblock = (TapeBlock*)&sd_buffer[sizeof(TapeBlock)*tapeCurrentBlock];
+
+	//	sd_seek_file(&sd_file,tblock->FPos);
+		
+		tapeTotByteCount = tblock->FPos;
+		tapeBlockLen=tblock->Size + 2;
+		bytesToRead = tapeBlockLen<BUFF_PAGE_SIZE ? tapeBlockLen : BUFF_PAGE_SIZE;
+		
+	//	tape_file_status = sd_read_file(&sd_file,sd_buffer,bytesToRead,&bytesRead);
+	   	
+		tapebufByteCount=2;
+		tapeBlockByteCount=0;
+	   	tapeStart=dt_cpu;               // Запоминаем время начала импульса
+	   	TapeStatus=TAPE_LOADING;         // Активируем загрузку
+	   	break;
+	   
+	case TAPE_LOADING:
+	   	TapeStatus=TAPE_PAUSED;          // Приостановка загрузки
+	   	break;
+	   
+	case TAPE_PAUSED:
+		tapeStart=dt_cpu;               // Продолжение загрузки
+		TapeStatus=TAPE_LOADING;
+		break;
+		
+	case TAPE_LOADED:
+		return;
+		break;
+	}
+#endif
+}
+
+
+// ============================================================================

@@ -17,12 +17,14 @@
 #include "hardware/vreg.h"
 
 
-#ifndef RP2040
-//#include  "hardware/regs/qmi.h"
-//#include "hardware/structs/qmi.h"
 
-#include "hardware/structs/sysinfo.h"
+//#######################################
+#ifdef PICO_RP2350
+#include <hardware/structs/qmi.h>
+#include <hardware/structs/xip.h>
+#include <hardware/regs/sysinfo.h>
 #endif
+//######################################
 
 
 
@@ -42,8 +44,9 @@
 
 #include "utf_handle.h"
 
+#ifdef MURM1
 #include "psram_spi.h"
-
+#endif
 
 #include "HDMI.h"
 #include "aySoft.h"
@@ -73,10 +76,13 @@
 //#include "fatfs_sd.h"
 #include "diskio.h"
 extern Z80 cpu;
-
+int real_psram_freq;
+int real_flash_freq;
 uint8_t vout_select;
 /////////////////////////////////////////
 // headers
+void file_manager (void);   
+void file_info (void);   
 void file_select_trdos(void);
 void setup_zx(void);
 //bool save_config(void);
@@ -85,21 +91,21 @@ void  config_init(void);
 void help_zx(void); //F1
 void pause_zx(void);//  [Pause Break]
 void help_keyboard(void); // F4
-void turbo_switch(void);
+//void turbo_switch(void);
 void led_trdos(void);
 void load_slot(void);
 void save_all(void);
 void save_slot(void);
 void disk_autorun (void);
 void disasm(void);
-void  init_psram_board_all_version(void);
+void  fast (init_psram_board_all_version)(void);
 
 #if PICO_RP2350
 void __no_inline_not_in_flash_func(init_psram_butter)(uint cs_pin);
 void __no_inline_not_in_flash_func(deinit_psram_butter)(uint cs_pin);
 static uint32_t __no_inline_not_in_flash_func(psram_b_size)(void);
 uint32_t get_psram_size();
-bool is_psram_enabled();
+//bool is_psram_enabled();
 #endif
 uint8_t psram_pin_cs; // переопределение пина PSRAM для пиморони 
 //---------------------------------------------------------------
@@ -113,18 +119,13 @@ void nmi_zx()
 }
 //--------------------------------------------------
 
-extern bool im_z80_stop;
 extern bool im_ready_loading;
 
 uint8_t saves[11];
 
-uint32_t last_action = 0;
-uint32_t scroll_action = 0;
-uint16_t scroll_pos =0;
-//bool showEmpySlots = false;
-
-
-
+static uint32_t last_action = 0;
+//uint32_t scroll_action = 0;
+//uint16_t scroll_pos =0;
 bool is_menu_mode=false;
 
 extern ZX_Input_t zx_input;
@@ -132,9 +133,7 @@ extern ZX_Input_t zx_input;
 
 //---------------------------------------------------------
 //инициализация переменных для меню
-
-   // int ScreenShot_Y=40; // координата Y для вывода скриншота
-	bool read_dir = true;
+//	bool read_dir = true;
 	int shift_file_index=0;
 	int cur_dir_index=0;
 	int cur_file_index=0;
@@ -143,14 +142,13 @@ extern ZX_Input_t zx_input;
 	char current_lfn[LENF];
 	//uint64_t current_time = 0;
 	//char icon[3];
-	uint8_t sound_reg_pause[18];
+//	uint8_t sound_reg_pause[18];
 
 	int lineStart=0;	
 
 	int tap_block_percent = 0;
 	
-	bool go_menu_mode=false;
-   bool is_menu_d_mode=false;
+
 
 	bool old_key_menu_state=false;
 	bool key_menu_state=false;
@@ -159,8 +157,7 @@ extern ZX_Input_t zx_input;
 	bool old_key_help_state=false;
 	bool key_help_state=false;
 	bool help_mode_draw=false;
-	
-	static bool is_emulation_mode=true;
+
 	bool need_reset_after_menu=false;
 
 	bool old_key_pause_state=false;
@@ -181,7 +178,7 @@ extern ZX_Input_t zx_input;
     }
 //---------------------------------------------
 // запуск с определенным видеовыходом по наличию файла Не используется
-    uint8_t video_filedetect(void)
+/*     uint8_t video_filedetect(void)
     {
         FIL f;
         sprintf(temp_msg, "0:/speccy_p_tft");
@@ -207,7 +204,7 @@ extern ZX_Input_t zx_input;
             return VIDEO_HDMI;
         }
         return video_autodetect();
-    }
+    } */
 //---------------------------------------------
 
 //----------------------------
@@ -286,7 +283,7 @@ extern ZX_Input_t zx_input;
     "[F9] NMI key ",
     "[ESC] exit almost all menus ",
     "[END] Dissasembler",
-    "[CNTRL+END] USB Update mode",
+    "[END] USB Update mode only here",
     "  ",
     "Video driver, etc. @Alex_Eburg ",
     "https://t.me/ZX_MURMULATOR ",
@@ -616,19 +613,21 @@ void joy_redirecting(void)
     }
 }
 //=========================================================
-void software_reset(){
+void pico_reset(){
 
     #ifdef GENERAL_SOUND
-    sys_GS(1);// принудителный сброс GS
-    sleep_ms(100);
+    sys_GS(GS_RESET);// принудителный сброс GS
+ //   sleep_ms(1000);
     #endif
+//#define AIRCR_Register (*((volatile uint32_t*)(PPB_BASE + 0x0ED0C)))
 
-	watchdog_enable(1, 1);
+//AIRCR_Register = 0x5FA0004;
+	watchdog_enable(1, 1);// сброс watch dog
 	while(1);
 }
 //-----------------------------------------------------
-bool b_beep;
-bool b_save;
+//bool b_beep;
+//bool b_save;
 
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
@@ -663,20 +662,6 @@ void gpio_out_init(uint8_t gpio)
     gpio_put(gpio, 0);
 }
 
-
-/*     gpio_init(S_COMAND_PIN);          // Сброс в SIO, вход
-   // gpio_disable_pulls(S_COMAND_PIN); // Отключить подтяжки (по умолчанию)
-   gpio_pull_down(S_COMAND_PIN);
-    gpio_set_dir(S_COMAND_PIN, GPIO_IN); 
-
-    gpio_init(S_DATA_PIN);          // Сброс в SIO, вход
-  // gpio_disable_pulls(S_DATA_PIN); // Отключить подтяжки (по умолчанию)
-    gpio_pull_down(S_DATA_PIN);
-    gpio_set_dir(S_DATA_PIN, GPIO_IN); 
- */
-
-
-
 //=================================================================================================================================
 #ifndef  GENERAL_SOUND     
 bool __not_in_flash_func(AY_timer_callback)(repeating_timer_t *rt)
@@ -694,57 +679,99 @@ bool zx_flash_callback(repeating_timer_t *rt) {zx_machine_flashATTR();return tru
 //============================================================================
 //bool zx_int(repeating_timer_t *rt) {zx_generator_int();return true;};
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#ifdef PICO_RP2350 
 
-//=========================================================================
-int main(void){  
+#if (FLASH_MAX_FREQ_MHZ!=166)
+static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
+    const int clock_hz = CPU_MHZ * 1000000;
+    const int max_flash_freq = FLASH_MAX_FREQ_MHZ * 1000000;//FLASH_MAX_FREQ_MHZ
+    int divisor = (clock_hz + max_flash_freq - (max_flash_freq >> 4) - 1) / max_flash_freq;
+    if (divisor == 1 && clock_hz >= 100000000) {
+        divisor = 2;
+    }
+     real_flash_freq = CPU_MHZ/divisor;
 
-// настройка и разгон для RP2350/ RP2040
-#ifndef PICO_RP2040        //RP2350 
-
+    int rxdelay = divisor;
+    if (clock_hz / divisor > 100000000) {
+        rxdelay += 1;
+    }
+    qmi_hw->m[0].timing = 0x60007000 |
+                        rxdelay << QMI_M0_TIMING_RXDELAY_LSB |
+                        divisor << QMI_M0_TIMING_CLKDIV_LSB;
+}
+#endif
+//############################################################
+void fast(init_pico)(void) // настройка и разгон для RP2350
+{  
     volatile uint32_t *qmi_m0_timing=(uint32_t *)0x400d000c;
     vreg_disable_voltage_limit();
     vreg_set_voltage(VOLTAGE);
-    sleep_ms(33);
-    *qmi_m0_timing = 0x60007204;
+
+#if (FLASH_MAX_FREQ_MHZ==166)
+    real_flash_freq = CPU_MHZ/3;
+
+    *qmi_m0_timing = 0x60007204; //  ???
     set_sys_clock_khz(CPU_KHZ, 0);
-    *qmi_m0_timing = 0x60007303;
-
-  // определение RP2350 A или B  
-     bool  rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
-      psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
-
+    *qmi_m0_timing = 0x60007303;   // ???
 #else 
-   // PICO_RP2040
+     set_flash_timings();
+     set_sys_clock_khz(CPU_KHZ, 0);
+#endif
+}
+
+#else
+void fast(init_pico)(void) // настройка и разгон для RP2040
+{  
    // hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
    // sleep_ms(10);
     vreg_set_voltage(VOLTAGE);
    sleep_ms(500);
    // запуск на пониженной частоте 
    set_sys_clock_khz(CPU_KHZ , false);
+
+}
+
+#endif
+//========================================================================
+static bool  rp2350a;
+static uint inx=0;		
+
+
+void init_and_info()
+{
+
+
+#if LED_BOARD != 255
+    gpio_init(LED_BOARD);
+    gpio_set_dir(LED_BOARD, GPIO_OUT);
+//	g_delay_ms(100);
+    gpio_put(LED_BOARD, 0);
+#endif 
+
+#ifdef PICO_RP2350 
+  // определение RP2350 A или B  
+     rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
+      psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
+
+    // для корректного запуска с бутербродом PSRAM  
+    gpio_init(psram_pin_cs);
+    gpio_set_dir((psram_pin_cs), GPIO_IN);
+    gpio_pull_up(psram_pin_cs); // 
+    gpio_put(psram_pin_cs, 1);
+
+// Weact RP2350A v20 GPIO 23 
+// MODE=0 (PFM — Pulse Frequency Modulation)
+// MODE=1 (PWM — Pulse Width Modulation)
+#if POWER_MODE_WEACT != 255
+    gpio_init(23);
+    gpio_set_dir(23, GPIO_OUT);
+    gpio_put(23, POWER_MODE_WEACT);
+#endif 
+//--------------------------------------
 #endif
 
-//	stdio_init_all();//Активирует интерфейс для stdio
-    // Явный сброс функции GPIO0 и GPIO1
-    //gpio_set_function(0, GPIO_FUNC_SIO);
-    //gpio_set_function(1, GPIO_FUNC_SIO);
-
-// Настройка GPIO все на вход и сброс в SIO
-//pio_set_gpio_base(pio0, 16);//использование GPIO 16...48
-  
-#if  RP2350B // RP2350B
-   //for (int gpio = 0; gpio < 48; gpio++) {
-  //  gpio_init(gpio);          // Сброс в SIO, вход
-  //  gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
-  //  gpio_set_dir(gpio, GPIO_IN); // Направление: вход
-  // }
-  #if WS_ZERO2
-    pio_set_gpio_base(PIO_VIDEO, 0x10);//использование на pio0 GPIO 16...48
-  #endif  
-  #if PI_CARD
-    pio_set_gpio_base(PIO_PS2, 0x10);//использование на pio0 GPIO 16...48
-  #endif  
-
   #if PI_CARD // ???? это для того чтобы настроить выходы для PICARD 1 ИНАЧЕЕ МИКРОСХЕМЫ ОБВЯЗКИ ГРЕЮТСЯ
+        pio_set_gpio_base(PIO_PS2, 0x10);//использование на pio0 GPIO 16...48
         gpio_init(40);
         gpio_set_dir(40, GPIO_OUT);
         gpio_put(41,1);
@@ -755,7 +782,8 @@ int main(void){
   #endif
 
   #ifdef WS_ZERO2
-         gpio_init(46);//DVI_CEC
+        pio_set_gpio_base(PIO_VIDEO, 0x10);//использование на pio0 GPIO 16...48
+        gpio_init(46);//DVI_CEC
         gpio_set_dir(46, GPIO_OUT);
         gpio_put(46,1);
 
@@ -769,45 +797,20 @@ int main(void){
 
 #endif  
 
-//
-#else // RP2040 или RP2350A
-   //for (int gpio = 0; gpio < 30; gpio++) {
-   // gpio_init(gpio);          // Сброс в SIO, вход
-   // gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
-   // gpio_set_dir(gpio, GPIO_IN); // Направление: вход
-   // }
-#endif    
 
 
 
-#if LED_BOARD != 255
-    gpio_init(LED_BOARD);
-    gpio_set_dir(LED_BOARD, GPIO_OUT);
-//	g_delay_ms(100);
-    gpio_put(LED_BOARD, 0);
-#endif 
-
-#ifdef  GENERAL_SOUND
-    gpio_out_init(PBUS_CS);// на выход  
-
-/*     gpio_init(PBUS_CS);
-    gpio_set_dir(PBUS_CS, GPIO_OUT);
-    gpio_disable_pulls(PBUS_CS); // Отключить подтяжки (по умолчанию)
-  //  gpio_is_pulled_up(PBUS_CS);// включить подтяжки */
-         gpio_put(PBUS_CS,1);
-
-     gpio_out_init(BEEP_PIN);// на выход  для реалиации звука бипера
+#ifdef  GENERAL_SOUND    
+   gpio_out_init(BEEP_PIN);// на выход  для реалиации звука бипера
 #endif
 
 	//пин ввода звука
 	gpio_in_init(PIN_ZX_LOAD);
     
 
-//---------------------------------------------------------------------------
-
-
  init_psram_board_all_version();// инициализация всех видов psram
 
+//---------------------------------------------------------------------------
 
   init_fs = disk_initialize(0);// инициализация SD
     DIR fs;
@@ -815,46 +818,26 @@ int main(void){
 
     config_init();
 
-//-----------------------------------------------------------------    
-// если одна плата без GS 
-    #ifndef  GENERAL_SOUND     
-    select_audio(); // переключение режимов вывода звука 
- 	int hz = 96000;	//44000 //44100 //96000 //22050
-	repeating_timer_t timer_audio;
-	// negative timeout means exact delay (rather than delay between callbacks)
- 	if (!add_repeating_timer_us(AY_SAMPLE_RATE, AY_timer_callback, NULL, &timer_audio)) return 1;// -10  частота ноты До 237Гц  нужно 240,0058 Гц
-    #endif
+
 //------------------------------------------------------------------
     turbo_switch(); // переключение режима turbo
  
     joy_redirecting();// установка режима работы kempston joy
 //--------------------------------------------------------------
-	repeating_timer_t zx_flash_timer;
-	//hz=2;
-	if (!add_repeating_timer_us(-1000000 / 2/*Hz*/, zx_flash_callback, NULL, &zx_flash_timer)) {
-	//	G_PRINTF_ERROR("Failed to add zx flash timer\n");
- //   gpio_put(25,1);//error
-		return 1;
-	}
-//---------------------------------------------------------
-// INT generator 50Hz
-/*  	repeating_timer_t int_timer; 
-     // hz=50;
-	if (!add_repeating_timer_us(-1000000 / 50, zx_int, NULL, &int_timer))
-     {
-		//G_PRINTF_ERROR("Failed to add INT timer\n");
-    //    gpio_put(25,1);//error
-		return 1;
-	}   
-    */
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 #ifdef  HDMI_ONLY
-       conf.hdmi_fdiv = 1.5;// 1.5-> 60Hz  (cpu=378MHz)
+     //  conf.hdmi_fdiv = 1.5;// 1.5-> 60Hz  (cpu=378MHz)
+        conf.hdmi_fdiv = HDMI_DIV;
          vout_select= VIDEO_HDMI;
          startVIDEO(VIDEO_HDMI);// только HDMI
 #else 
      //  conf.vout=video_filedetect();// определение видеовыхода по наличию определенного файла OLD!
+         conf.hdmi_fdiv = HDMI_DIV;
          vout_select= video_select();// автоопределение
+
+       //   vout_select=VIDEO_TFT;
+       //  conf.tft=2; // 0-ili9341 1-st7789 2-ili9341 ips
+ 
          startVIDEO(vout_select);     
 #endif 
 //
@@ -875,17 +858,9 @@ int main(void){
 #ifdef  SOUND_PWM_ONLY
         conf.type_sound=1; // только pwm
 #endif 
-///####################################################################
- // Инициализация USB
-   init_usb_hid(); // USB HID
-   for(int i = 0; i < 500; i++)// время на определение USB устройств
-{
-     tuh_task(); // tinyusb host task
-    //  tuh_task_ext(0, false);
-g_delay_ms(1);
-  }
+
 //#####################################################################
-    	uint inx=0;		
+    	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
 //#####################################################################        
 // инициализация с выводом результата на дисплей
@@ -903,29 +878,16 @@ g_delay_ms(1);
 
         draw_text(7+XPOS,0+YPOS,"ZX SpeccyP",CL_GRAY ,CL_BLACK);	
         draw_text_len(7+11*FONT_W+XPOS,YPOS,FW_VERSION,CL_GRAY ,CL_BLACK,16);
-        if (vout_select==VIDEO_VGA)
-		draw_text(220+XPOS,YPOS,"VGA",CL_GRAY ,CL_BLACK);	
-        if (vout_select==VIDEO_HDMI)
-		draw_text(220+XPOS,YPOS,"HDMI",CL_GRAY ,CL_BLACK);	
-        if (vout_select==VIDEO_TFT)
-		draw_text(220+XPOS,YPOS,"TFT",CL_GRAY ,CL_BLACK);	
-        snprintf(temp_msg, sizeof temp_msg, "%d MHz",(int) (clock_get_hz(clk_sys)/1000000));
-		draw_text(254+XPOS,YPOS,temp_msg,CL_GRAY ,CL_BLACK);
-         
-/*         if (vout_select==VIDEO_TFT)
-        {
-        snprintf(temp_msg, sizeof temp_msg, "#%x ",conf.pullup_pin_video);
-	   	draw_text(254+XPOS,YPOS+20,temp_msg,CL_LT_CYAN,CL_BLACK);
-        }
-            */
-        #ifndef PICO_RP2040
-        if (rp2350a) strcpy(temp_msg, "RP2350A");
-        else strcpy(temp_msg, "RP2350B");
-        #else
-        strcpy(temp_msg, "RP2040");
-        #endif
 
-        draw_text(254+XPOS,YPOS+10,temp_msg,CL_BLUE ,CL_BLACK);
+        #ifndef PICO_RP2040
+        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A %dMHz",CPU_MHZ);
+        else snprintf(temp_msg, sizeof temp_msg, "RP2350B %dMHz",CPU_MHZ);
+        #else
+        snprintf(temp_msg, sizeof temp_msg, " RP2040 %dMHz",CPU_MHZ);    
+        #endif
+        draw_text(210+XPOS,YPOS,temp_msg,CL_GRAY ,CL_BLACK);
+
+
 
         draw_text((320-(34*FONT_W))/2,180+YPOS,"[F12]-Setup [F11]-Files [F1]-Help",CL_GREEN,CL_BLACK);
       //  draw_text((320-(20*FONT_W))/2,140+YPOS,"Forward to the past",CL_GRAY,CL_BLACK);
@@ -942,6 +904,8 @@ g_delay_ms(1);
         #if D_JOY_CLK_PIN!=255      
         d_joy_init();
 	    decode_joy(); //????????
+
+
          #if !DEVICE_HDMI90_I2S
 	      if(gpio_get(D_JOY_DATA_PIN))
           {
@@ -977,7 +941,7 @@ case NOT_PSRAM:
     psram_avaiable =0;
     break;
 case BUTTER_PSRAM:
-    snprintf(temp_msg, sizeof temp_msg, "PSRAM %d Mb QSPI CS:%d 'butter'", size_psram, psram_pin_cs );//BUTTER
+    snprintf(temp_msg, sizeof temp_msg, "PSRAM %d Mb QSPI CS:%d", size_psram, psram_pin_cs );//BUTTER  'butter'
 	draw_text(10+XPOS,y_info,temp_msg,CL_GREEN,CL_BLACK);
     psram_type = 0;
     psram_avaiable =1;
@@ -1001,6 +965,42 @@ case BOARD_PSRAM_NOSUPORT:
     break;
 }
 
+        #ifdef TEST_DEBUG
+uint8_t table_voltage[] = {55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,150,160,165};
+#ifdef GENERAL_SOUND
+snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq); 
+        draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
+        snprintf(temp_msg, sizeof temp_msg, "PSRAM   N/A",real_psram_freq);
+        if (type_psram==BUTTER_PSRAM) snprintf(temp_msg, sizeof temp_msg, "PSRAM   %dMHz",real_psram_freq); 
+        else snprintf(temp_msg, sizeof temp_msg, "PSRAM   SPI");
+      
+        draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK); 
+
+        snprintf(temp_msg, sizeof temp_msg, "Ucpu    %.1fV",table_voltage[VOLTAGE]/ 100.0); 
+        draw_text(210+XPOS,YPOS+30,temp_msg,CL_GRAY ,CL_BLACK); 
+        snprintf(temp_msg, sizeof temp_msg, "PicoBus %dMbps",PICOBUS_SPEED); 
+        draw_text(210+XPOS,YPOS+40,temp_msg,CL_GRAY ,CL_BLACK); 
+
+        #else
+snprintf(temp_msg, sizeof temp_msg, " FLASH   %dMHz", real_flash_freq); 
+        draw_text(204+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
+        snprintf(temp_msg, sizeof temp_msg, "PSRAM   N/A",real_psram_freq);
+/*         if (type_psram==BUTTER_PSRAM) snprintf(temp_msg, sizeof temp_msg, "PSRAM   %dMHz",real_psram_freq); 
+        else snprintf(temp_msg, sizeof temp_msg, " ");
+        draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK);  */
+
+        snprintf(temp_msg, sizeof temp_msg, " Ucpu    %.2fV",table_voltage[VOLTAGE]/ 100.0); 
+        draw_text(204+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK); 
+
+#if POWER_MODE_WEACT == 0
+        draw_text(210+XPOS,YPOS+30,"MODE    PFM",CL_GRAY ,CL_BLACK); 
+#endif 
+#if POWER_MODE_WEACT == 1
+        draw_text(210+XPOS,YPOS+30,"MODE    PWM",CL_GRAY ,CL_BLACK); 
+#endif 
+
+        #endif
+        #endif
 
 // информация из setup
 draw_text(6+FONT_W,75+YPOS,menu_ram[conf.mashine],CL_GRAY,CL_BLACK);
@@ -1008,27 +1008,30 @@ draw_text(6+FONT_W,75+YPOS,menu_ram[conf.mashine],CL_GRAY,CL_BLACK);
 #ifndef  GENERAL_SOUND     
 draw_text(6+FONT_W,85+YPOS,menu_sound[conf.type_sound],CL_GRAY,CL_BLACK);    
 #else 
+#ifdef Z_CONTROLER 
 draw_text(11+FONT_W,85+YPOS,"TurboSound + Z-Controller SD",CL_GRAY,CL_BLACK);    
+#else
+draw_text(11+FONT_W,85+YPOS,"GeneralSound + TurboSound",CL_GRAY,CL_BLACK);   
+#endif 
 #endif
 
 
 // дата и время компиляции
 //printf("%s ", BUILD_DATE);
-
 draw_text(12+FONT_W,110+YPOS,BUILD_DATE,CL_BLUE,CL_BLACK); 
 
 
 #ifdef MOS2
 #ifndef WS_ZERO2
-draw_text(12+FONT_W,110+YPOS,"Murmulator OS2 Edition",CL_BLUE,CL_BLACK); 
+draw_text(70+FONT_W,110+YPOS,"Murmulator OS2 Edition",CL_BLUE,CL_BLACK); 
 #else
-draw_text(12+FONT_W,110+YPOS,"RP2350-PiZero MOS2",CL_BLUE,CL_BLACK); 
+draw_text(70+FONT_W,110+YPOS,"RP2350-PiZero MOS2",CL_BLUE,CL_BLACK); 
 #endif
 #endif
 
 #ifndef MOS2
 #ifdef WS_ZERO2
-draw_text(12+FONT_W,110+YPOS,"RP2350-PiZero",CL_BLUE,CL_BLACK); 
+draw_text(70+FONT_W,110+YPOS,"RP2350-PiZero",CL_BLUE,CL_BLACK); 
 #endif
 #endif
 
@@ -1036,25 +1039,47 @@ draw_text(12+FONT_W,110+YPOS,"RP2350-PiZero",CL_BLUE,CL_BLACK);
 #ifndef  MOS2
 
 #ifdef  MURM2
-draw_text(12+FONT_W,110+YPOS,"Murmulator v2.x ",CL_BLUE,CL_BLACK); 
+draw_text(70+FONT_W,110+YPOS,"Murmulator v2.x ",CL_BLUE,CL_BLACK); 
 #endif
 
 #ifdef  MURM1
-draw_text(12+FONT_W+60,110+YPOS,"Murmulator v1.x ",CL_BLUE,CL_BLACK); 
+draw_text(70+FONT_W,110+YPOS,"Murmulator v1.x ",CL_BLUE,CL_BLACK); 
 #endif
 
 #ifdef  PI_CARD
-draw_text(12+FONT_W,110+YPOS,"PiCard v1.x ",CL_BLUE,CL_BLACK); 
+draw_text(70+FONT_W,110+YPOS,"PiCard v1.x ",CL_BLUE,CL_BLACK); 
 #endif
 
 #endif
 #endif
+
+if (vout_select==VIDEO_VGA)
+        {
+        snprintf(temp_msg, sizeof temp_msg, "VGA %dHz",60);   
+       // snprintf(temp_msg, sizeof temp_msg, "VGA %dHz",(int) (CPU_MHZ*10/63)); 
+       draw_text(246+XPOS,YPOS+110,temp_msg,CL_BLUE ,CL_BLACK);  	
+        }
+
+        if (vout_select==VIDEO_HDMI)
+        {
+        snprintf(temp_msg, sizeof temp_msg, "HDMI %dHz",(int) (CPU_MHZ*10/(42*conf.hdmi_fdiv)));  
+        draw_text(240+XPOS,YPOS+110,temp_msg,CL_BLUE ,CL_BLACK);
+        }
+
+        if (vout_select==VIDEO_TFT)
+        {
+        if (conf.tft== TFT_9345) snprintf(temp_msg, sizeof temp_msg,  "ILI9345 TFT");
+        if (conf.tft== TFT_9345I) snprintf(temp_msg, sizeof temp_msg, "ILI9345 IPS");
+        if (conf.tft== TFT_7789) snprintf(temp_msg, sizeof temp_msg,  "ST7789");
+		draw_text(228+XPOS,YPOS+110,temp_msg,CL_BLUE ,CL_BLACK);	
+        }   
+           
 //------------------------------------------------------------------
 // есле подключается плата с GS PicoBUS
 	#if defined  GENERAL_SOUND
     // Первичная инициализация picobus
      draw_text(12+FONT_W,100+YPOS, "Connect PicoBus ....",CL_LT_BLUE,CL_BLACK);
-      sleep_ms(500);
+      sleep_ms(1000);
        init_picobus();
 
        flag_gs=1;
@@ -1066,7 +1091,7 @@ draw_text(12+FONT_W,110+YPOS,"PiCard v1.x ",CL_BLUE,CL_BLACK);
     #endif
 //-----------------------------------------------------------------    
      y_info += 10;
-  
+//  tuh_task(); // tinyusb host task
   switch (usb_device) 
     {
               case 0:
@@ -1102,27 +1127,9 @@ flag_usb_kb = false;
 	//while (! ((decode_PS2()) | (decode_key(is_menu_mode)) | (decode_joy()))){}
  //   sleep_ms(9000);
 
-  is_new_screen = true;
-
-    
-	multicore_launch_core1(ZXThread);
-
-    disk_autorun ();
-
-    //   основной цикл
-    #ifdef TEST
-    wait_msg = 5000;// сообщения внизу и громкость время вывода
-     msg_bar = 0;
-    #endif
-
-//gpio_put(LED_BOARD, 0);
-
-    while (1)
-    {
-        //++++++++++++++++++++++++++++++++++++++++++
-        #ifdef TEST
-
-        if (wait_msg !=0)
+}
+//=========================================================================
+void Message_Print()
         {
            wait_msg--;
            
@@ -1206,18 +1213,17 @@ flag_usb_kb = false;
             break;   
  */
         case 10:
-           sprintf(temp_msg, "          SCL files Read Only!          ");
+           sprintf(temp_msg, " Read Only! ");
             draw_text(0,Y_INFO,temp_msg,CL_WHITE ,CL_RED);//232
             break;  
-        case 11:
+      /*   case 11:
            sprintf(temp_msg, " TRD the file is non-standard Read Only ");
             draw_text(0,Y_INFO,temp_msg,CL_WHITE ,CL_RED);//232
             break;  
-
         case 12:
            sprintf(temp_msg, " This file is Read Only ");
             draw_text(0,Y_INFO,temp_msg,CL_WHITE ,CL_RED);//232
-            break;  
+            break;  */ 
 
 
     /*     case 14:
@@ -1257,94 +1263,140 @@ flag_usb_kb = false;
             break;
         }
         }
-         
-        #endif
+//=========================================================================
+// MAIN
+int fast(main)(void){  
 
-//===============================================================
+    init_pico();
+    sleep_ms(100);
 
-       //++++++++++++++++++++++++++++++++++++++++++
-        // опрос джоя
+ // Инициализация USB
+   init_usb_hid(); // USB HID
+    for(int i = 0; i < 500; i++)// время на определение USB устройств
+{
+     tuh_task(); // tinyusb host task
+    //  tuh_task_ext(0, false);
+     g_delay_ms(1);
+  } 
+// tuh_task(); // tinyusb host task
+// Инициализация последовательного порта
+    stdio_init_all(); // для автоматической загрузки прошивки RP2350
+
+    init_and_info();
+
+//-----------------------------------------------------------------    
+// если одна плата без GS 
+    #ifndef  GENERAL_SOUND     
+    select_audio(); // переключение режимов вывода звука 
+ 	int hz = 96000;	//44000 //44100 //96000 //22050
+	repeating_timer_t timer_audio;
+	// negative timeout means exact delay (rather than delay between callbacks)
+ 	if (!add_repeating_timer_us(AY_SAMPLE_RATE, AY_timer_callback, NULL, &timer_audio)) return 1;// -10  частота ноты До 237Гц  нужно 240,0058 Гц
+    #endif
+
+	repeating_timer_t zx_flash_timer;
+	//hz=2;
+	if (!add_repeating_timer_us(-1000000 / 2/*Hz*/, zx_flash_callback, NULL, &zx_flash_timer)) {
+	//	G_PRINTF_ERROR("Failed to add zx flash timer\n");
+ //   gpio_put(25,1);//error
+		return 1;
+	}
+//---------------------------------------------------------
+// INT generator 50Hz
+/*  	repeating_timer_t int_timer; 
+     // hz=50;
+	if (!add_repeating_timer_us(-1000000 / 50, zx_int, NULL, &int_timer))
+     {
+		//G_PRINTF_ERROR("Failed to add INT timer\n");
+    //    gpio_put(25,1);//error
+		return 1;
+	}   
+    */
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+ // is_new_screen = true;
+
+    
+	multicore_launch_core1(ZXThread);
+
+    disk_autorun ();
+ //   wait_msg = 5000;// сообщения внизу и громкость время вывода
+ //   msg_bar = 0;
+//######################
+//   основной цикл
+//######################
+
+
+    while (1)
+    {
+        if (wait_msg !=0) Message_Print();
+//---------------------------------------------
+// опрос джоя
        if (conf.joyMode == 0)
         {
             if ((inx++ %5) == 0)
             {
-                if (joy_connected)
-                {
-                    zx_input.kempston = (uint8_t)(data_joy);
-                }
-                else
-                {
-                    zx_input.kempston = 0;
-                }
+                if (joy_connected) zx_input.kempston = (uint8_t)(data_joy);
+                else  zx_input.kempston = 0;
             };
         }
         
   // ОПРОС КЛАВИАТУРЫ И ДЖОЙСТИКА 
- if ((decode_PS2()) | (decode_key(is_menu_mode)) | (decode_joy()) | (go_menu_mode))
-
+ if ((decode_PS2()) | (decode_key(is_menu_mode)) | (decode_joy()) )
     {   
-            go_menu_mode = false;
-            //  reset pico
-            if (KEY_RESET_PICO)
-            {
-                software_reset();
-            }
-            //==============================
-
- 
-            //==============================
+            //------------------------------------------------------
             // кнопка перехода в меню файлов
              key_menu_state =( (MENU) | (joy_key_ext  == 0x84)  );
    
             // кнопка выхода из меню файлов по [start] joy
-             if ( (joy_key_ext  == 0x80) & (is_menu_mode)) // exit [start] joy
-             {
-                key_menu_state = true;
-             }
+             if ( (joy_key_ext  == 0x80) & (is_menu_mode))  key_menu_state = true;// exit [start] joy
 
-
-            if (key_menu_state & !old_key_menu_state)
-            // выход из файлового меню
+            if (key_menu_state & !old_key_menu_state) // выход из файлового меню 
             {
                 data_joy =0;
                 is_menu_mode ^= 1;
                 is_new_screen = true;
                 zx_machine_enable_vbuf(false);
-                is_emulation_mode = false;
                 im_z80_stop = false;
-             //    hardAY_on_off=0;
-               hardAY_on();
+                hardAY_on();
             }
 
             else // останов эмуляции и вход в файловое меню
             {  
-       //      hardAY_off();// off hard AY файловое меню
                 is_new_screen = false;
-                is_emulation_mode = true;
                 im_z80_stop = true;
             }
                old_key_menu_state = key_menu_state;
 
-            //
+//########################################################################################           
+                // меню если is_menu_mode =true файловое меню
+                if ((is_menu_mode) && (!trdos))   file_manager();// файловое меню                   
+//########################################################################################
+    if ((!is_menu_mode)) // что нажимается вне файлового менеджера
+    {  
+            if (((kb_st_ps2.u[3] & KB_U3_F2) | (joy_key_ext== 0x82)) )  save_slot();   // [START]+стрелка влево - вход в меню SAVE
+            if (((kb_st_ps2.u[3] & KB_U3_F3) | (joy_key_ext == 0x81)) )  load_slot();   // [START]+стрелка вправо - вход в меню LOAD
+            if (kb_st_ps2.u[3] & KB_U3_F5)   save_all(); // запись всей памяти и файла конфигурации
+            if (END) disasm(); // Дизассемблер
+            if (F10) // TURBO
+                { conf.turbo++;
+                  turbo_switch();
+                  msg_bar=3+conf.turbo;
+                  wait_msg = 2000; 
+                }
             // кнопка перехода в меню SETUP
            if (((MENU_SETUP) | (joy_key_ext  == 0x88)) )  setup_zx();  // START+ [B] SetUp
 
 
            //
-           if (F1)
-               help_zx();
-           if (F4)
-               help_keyboard();
-           if (F9)
-               nmi_zx();
-           if (PAUSE)
-               pause_zx(); //  [Pause Break]
-
-
+           if (F1)  help_zx();
+           if (F4)  help_keyboard();
+           if (F9)  nmi_zx();
+           if (PAUSE) pause_zx(); //  [Pause Break]
 
            if (F6) // палитра
            {
-             //  if (conf.vout != VIDEO_TFT)
                if (vout_select != VIDEO_TFT)
                {
                    msg_bar = 17;
@@ -1355,13 +1407,17 @@ flag_usb_kb = false;
                    set_palette(conf.pallete);
                }
            }
+
+            if (KEY_RESET_PICO) pico_reset();  
+
+
 //### длителность кадра в тактах
            if (KEY_CTRL_F7) // -
            {
             msg_bar = 19;
             wait_msg = 1000;
             conf.shift_img = conf.shift_img - 1;
-            kb_st_ps2.u[3]=0;//continue;
+            kb_st_ps2.u[3]=0;
            }
 
            if (KEY_CTRL_F8) // +
@@ -1369,10 +1425,10 @@ flag_usb_kb = false;
              msg_bar = 19;
              wait_msg = 1000;
              conf.shift_img = conf.shift_img + 1;
-             kb_st_ps2.u[3]=0;//continue;
+             kb_st_ps2.u[3]=0;
            }
 //###
-
+#ifndef  GENERAL_SOUND         
            if (conf.type_sound < HARD_AY) // остальное железные AY
            {
                if (F7) // громкость -
@@ -1404,10 +1460,8 @@ flag_usb_kb = false;
 
                if (F8) // громкость +
                {
-                   //  kb_st_ps2.u[3] = 0; // key F8
                    msg_bar = 2;
                    wait_msg = 1000;
-
                    // Soft AY
                    if ((conf.type_sound == SOFT_AY) | (conf.type_sound == SOFT_TS))
                    {
@@ -1430,529 +1484,67 @@ flag_usb_kb = false;
                    }
                }
            }
-           if (F10) // TURBO
-           {
-               conf.turbo++; 
 
-               turbo_switch();
-               msg_bar=3+conf.turbo;
-               wait_msg = 2000; 
-
-            }
-
-#ifndef MOS2
-           if (KEY_BOOT)
-           {
-               draw_img(0, 0);
-               MessageBox("  switching to firmware update mode ", "", CL_WHITE, CL_RED, 2);
-               reset_usb_boot(0, 0);
-           }
-               
 #endif
 
-           if (END) 
+#ifdef  GENERAL_SOUND         
+      //   if ((z_controler_cs & 0x02) == 0x00) // Z-Controller не активен
+     /// if (gpio_get(PBUS_CS)) // Z-Controller не активен
            {
+               if (F7) // громкость -
+               {
+                   msg_bar = 1;
+                   wait_msg = 1000;
 
-             gpio_put(LED_BOARD, 0);
-           disasm();
+                       if (conf.vol_i2s == 0)
+                           conf.vol_i2s = 0;
+                       else
+                           conf.vol_i2s--;
+                       vol_ay = conf.vol_i2s;
+                       init_vol_ay();
+               }
+
+               if (F8) // громкость +
+               {
+                   //  kb_st_ps2.u[3] = 0; // key F8
+                   msg_bar = 2;
+                   wait_msg = 1000;
+
+                       if (conf.vol_i2s == 100)
+                           conf.vol_i2s = 100;
+                       else
+                           conf.vol_i2s++;
+                       vol_ay = conf.vol_i2s;
+
+                        im_z80_stop = true;
+                       init_vol_ay();
+                   
+               }
            }
 
-            is_emulation_mode = !(is_menu_mode); //
+#endif
+           /*--Emulator reset--*/
+           if (KEY_RESET_ZX)
+           {
 
-             //========================================================================
-            // непосредственно цикл меню если is_menu_mode =true файловое меню
-         ///   if (is_menu_mode)// файловое меню
-         if ((is_menu_mode) && (!trdos))// файловое меню
-            {
-              
-                //	tap_loader_active=false;// рудимент от аудио загрузки
- 
-               if (init_fs!=FR_OK)
-                {
-                    g_delay_ms(10);
-                    init_fs = init_filesystem();
-                    N_files = read_select_dir(cur_dir_index);
-                    if (N_files == 0)  init_fs = FR_NO_FILE;
-                }
-                //++++++++++++++++++++++++++++++++++++++++++
-               if (is_new_screen)
-               { 
-                hardAY_on_off=0;
-                hardAY_off();// off hard AY файловое меню
-                     if (init_fs != FR_OK)
-                 {
-                    memset(g_gbuf, COLOR_BACKGOUND, sizeof(g_gbuf));
-                    MessageBox("SD Card not found!!!", "    Please REBOOT   ", CL_LT_YELLOW, CL_RED, 0);
-                    continue;
-                 } 
-                      draw_main_window();// рисование рамок
-                      draw_file_window();// рисование каталога файлов
+               im_z80_stop = true;
+               is_menu_mode = true;
+               is_new_screen = true;
 
- 
-                     if (init_fs==FR_OK)
-                    {
-                       N_files = read_select_dir(cur_dir_index);
+               hardAY_off();
+               MessageBox(" ZX SPECTRUM RESET ", "", CL_WHITE, CL_RED, 2);
 
-                        if (N_files == 0)
-                        {
-                            init_fs = FR_NO_FILE;// нет файлов
-                        }
-                        else
-                        {
-                            cur_file_index_old = -1;
-                        }
-                      
-                    }  
-                 
- 
-                   //++++++++++++++++++++++++++++++++++++++++++++++++++++++    
-                }  // if ((is_new_screen))
-                  //+++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-                if (init_fs==FR_OK)
-                {
-                   //  if (!decode_key_joy()) continue;   
-                //   decode_key_joy() ;
-
-
-                 // кнопка выхода из меню файлов по [ESC]
-                         if ( (ESC_EXIT) )// exit [ESC]
-             {
-                            im_z80_stop = false;
-                            is_menu_mode = false;
-                            is_new_screen = false;
-                            hardAY_on();//выход из меню файлов по [ESC]
-                            continue;
-             }        
-
-                   if (((KEY_SPACE)|JOY_B)  && (init_fs==FR_OK)) //  нажатие пробела запуск после сброса [B] joy
-                    {        
-                       // off_any_key() ;// отжатие любой клавиши
-                     
-                        strcpy(conf.activefilename, dir_patch); // strcpy
-                        strcat(conf.activefilename, "/");
-                        strcat(conf.activefilename, files[cur_file_index]);
-
-                        afilename[0] = 0;
-                        strcat(afilename, files[cur_file_index]);
-
-                        const char *ext = get_file_extension(conf.activefilename);
-                        if (strcasecmp(ext, "trd") == 0) //   запуск после сброса
-                        {
-                            // file_select_trdos();
-                            // Копируем строку длиною не более 10 символов из массива src в массив dst1.
-                            // strncpy (dst1, src,3);
-
-                            MessageBox(" RUNING TRD FILE ", "", CL_WHITE, CL_BLUE, 4);
-
-                             file_type[0] = TRD; //trd
-                             conf.sclConverted = 1; // к диску а подключен TRD образ
-                             strncpy(conf.DiskName[0], files[cur_file_index], LENF);
-                             OpenTRDFile(conf.activefilename,0);
-                             write_protected = false; // защита записи отключена для TRD
-
-                            zx_machine_reset(1);// включить загрузку файла при reset 1 раз
-
-                            is_new_screen = false;
-                            is_menu_mode = false;
-                            im_z80_stop = false;
-
-                       //   hardAY_on();
-                            continue; 
-                        }
-                        if (strcasecmp(ext, "scl") == 0) //  запуск после сброса
-                        {
-                            MessageBox(" RUNING SCL FILE ", "", CL_WHITE, CL_BLUE, 4);
-                            write_protected = true; // защита записи для SCL
-                            conf.sclConverted = 0;
-                            file_type[0] = SCL;// scl
-                            strncpy(conf.DiskName[0], files[cur_file_index], LENF); // disk A
-                            Run_file_scl(conf.activefilename, 0);
-                            zx_machine_reset(1);// включить загрузку файла при reset 1 раз
-                            im_z80_stop = false;
-                            is_menu_mode = false;
-                            is_new_screen = false;
-                        //    hardAY_on();
-                            continue;
-                        }
-                            continue;
-                    }// end KEY_SPACE
-
-                       if (((KEY_ENTER)|JOY_A) && (init_fs==FR_OK))// нажатие enter
-                      
-                    {
-                         //  off_any_key() ;// отжатие любой клавиши
-    
-                        flag_usb_kb = false;  
-
-                        if (files[cur_file_index][LENF1])
-                        { // выбран каталог
-
-                            if (cur_file_index == 0)
-                            { // на уровень выше
-                                if (cur_dir_index)
-                                {                      
-                                    cur_dir_index--;
-                                    N_files = read_select_dir(cur_dir_index);
-                                    cur_file_index = 0;
-                                   // draw_text_len(2 + FONT_W, 2 * FONT_H , " ****     ", CL_TEST, COLOR_BORDER, 14);
-                                    continue;
-                                };
-                            }
-                            if (cur_dir_index < (DIRS_DEPTH - 2))
-                            { // выбор каталога
-                                cur_dir_index++;
-                                strncpy(dirs[cur_dir_index], files[cur_file_index], LENF1);
-                                N_files = read_select_dir(cur_dir_index);
-                                cur_file_index = 0;
-                                cur_file_index_old = cur_file_index;
-                               shift_file_index=0;
-                                last_action = time_us_32();
-                                continue;
-                            }
-                        }
-                        //
-                        else
-                        { // выбран файл
-
-                            strcpy(conf.activefilename, dir_patch); // strcpy
-                            strcat(conf.activefilename, "/");
-                            strcat(conf.activefilename, files[cur_file_index]);
-
-                            afilename[0] = 0;
-                            strcat(afilename, files[cur_file_index]);
-                            const char *ext = get_file_extension(conf.activefilename);
-
-                            if (strcasecmp(ext, "z80") == 0)
-                            {
-                                im_z80_stop = true;
-                                while (im_z80_stop)
-                                {
-                                    sleep_ms(10);
-                                    if (im_ready_loading)
-                                    {
-                                        // sleep_ms(10);
-                                        conf.turbo = 0;
-                                        turbo_switch();
-                                        zx_machine_reset(3);
-                                      //  AY_reset(); // сбросить AY
-
-                                        if (load_image_z80(conf.activefilename))
-                                        {
-                                            memset(temp_msg, 0, sizeof(temp_msg));
-                                            sprintf(temp_msg, " Loading file:%s", afilename);
-                                            MessageBox("Z80", temp_msg, CL_WHITE, CL_BLUE, 2);
-                                            conf.activefilename[0] = 0;
-                                            im_z80_stop = false;
-                                            im_ready_loading = false;
-                                            is_menu_mode = false;
-                                            break;
-                                        }
-                                        else
-                                        {
-                                            MessageBox("Error loading snapshot!!!", afilename, CL_YELLOW, CL_LT_RED, 1);
-                                            last_action = time_us_32();
-                                            draw_file_window();
-                                            im_z80_stop = false;
-                                            im_ready_loading = false;
-                                            break;
-                                        }
-                                    }
-                                }
-                                continue;
-                            }
-                            else if (strcasecmp(ext, "sna") == 0)
-                            {
-                                // G_PRINTF_DEBUG("current file select=%s\n",conf.activefilename);
-                                // load_image_z80(conf.activefilename);
-                                im_z80_stop = true;
-                                while (im_z80_stop)
-                                {
-                                    sleep_ms(10);
-                                    if (im_ready_loading)
-                                    {
-                                     //   if (conf.mashine!=SCORP256) zx_machine_reset(3); // убрать для работы в SCORPION
-                                        zx_machine_reset(3);
-                                      //  AY_reset(); // сбросить AY
-                                        if (load_image_sna(conf.activefilename))
-                                        {
-                                            memset(temp_msg, 0, sizeof(temp_msg));
-                                            sprintf(temp_msg, " Loading file:%s", afilename);
-                                            MessageBox("SNA", temp_msg, CL_WHITE, CL_BLUE, 2);
-                                            conf.activefilename[0] = 0;
-                                            im_z80_stop = false;
-                                            im_ready_loading = false;
-                                            is_menu_mode = false;
-                                            break;
-                                        }
-                                        else
-                                        {
-                                            MessageBox("Error loading snapshot!!!", afilename, CL_YELLOW, CL_LT_RED, 1);
-                                            // printf("load_image_sna - ERROR\n");
-                                            last_action = time_us_32();
-                                            draw_file_window();
-                                            im_z80_stop = false;
-                                            im_ready_loading = false;
-                                            break;
-                                        }
-                                    }
-                                }
-                                continue;
-                            }
-                            else if (strcasecmp(ext, "scr") == 0)
-                            {
-                                if (LoadScreenshot(conf.activefilename, true))
-                                {
-                                    is_menu_mode = false;
-                                    continue;
-                                }
-                                else
-                                {
-                                    MessageBox("Error loading screen!!!", afilename, CL_YELLOW, CL_LT_RED, 1);
-                                    break;
-                                }
-                            }
-                            else if (strcasecmp(ext, "tap") == 0)
-                            {
-                                Set_load_tape(conf.activefilename, current_lfn);
-                                strcpy(temp_msg, current_lfn);
-                                MessageBox("    TAPE    ", temp_msg, CL_WHITE, CL_BLUE, 4);
-                                //     zx_machine_reset();
-
-                                im_z80_stop = false;
-                                is_menu_mode = false;
-                                 hardAY_on();// exit tape select
-                                continue;
-                            }
-                            // TRDOS обработка
-
-                            if (strcasecmp(ext, "trd") == 0)
-                            {
-                                file_select_trdos();
-                                // continue;
-                            }
-                            // SCL обработка
-
-                            if (strcasecmp(ext, "scl") == 0)
-                            {
-                                MessageBox("SCL files are mounted", "   only on Drive A:", CL_WHITE, CL_BLUE, 4);// 3 delay 250 4 -1000
-                                write_protected = true; // защита записи для SCL
-                                conf.sclConverted = 0;
-                               file_type[0] = SCL;//scl
-                              //  strncpy(DiskName[0], current_lfn, 16);
-                                strncpy(conf.DiskName[0], files[cur_file_index], LENF);// disk A
-                                Run_file_scl(conf.activefilename, 0);
-
-                                draw_main_window(); // восстановление текста
-                                draw_file_window();
-
-                                // g_delay_ms(200);
-                                last_action = time_us_32();
-
-                                is_new_screen = 1;
-
-                                continue;
-                            }
-                        }
-                    }
-
-
-
-                    int num_show_files = 18; // количество файлов при показе
-
-
-                    // стрелки вверх вниз
-                    if (((kb_st_ps2.u[2] & KB_U2_DOWN) | JOY_DOWN) && (cur_file_index < (N_files)))
-                    {
-                        cur_file_index++;
-                        last_action = time_us_32();
-                        
-                    }
-                   if (((kb_st_ps2.u[2] & KB_U2_UP) | JOY_UP) && (cur_file_index > 0))
-                    {
-                        cur_file_index--;
-                        last_action = time_us_32();
-                       
-                    }
-                    // начало и конец списка
-                    if ((kb_st_ps2.u[2] & KB_U2_LEFT))
-                    {
-                        cur_file_index = 0;
-                        shift_file_index = 0;
-                        last_action = time_us_32();
-                       
-                    }
-                    if ((kb_st_ps2.u[2] & KB_U2_RIGHT))
-                    {
-                        cur_file_index = N_files;
-                        shift_file_index = (N_files >= num_show_files) ? N_files - num_show_files : 0;
-                        last_action = time_us_32();
-                        
-                    }
-
-                    // PAGE_UP PAGE_DOWN
-                    if (((kb_st_ps2.u[2] & KB_U2_PAGE_DOWN) | JOY_RIGHT) && (cur_file_index < (N_files)))
-                    {
-                        cur_file_index += num_show_files;
-                        last_action = time_us_32();
-                        
-                    }
-                    if (((kb_st_ps2.u[2] & KB_U2_PAGE_UP) | JOY_LEFT) && (cur_file_index > 0))
-                    {
-                        cur_file_index -= num_show_files;
-                        last_action = time_us_32();
-                        
-                    }
-                    // Возврат на уровень выше по BACKSPACE
-                    if ((kb_st_ps2.u[1] & KB_U1_BACK_SPACE) | (data_joy == 0x40)) 
-                    {
-                        if (cur_dir_index == 0)
-                        {
-                            if (cur_file_index == 0)
-                                cur_file_index = 1; // не можем выбрать каталог вверх
-                            if (shift_file_index == 0)
-                                shift_file_index = 1; // не отображаем каталог вверх
-                            read_select_dir(cur_dir_index);
-                        }
-                        else
-                        {
-                            cur_dir_index--;
-                            N_files = read_select_dir(cur_dir_index);
-                            cur_file_index = 0;
-                            draw_text_len(2 + FONT_W, FONT_H - 1, "                    ", COLOR_BACKGOUND, COLOR_BORDER, 20);
-                            cur_file_index = 0;
-                            shift_file_index = 0;
-                            continue;
-                        }
-                    }
-                    if (cur_file_index < 0)
-                        cur_file_index = 0;
-                    if (cur_file_index >= N_files)
-                        cur_file_index = N_files;
-
-                    if (data_joy > 0)
-                    {
-                        old_data_joy = 0;
-                    };
-
-                    for (int i = num_show_files; i--;)
-                    {
-                        if ((cur_file_index - shift_file_index) >= (num_show_files))
-                            shift_file_index++;
-                        if ((cur_file_index - shift_file_index) < 0)
-                            shift_file_index--;
-                    }
-
-                    // ограничения корневого каталога
-                    if (cur_dir_index == 0)
-                    {
-                        if (cur_file_index == 0)
-                            cur_file_index = 1; // не можем выбрать каталог вверх
-                        if (shift_file_index == 0)
-                            shift_file_index = 1; // не отображаем каталог вверх
-                    }
-
-                    // прорисовка
-                    // заголовок окна - текущий каталог
-
-                    if (strlen(dir_patch) > 0)
-                    {
-                        draw_text_len(FONT_W + 3, FONT_H - 1, dir_patch + 1, COLOR_UP, COLOR_BORDER, 51);// путь папки в шапке
-                    }
-                    else
-                    {
-                        draw_text_len(FONT_W + 3, FONT_H - 1, "                                                  ", CL_TEST, COLOR_BORDER, 51);
-                    }
-
-                    for (int i = 0; i < num_show_files; i++)
-                    {
-                        uint8_t color_text = CL_GREEN;
-                        uint8_t color_text_d = CL_YELLOW; // если директория
-                        uint8_t color_bg = COLOR_BACKGOUND;
-
-                        if (i == (cur_file_index - shift_file_index))
-                        {
-                            color_text = CL_BLACK;
-                            color_bg = COLOR_SELECT;
-                            color_text_d = CL_BLACK;
-                        }
-                        // если файлов меньше, чем отведено экрана - заполняем пустыми строками
-                        if ((i > N_files) || ((cur_dir_index == 0) && (i > (N_files - 1))))
-                        {
-                            draw_text_file(4+ FONT_W, 2 * FONT_H + i * FONT_H, " ", color_text, color_bg, NUMBER_CHAR);
-                            continue;
-                        }
-
-                        if (files[i + shift_file_index][LENF1])
-                        {
-
-                            draw_text_file(4 + FONT_W, 2 * FONT_H + i * FONT_H, files[i + shift_file_index], color_text_d, color_bg, NUMBER_CHAR); // get_file_from_dir("0:/z80",i)//?????
-                        }
-                        else
-                        {
-
-                            draw_text_file(4 + FONT_W, 2 * FONT_H + i * FONT_H, files[i + shift_file_index], color_text, color_bg, NUMBER_CHAR); // get_file_from_dir("0:/z80",i)//???????
-                        }
-                    }
-               //    strcpy(current_lfn, get_lfn_from_dir(dir_patch, files[cur_file_index])); // имя длинное должно быть
-                   strcpy(current_lfn, get_current_altname(dir_patch, files[cur_file_index]));
-
-                    // draw_rect(10+FONT_W*13,17,3,5,0xf,true);
-                    int file_inx = cur_file_index - 1;
-                    if (file_inx == -1)
-                        file_inx = 0;
-                    if (file_inx == N_files)
-                        file_inx += 1;
-       
-               //     int shft = 156 * (file_inx) / (N_files <= 1 ? 1 : N_files - 1);
-
-                    if (strcasecmp(files[cur_file_index], "..") == 0)
-                    {
-                        cur_file_index_old = cur_file_index;
-                    
-                    }
-
-
-                 if (cur_file_index)  
-                 {
-//======================================================================================================================
-               strncpy(temp_msg, get_lfn_from_dir(dir_patch, files[cur_file_index]),72); // имя длинное должно быть
-				draw_text_len(12+FONT_W*14,18, temp_msg,CL_INK,COLOR_BACKGOUND,35); // длинное имя должно быть показывается вверху
-                for (size_t i = 0; i < 36; i++)
-                {
-                   temp_msg[i] = temp_msg[i+35];
-                }
-                draw_text_len(12+FONT_W*14,28, temp_msg,CL_INK,COLOR_BACKGOUND,35); // длинное имя длжно быть показывается вверху
- //=====================================================================================================================
-                 }
-                   else
-                   {
-                    draw_rect(FONT_W*16,18,FONT_W*36,20,COLOR_BACKGOUND,true) ;
-                   }
-
-                    if ((cur_file_index > 0) && (cur_file_index_old == -1))
-                    {
-                        last_action = time_us_32();  
-                    }
-                }
-                //++++++++++++++++++++++++++++++++++++++++++++++++++++++
+               zx_machine_reset(3);
+               im_z80_stop = false;
+               is_menu_mode = false;
+            //   is_new_screen = false;
+           }
             }
-            //-------------------------------------------------------------------------------
-            if ((!is_menu_mode))
-            {  
-                if (((kb_st_ps2.u[3] & KB_U3_F2) | (joy_key_ext== 0x82)) )  save_slot();   // [START]+стрелка влево - вход в меню SAVE
-                if (((kb_st_ps2.u[3] & KB_U3_F3) | (joy_key_ext == 0x81)) )  load_slot();   // [START]+стрелка вправо - вход в меню LOAD
-                if (kb_st_ps2.u[3] & KB_U3_F5)   save_all(); // запись всей памяти и файла конфигурации
-           
-            }
-
-
-
-
-
-            if (is_emulation_mode)
+//######################################################
+// Работа эмулятора
+//######################################################
+          if (!is_menu_mode)
             { // Emulation mode
-                // process_menu_mode = false;
                 zx_machine_enable_vbuf(true);
                 if (im_z80_stop)
                 {
@@ -1968,140 +1560,20 @@ flag_usb_kb = false;
 
                 joy_scan();// переопределление kempston joy на клавиши 
 
+            } // Emulation mode end
 
 
+        } 
 
-                /*--Emulator reset--*/
-                if (KEY_RESET_ZX)
-                {
-
-            MessageBox(" ZX SPECTRUM RESET ", "", CL_WHITE, CL_RED, 2);
-            
-            zx_machine_reset(3);
-            im_z80_stop = false;
-            is_menu_mode = false;
-            is_new_screen = false;
-
-                }
-
-
-            } // Emulation mode
-              // zx_machine_input_set(&zx_input);
-            // process_menu_mode = false;
-
-        } // else//if (decode_PS2())
-
-        zx_machine_input_set(&zx_input);
-
-        if ((is_menu_mode) && (init_fs==FR_OK))
-        {
-
-            if ((last_action > 0) && (time_us_32() - last_action) > SHOW_SCREEN_DELAY * 1000)
-            {
-
-                 last_action = 0;
-            //    CLEAR_INFO; // Фон отображения информации о файле
-                 const char* ext = get_file_extension(files[cur_file_index]);
-              //  const char *ext = get_file_extension(current_lfn);
-               // printf("ext:%s\n", ext);
-               // G_PRINTF_DEBUG("files[cur_file_index]=%s\n", files[cur_file_index]);
-                //-----------------------------------------------
-                // TRD INFO
-                if (strcasecmp(ext, "trd") == 0)
-                {
-                    strncpy(temp_msg, current_lfn, 22);
-                    strcpy(conf.activefilename, dir_patch);
-                    strcat(conf.activefilename, "/");
-                    strcat(conf.activefilename,files[cur_file_index]);
-                    cur_file_index_old = cur_file_index;
-
-                    if (!ReadCatalog(conf.activefilename, current_lfn, false))
-                    {
-
-                        //    
-                    }
-
-                    continue;
-                }
-                //-----------------------------------------------------
-                //-----------------------------------------------
-                // SCL INFO
-                if (strcasecmp(ext, "scl") == 0)
-                {
-					strncpy(temp_msg,current_lfn,22);
-					strcpy(conf.activefilename,dir_patch);
-					strcat(conf.activefilename,"/");
-					strcat(conf.activefilename,files[cur_file_index]);
-					cur_file_index_old=cur_file_index;		
-			    	if(!ReadCatalog_scl(conf.activefilename,current_lfn,false))
-                    {
-				    } 
-                 continue;
-                 }
-//-----------------------------------------------------
-				if(strcasecmp(ext, "z80")==0) {
-					strcpy(conf.activefilename,dir_patch);
-					strcat(conf.activefilename,"/");
-					strcat(conf.activefilename,files[cur_file_index]);
-					cur_file_index_old=cur_file_index;					
-					if(!LoadScreenFromZ80Snapshot(conf.activefilename)){
-						CLEAR_INFO;
-					}
-					continue;
-				} else
-				if(strcasecmp(ext, "scr") == 0) {
-					strcpy(conf.activefilename,dir_patch);
-					strcat(conf.activefilename,"/");
-					strcat(conf.activefilename,files[cur_file_index]);
-				//	printf("LoadScreenshot: %s\n",conf.activefilename);
-					CLEAR_INFO;
-					cur_file_index_old=cur_file_index;
-					if(!LoadScreenshot(conf.activefilename,false)){
-						CLEAR_INFO;
-
-					} 
-					continue;
-				} else
-				if(strcasecmp(ext, "tap") == 0) {
-					strcpy(conf.activefilename,dir_patch);
-					strcat(conf.activefilename,"/");
-					strcat(conf.activefilename,files[cur_file_index]);
-					CLEAR_INFO;
-					cur_file_index_old=cur_file_index;
-					if(!LoadScreenFromTap(conf.activefilename))
-						CLEAR_INFO;;
-					continue;
-				} 
-				if(strcasecmp(ext, "sna") == 0) {
-					strcpy(conf.activefilename,dir_patch);
-					strcat(conf.activefilename,"/");
-					strcat(conf.activefilename,files[cur_file_index]);
-					CLEAR_INFO;;
-					cur_file_index_old=cur_file_index;
-					if(!LoadScreenFromSNASnapshot(conf.activefilename)){
-						CLEAR_INFO;;
-					}
-					continue;
-				} 
-				else {
-					if (cur_file_index_old==-1) CLEAR_INFO;//Фон отображения скринов и информации очистка	
-					 else CLEAR_INFO;
-					cur_file_index_old=cur_file_index;    
-				}
-			}
-
-
-		}
-
-
-            led_trdos();// мигаие led 
+           zx_machine_input_set(&zx_input);
+      
+           led_trdos();// мигаие led 
 
 
       } // while(1)
-    software_reset();
+    pico_reset(); // аварийный сброс ;)
 }
 //==========================================================================
-//------------------------------------------
 void file_select_trdos(void) // 
 {
 	is_menu_mode = true;
@@ -2115,7 +1587,9 @@ is_new_screen = true;
 		// strncpy (dst1, src,3);
         strncpy(conf.DiskName[Drive], files[cur_file_index], LENF);
 
-          if (Drive == 0) conf.sclConverted=1; // к диску а подключен TRD образ
+          if (Drive == 0) conf.FileAutorunType=TRD; // к диску а подключен TRD образ
+         // conf.FileAutorunType=TRD;
+         file_type[Drive] = TRD;
           OpenTRDFile(conf.activefilename,Drive);
 
           write_protected = false; // защита записи отключена для TRD
@@ -2422,7 +1896,7 @@ void help_keyboard(void) // F4
  
             im_z80_stop = false;
             is_menu_mode = false;
-            is_new_screen = false;
+        //    is_new_screen = false;
             hardAY_on(); // ON hard AY help keyboard
 
 }
@@ -2541,7 +2015,7 @@ void setup_zx(void)
              save_config();
          //   if (conf.type_sound == y) continue;
              MessageBox("  HARD RESET  ", "", CL_WHITE, CL_RED, 2);
-             software_reset();
+             pico_reset();
             continue;
         }
         #endif
@@ -2592,17 +2066,17 @@ if (numsetup == M_JOY)
             zx_machine_reset(3);
             im_z80_stop = false;
             is_menu_mode = false;
-            is_new_screen = false;
+        //    is_new_screen = false;
             return;
  
         }
         if (numsetup == M_HARD_RESET) // Hard reset
         {
             MessageBox("  HARD RESET  ", "", CL_WHITE, CL_RED, 2);
-            software_reset();
+            pico_reset();
             im_z80_stop = false;
             is_menu_mode = false;
-            is_new_screen = false;
+         //   is_new_screen = false;
             return;
  
         }
@@ -2626,7 +2100,7 @@ if (numsetup == M_JOY)
 
 //--------------
 #ifndef MOS2
-        if (numsetup == M_UPDATE) // power off
+        if (numsetup == M_UPDATE) // update mode
         {
             im_z80_stop = true;
             is_menu_mode = true;
@@ -2661,7 +2135,7 @@ if (numsetup == M_JOY)
            draw_img(0,0);
            MessageBox("                 RESET              ","", CL_WHITE, CL_RED, 0);
            sleep_ms(256);
-           software_reset(); // нет файла .firmware загрузка не под Murmulator OS
+           pico_reset(); // нет файла .firmware загрузка не под Murmulator OS
            return;
            }
 
@@ -2672,7 +2146,7 @@ if (numsetup == M_JOY)
 
            sleep_ms(256);
            f_close(&f);
-           software_reset();
+           pico_reset();
            //reset_usb_boot(0, 0);
         }
 #endif        
@@ -2712,13 +2186,13 @@ if (numsetup == M_TFT_BRIGHT)
             switch (x)
             {
             case 0:
-            conf.tft=0;// ili9341
+            conf.tft=TFT_9345;// ili9341
                 break;
             case 1:
-            conf.tft=2;// ili9341 ips
+            conf.tft=TFT_9345I;// ili9341 ips
                 break;              
             case 2:
-            conf.tft=1;// st7789
+            conf.tft=TFT_7789;// st7789
                 break;
             case 3://переворот TFT 0 - 0x20 180 -0xE0
             if (conf.tft_rotate  == 0) conf.tft_rotate  = 1;
@@ -2734,7 +2208,7 @@ if (numsetup == M_TFT_BRIGHT)
                 break;
             case 6://Save config + reset
             save_config(); //сохраняем  конфигурацию
-            software_reset();
+            pico_reset();
                 break;
 
             default:
@@ -3015,23 +2489,30 @@ void load_all(void)
     {
 
      //   hardAY_on();
-
-        if (conf.sclConverted == 0)
+//conf.FileAutorunType = 4;
+        if (conf.FileAutorunType == SCL)
         {
-            write_protected = true; // защита записи для SCL
-                                    //  strncpy(conf.DiskName[0], files[cur_file_index], LENF);// disk A
-             strcpy(conf.activefilename, conf.Disks[0]);// disk A   
-               file_type[0] = SCL;// scl            
+          //  write_protected = true; // защита записи для SCL
+            strcpy(conf.activefilename, conf.Disks[0]);// disk A   
+               file_type[0] = SCL;           
             Run_file_scl(conf.activefilename, 0);
         }
-        else // trd
+        if (conf.FileAutorunType == TRD)
         {
-            conf.sclConverted = 1; // к диску а подключен TRD образ
-            file_type[0] = TRD;// trd
+             file_type[0] = TRD;// trd
                strcpy(conf.activefilename, conf.Disks[0]);// disk A
                OpenTRDFile(conf.activefilename, 0);        
-            write_protected = false; // защита записи отключена для TRD
+          //  write_protected = false; // защита записи отключена для TRD
         }
+
+        if (conf.FileAutorunType == FDI)
+        {
+                             file_type[0] = FDI; 
+                             strncpy(conf.DiskName[0], files[cur_file_index], LENF);
+                             OpenFDI_File(conf.activefilename,0);
+                             write_protected = true; // защита записи включена
+        }
+
         im_z80_stop = false;
         is_menu_mode = false;
         zx_machine_enable_vbuf(true);
@@ -3079,31 +2560,64 @@ void led_trdos(void)
         draw_symbol(0, 240-16,0,CL_LT_BLUE, color_fon);
     }
 
-#ifdef Z_CONTROLER 
+#ifdef Z_CONTROLER
 if ((z_controler_cs & 0x02) == 0)
     {    
         static uint8_t x =0;
          uint8_t color_fon = zx_Border_color & 0x07; // дублируем для 4 битного видеобуфера
         //if (x&0x80) 
-         draw_symbol(0, 240-16,0,CL_LT_BLUE, color_fon);
+         draw_symbol(0, 240-16,0,CL_LT_GREEN, color_fon);
     }
 #endif
 }
-
-
-
 //===============================================================
 // Работа с бутербродной PSRAM 
 //===============================================================
-volatile uint8_t * const PSRAM_DATA = (volatile uint8_t*)PSRAM_BASE;
+volatile uint8_t * PSRAM_DATA = (uint8_t*)0x11000000;
 #if defined(PICO_RP2350)
 #include <hardware/structs/qmi.h>
 #include <hardware/structs/xip.h>
-// Глобальное объявление 
-//#define PSRAM_BASE 0x11000000 // Базовый адрес PSRAM в адресном пространстве
-//volatile uint8_t * const PSRAM_DATA = (volatile uint8_t*)PSRAM_BASE;
+//=================================================================
+/**
+ * @brief Проверка доступности PSRAM 
+ * @return Размер PSRAM в Мегабайтах (8MB для APS6404)
+ */
+#define MB16 (16ul << 20)
+#define MB8 (8ul << 20)
+#define MB4 (4ul << 20)
+#define MB1 (1ul << 20)
 
-//volatile uint8_t * PSRAM_DATA = (uint8_t*)0x11000000;
+
+static int BUTTER_PSRAM_SIZE = 0;
+ uint32_t __not_in_flash_func(get_psram_size)() {
+   // if (BUTTER_PSRAM_SIZE != -1) return BUTTER_PSRAM_SIZE;
+    for(register int i = MB8; i < MB16; i += 4096)
+        PSRAM_DATA[i] = 16;
+    for(register int i = MB4; i < MB8; i += 4096)
+        PSRAM_DATA[i] = 8;
+    for(register int i = MB1; i < MB4; i += 4096)
+        PSRAM_DATA[i] = 4;
+    for(register int i = 0; i < MB1; i += 4096)
+        PSRAM_DATA[i] = 1;
+    register uint32_t res = PSRAM_DATA[MB16 - 4096];
+    for (register int i = MB16 - MB1; i < MB16; i += 4096) {
+        if (res != PSRAM_DATA[i])
+            return 0;
+    }
+    BUTTER_PSRAM_SIZE = res;// << 20;
+    return BUTTER_PSRAM_SIZE;
+} 
+// упрощенная версия только PSRAM = 8
+/* uint32_t __not_in_flash_func(get_psram_size)() {
+             PSRAM_DATA[0] = 8;
+        if (PSRAM_DATA[0]!=8)
+            return PSRAM_DATA[0];
+
+    return PSRAM_DATA[0];
+}
+ */
+
+
 /**
  * @brief Инициализация PSRAM (APS6404) на Raspberry Pi Pico
  * @param cs_pin Номер пина Chip Select для PSRAM
@@ -3129,7 +2643,8 @@ void __no_inline_not_in_flash_func(init_psram_butter)(uint cs_pin) {
     while (qmi_hw->direct_csr & QMI_DIRECT_CSR_BUSY_BITS);
 
     // 4. Расчет временных параметров для PSRAM APS6404
-    const int max_psram_freq = 166000000; // Макс. частота PSRAM (166 МГц)
+    const int max_psram_freq = PSRAM_MAX_FREQ_MHZ * 1000000; // Макс. частота PSRAM (166 МГц)
+  //  const int max_psram_freq = 166000000; // Макс. частота PSRAM (166 МГц)
     const int clock_hz = clock_get_hz(clk_sys); // Текущая частота ядра
     
     // Расчет делителя частоты
@@ -3137,7 +2652,9 @@ void __no_inline_not_in_flash_func(init_psram_butter)(uint cs_pin) {
     if (divisor == 1 && clock_hz > 100000000) {
         divisor = 2; // Ограничение для высоких частот
     }
-    
+   
+    real_psram_freq = CPU_MHZ/divisor;
+
     // Расчет задержки чтения
     int rxdelay = divisor;
     if (clock_hz / divisor > 100000000) {
@@ -3234,60 +2751,14 @@ void __no_inline_not_in_flash_func(deinit_psram_butter)(uint cs_pin) {
    // hw_clear_bits(&xip_ctrl_hw->ctrl, XIP_CTRL_ENABLE_M1_BITS);
 }
 //------------------------------------------------------------------------
-/**
- * @brief Проверка доступности PSRAM 
- * @return Размер PSRAM в байтах (8MB для APS6404)
- */
-uint32_t get_psram_size77()  {
-    // Проверяем разрешение записи как индикатор инициализации
-    if (xip_ctrl_hw->ctrl & XIP_CTRL_WRITABLE_M1_BITS) return 0; 
-    return 8;  
-}
 
-/**
- * @brief Проверка доступности PSRAM через тест записи/чтения
- * @return Размер PSRAM в байтах (8MB для APS6404)
- */
-uint32_t get_psram_size() {
- 
-  #define TEST_ADDR_PSRAM 0x1000
-     
-    uint32_t a;
-
-    for (a =  0; a < (TEST_ADDR_PSRAM ); ++a) {
-        PSRAM_DATA[a] =  a & 0x00ff;
-    }
-
-    for (a = 0; a < (TEST_ADDR_PSRAM ); ++a) {
-        if ((a & 0x00ff) != PSRAM_DATA[a])  return 0;
-    }
-
-/*          for (a =  0; a < (TEST_ADDR_PSRAM ); ++a) {
-        PSRAM_DATA[a] =  0x00;
-    }  */
-        return 8;
-
-}
-
-
-//######################################################################################
-/**
- * @brief Проверка доступности PSRAM 
- * @return Размер PSRAM в байтах (8MB для APS6404)
- */
-uint32_t get_psram_siz5e() {
-
-  if (is_psram_enabled()) return 8;
-return 0;    
-
-}
-//######################################################################################
+//########################
 
 #endif
 //######################################################################################
 
 
-void  init_psram_board_all_version(void)
+void  fast(init_psram_board_all_version)(void)
 #ifdef NO_PSRAM   
 //-----------------NO PSRAM -------------------
   {
@@ -3315,6 +2786,7 @@ void  init_psram_board_all_version(void)
       {
        psram_avaiable =1;
        type_psram=BUTTER_PSRAM;// тип psram бутерброд или на плате murm1
+       gpio_put(LED_BOARD, 0); 
        return;
       }  
 
@@ -3324,21 +2796,28 @@ void  init_psram_board_all_version(void)
 
 
       size_psram =  init_psram_board();// если 0 то деинсталяция программы
+      gpio_put(LED_BOARD, 0); 
 //
 if (size_psram==0) 
 {
     type_psram = NOT_PSRAM;// PSRAM not found
 }
     type_psram=BOARD_PSRAM;
-
+    
 }
 #endif ////////////////////////////////////////////////////////////
 //----------------------------------------------------------------
 #ifdef PSRAM_BUTTER// если rp2350 и psram бутерброд 
 {
-           init_psram_butter(psram_pin_cs);  
-           size_psram= get_psram_size();
+       
+    init_psram_butter(psram_pin_cs);  
+    gpio_put(LED_BOARD, 0); 
 
+      
+
+          size_psram= get_psram_size();
+      
+//size_psram=0;
  if (size_psram==0) 
 {
     type_psram = NOT_PSRAM;// PSRAM not found
@@ -3373,3 +2852,624 @@ if (size_psram==0)
 }
 #endif
 //----------------- PSRAM END ---------------
+//###########################################
+//   Файловое меню
+//###########################################         
+void file_manager (void)     
+         //    if ((is_menu_mode) && (!trdos))// файловое меню
+            {
+              
+                //	tap_loader_active=false;// рудимент от аудио загрузки
+                 hardAY_on_off=0;
+                hardAY_off();// off hard AY файловое меню
+                
+               if (init_fs!=FR_OK)
+                {
+                    g_delay_ms(10);
+                    init_fs = init_filesystem();
+                    N_files = read_select_dir(cur_dir_index);
+                    if (N_files == 0)  init_fs = FR_NO_FILE;
+                }
+                //++++++++++++++++++++++++++++++++++++++++++
+              if (is_new_screen)
+               { 
+
+                     if (init_fs != FR_OK)
+                 {
+                    memset(g_gbuf, COLOR_BACKGOUND, sizeof(g_gbuf));
+                    MessageBox("SD Card not found!!!", "    Please REBOOT   ", CL_LT_YELLOW, CL_RED, 0);
+                    return; //continue;
+                 } 
+                      draw_main_window();// рисование рамок
+                      draw_file_window();// рисование каталога файлов
+
+ 
+                     if (init_fs==FR_OK)
+                    {
+                       N_files = read_select_dir(cur_dir_index);
+
+                        if (N_files == 0)
+                        {
+                            init_fs = FR_NO_FILE;// нет файлов
+                        }
+                        else
+                        {
+                            cur_file_index_old = -1;
+                        }
+                      
+                    }  
+  
+                }  
+                  //+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+                if (init_fs==FR_OK)
+                {
+                 // кнопка выхода из меню файлов по [ESC]
+                         if ( (ESC_EXIT) )// exit [ESC]
+             {
+                            im_z80_stop = false;
+                            is_menu_mode = false;
+                            is_new_screen = false;
+                            hardAY_on();//выход из меню файлов по [ESC]
+                            return; //continue;
+             }        
+
+                   if (((KEY_SPACE)|JOY_B)  && (init_fs==FR_OK)) //  нажатие пробела запуск после сброса [B] joy
+                    {        
+                       // off_any_key() ;// отжатие любой клавиши
+                     
+                        strcpy(conf.activefilename, dir_patch); // strcpy
+                        strcat(conf.activefilename, "/");
+                        strcat(conf.activefilename, files[cur_file_index]);
+
+                        afilename[0] = 0;
+                        strcat(afilename, files[cur_file_index]);
+
+                        const char *ext = get_file_extension(conf.activefilename);
+                        if (strcasecmp(ext, "trd") == 0) //   запуск после сброса
+                        {
+                            // file_select_trdos();
+                            // Копируем строку длиною не более 10 символов из массива src в массив dst1.
+                            // strncpy (dst1, src,3);
+
+                            MessageBox(" RUNING TRD FILE ", "", CL_WHITE, CL_BLUE, 4);
+
+                             file_type[0] = TRD; //trd
+                             conf.FileAutorunType = TRD; // к диску а подключен TRD образ
+                             strncpy(conf.DiskName[0], files[cur_file_index], LENF);
+                             OpenTRDFile(conf.activefilename,0);
+                             write_protected = false; // защита записи отключена для TRD
+
+                            zx_machine_reset(1);// включить загрузку файла при reset 1 раз
+
+                            is_new_screen = false;
+                            is_menu_mode = false;
+                            im_z80_stop = false;
+                            return;// continue; 
+                        }
+                        if (strcasecmp(ext, "scl") == 0) //  запуск после сброса
+                        {
+                            MessageBox(" RUNING SCL FILE ", "", CL_WHITE, CL_BLUE, 4);
+                            write_protected = true; // защита записи для SCL
+                            conf.FileAutorunType = SCL;
+                            file_type[0] = SCL;
+                            strncpy(conf.DiskName[0], files[cur_file_index], LENF); // disk A
+                            Run_file_scl(conf.activefilename, 0);
+                            zx_machine_reset(1);// включить загрузку файла при reset 1 раз
+                            im_z80_stop = false;
+                            is_menu_mode = false;
+                            is_new_screen = false;
+                            return; // continue;
+                        }
+//##########################################
+                        if (strcasecmp(ext, "fdi") == 0) //   запуск после сброса
+                        {		
+                            MessageBox(" RUNING FDI FILE ", "", CL_WHITE, CL_BLUE, 4);
+                             conf.FileAutorunType = FDI;
+                             file_type[0] = FDI; 
+                             strncpy(conf.DiskName[0], files[cur_file_index], LENF);
+                             OpenFDI_File(conf.activefilename,0);
+                          //   write_protected = true; // защита записи включена
+
+                            zx_machine_reset(1);// включить загрузку файла при reset 1 раз
+
+                            is_new_screen = false;
+                            is_menu_mode = false;
+                            im_z80_stop = false;
+                            return;// continue; 
+                        }
+//##########################################
+                            return; // continue;
+                    }// end KEY_SPACE
+
+                       if (((KEY_ENTER)|JOY_A) && (init_fs==FR_OK))// нажатие enter
+                      
+                    {
+     
+                        flag_usb_kb = false;  
+
+                        if (files[cur_file_index][LENF1])
+                        { // выбран каталог
+
+                            if (cur_file_index == 0)
+                            { // на уровень выше
+                                if (cur_dir_index)
+                                {                      
+                                    cur_dir_index--;
+                                    N_files = read_select_dir(cur_dir_index);
+                                    cur_file_index = 0;
+                                   // draw_text_len(2 + FONT_W, 2 * FONT_H , " ****     ", CL_TEST, COLOR_BORDER, 14);
+                                    return; // continue;
+                                };
+                            }
+                            if (cur_dir_index < (DIRS_DEPTH - 2))
+                            { // выбор каталога
+                                cur_dir_index++;
+                                strncpy(dirs[cur_dir_index], files[cur_file_index], LENF1);
+                                N_files = read_select_dir(cur_dir_index);
+                                cur_file_index = 0;
+                                cur_file_index_old = cur_file_index;
+                               shift_file_index=0;
+                                last_action = time_us_32();
+                                return; // continue;
+                            }
+                        }
+                        //
+                        else
+                        { // выбран файл
+
+                            strcpy(conf.activefilename, dir_patch); // strcpy
+                            strcat(conf.activefilename, "/");
+                            strcat(conf.activefilename, files[cur_file_index]);
+
+                            afilename[0] = 0;
+                            strcat(afilename, files[cur_file_index]);
+                            const char *ext = get_file_extension(conf.activefilename);
+
+                            if (strcasecmp(ext, "z80") == 0)
+                            {
+                                im_z80_stop = true;
+                                while (im_z80_stop)
+                                {
+                                    sleep_ms(10);
+                                    if (im_ready_loading)
+                                    {
+                                        // sleep_ms(10);
+                                        conf.turbo = 0;
+                                        turbo_switch();
+                                        zx_machine_reset(3);
+                                      //  AY_reset(); // сбросить AY
+
+                                        if (load_image_z80(conf.activefilename))
+                                        {
+                                            memset(temp_msg, 0, sizeof(temp_msg));
+                                            sprintf(temp_msg, " Loading file:%s", afilename);
+                                            MessageBox("Z80", temp_msg, CL_WHITE, CL_BLUE, 2);
+                                            conf.activefilename[0] = 0;
+                                            im_z80_stop = false;
+                                            im_ready_loading = false;
+                                            is_menu_mode = false;
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            MessageBox("Error loading snapshot!!!", afilename, CL_YELLOW, CL_LT_RED, 1);
+                                            last_action = time_us_32();
+                                            draw_file_window();
+                                            im_z80_stop = false;
+                                            im_ready_loading = false;
+                                            break;
+                                        }
+                                    }
+                                }
+                                return; // continue;
+                            }
+                            else if (strcasecmp(ext, "sna") == 0)
+                            {
+                                // G_PRINTF_DEBUG("current file select=%s\n",conf.activefilename);
+                                // load_image_z80(conf.activefilename);
+                                im_z80_stop = true;
+                                while (im_z80_stop)
+                                {
+                                    sleep_ms(10);
+                                    if (im_ready_loading)
+                                    {
+                                     //   if (conf.mashine!=SCORP256) zx_machine_reset(3); // убрать для работы в SCORPION
+                                        zx_machine_reset(3);
+                                      //  AY_reset(); // сбросить AY
+                                        if (load_image_sna(conf.activefilename))
+                                        {
+                                            memset(temp_msg, 0, sizeof(temp_msg));
+                                            sprintf(temp_msg, " Loading file:%s", afilename);
+                                            MessageBox("SNA", temp_msg, CL_WHITE, CL_BLUE, 2);
+                                            conf.activefilename[0] = 0;
+                                            im_z80_stop = false;
+                                            im_ready_loading = false;
+                                            is_menu_mode = false;
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            MessageBox("Error loading snapshot!!!", afilename, CL_YELLOW, CL_LT_RED, 1);
+                                            // printf("load_image_sna - ERROR\n");
+                                            last_action = time_us_32();
+                                            draw_file_window();
+                                            im_z80_stop = false;
+                                            im_ready_loading = false;
+                                            break;
+                                        }
+                                    }
+                                }
+                                return; // continue;
+                            }
+                            else if (strcasecmp(ext, "scr") == 0)
+                            {
+                                if (LoadScreenshot(conf.activefilename, true))
+                                {
+                                    is_menu_mode = false;
+                                    return; // continue;
+                                }
+                                else
+                                {
+                                    MessageBox("Error loading screen!!!", afilename, CL_YELLOW, CL_LT_RED, 1);
+                                   // break;
+                                }
+                            }
+                            else if (strcasecmp(ext, "tap") == 0)
+                            {
+                                Set_load_tape(conf.activefilename, current_lfn);
+                                strcpy(temp_msg, current_lfn);
+                                MessageBox("    TAPE    ", temp_msg, CL_WHITE, CL_BLUE, 4);
+                                //     zx_machine_reset();
+
+                                im_z80_stop = false;
+                                is_menu_mode = false;
+                                 hardAY_on();// exit tape select
+                                return; // continue;
+                            }
+                            // TRDOS обработка
+
+                            if (strcasecmp(ext, "trd") == 0)
+                            {
+                                file_select_trdos();
+                                return; // continue;
+                            }
+                            // SCL обработка
+
+                            if (strcasecmp(ext, "scl") == 0)
+                            {
+                                MessageBox("SCL files are mounted", "   only on Drive A:", CL_WHITE, CL_BLUE, 4);// 3 delay 250 4 -1000
+                                conf.FileAutorunType = SCL;
+                               file_type[0] = SCL;
+                                strncpy(conf.DiskName[0], files[cur_file_index], LENF);// disk A
+                                Run_file_scl(conf.activefilename, 0);
+
+                                draw_main_window(); // восстановление текста
+                                draw_file_window();
+                                last_action = time_us_32();
+                                is_new_screen = 1;
+                                return; // continue;
+                            }
+
+                            if (strcasecmp(ext, "fdi") == 0)
+                            {
+                                MessageBox("FDI files are mounted", "   only on Drive A:", CL_WHITE, CL_BLUE, 4);// 3 delay 250 4 -1000
+                                conf.FileAutorunType = FDI;
+                                file_type[0] = FDI;
+                                strncpy(conf.DiskName[0], files[cur_file_index], LENF);// disk A
+                                Run_file_scl(conf.activefilename, 0);
+                                OpenFDI_File(conf.activefilename,0);
+
+                                draw_main_window(); // восстановление текста
+                                draw_file_window();
+                                last_action = time_us_32();
+                                is_new_screen = 1;
+                                return; // continue;
+                            }
+
+
+                        }
+                    }
+
+
+
+                    int num_show_files = 18; // количество файлов при показе
+
+
+                    // стрелки вверх вниз
+                    if (((kb_st_ps2.u[2] & KB_U2_DOWN) | JOY_DOWN) && (cur_file_index < (N_files)))
+                    {
+                        cur_file_index++;
+                        last_action = time_us_32();
+                        
+                    }
+                   if (((kb_st_ps2.u[2] & KB_U2_UP) | JOY_UP) && (cur_file_index > 0))
+                    {
+                        cur_file_index--;
+                        last_action = time_us_32();
+                       
+                    }
+                    // начало и конец списка
+                    if ((kb_st_ps2.u[2] & KB_U2_LEFT))
+                    {
+                        cur_file_index = 0;
+                        shift_file_index = 0;
+                        last_action = time_us_32();
+                       
+                    }
+                    if ((kb_st_ps2.u[2] & KB_U2_RIGHT))
+                    {
+                        cur_file_index = N_files;
+                        shift_file_index = (N_files >= num_show_files) ? N_files - num_show_files : 0;
+                        last_action = time_us_32();
+                        
+                    }
+
+                    // PAGE_UP PAGE_DOWN
+                    if (((kb_st_ps2.u[2] & KB_U2_PAGE_DOWN) | JOY_RIGHT) && (cur_file_index < (N_files)))
+                    {
+                        cur_file_index += num_show_files;
+                        last_action = time_us_32();
+                        
+                    }
+                    if (((kb_st_ps2.u[2] & KB_U2_PAGE_UP) | JOY_LEFT) && (cur_file_index > 0))
+                    {
+                        cur_file_index -= num_show_files;
+                        last_action = time_us_32();
+                        
+                    }
+                    // Возврат на уровень выше по BACKSPACE
+                    if ((kb_st_ps2.u[1] & KB_U1_BACK_SPACE) | (data_joy == 0x40)) 
+                    {
+                        if (cur_dir_index == 0)
+                        {
+                            if (cur_file_index == 0)
+                                cur_file_index = 1; // не можем выбрать каталог вверх
+                            if (shift_file_index == 0)
+                                shift_file_index = 1; // не отображаем каталог вверх
+                            read_select_dir(cur_dir_index);
+                        }
+                        else
+                        {
+                            cur_dir_index--;
+                            N_files = read_select_dir(cur_dir_index);
+                            cur_file_index = 0;
+                            draw_text_len(2 + FONT_W, FONT_H - 1, "                    ", COLOR_BACKGOUND, COLOR_BORDER, 20);
+                            cur_file_index = 0;
+                            shift_file_index = 0;
+                          //  continue;
+                        }
+                    }
+                    if (cur_file_index < 0)
+                        cur_file_index = 0;
+                    if (cur_file_index >= N_files)
+                        cur_file_index = N_files;
+
+                    if (data_joy > 0)
+                    {
+                        old_data_joy = 0;
+                    };
+
+                    for (int i = num_show_files; i--;)
+                    {
+                        if ((cur_file_index - shift_file_index) >= (num_show_files))
+                            shift_file_index++;
+                        if ((cur_file_index - shift_file_index) < 0)
+                            shift_file_index--;
+                    }
+
+                    // ограничения корневого каталога
+                    if (cur_dir_index == 0)
+                    {
+                        if (cur_file_index == 0)
+                            cur_file_index = 1; // не можем выбрать каталог вверх
+                        if (shift_file_index == 0)
+                            shift_file_index = 1; // не отображаем каталог вверх
+                    }
+
+                    // прорисовка
+                    // заголовок окна - текущий каталог
+
+                    if (strlen(dir_patch) > 0)
+                    {
+                        draw_text_len(FONT_W + 3, FONT_H - 1, dir_patch + 1, COLOR_UP, COLOR_BORDER, 51);// путь папки в шапке
+                    }
+                    else
+                    {
+                        draw_text_len(FONT_W + 3, FONT_H - 1, "                                                  ", CL_TEST, COLOR_BORDER, 51);
+                    }
+
+                    for (int i = 0; i < num_show_files; i++)
+                    {
+                        uint8_t color_text = CL_GREEN;
+                        uint8_t color_text_d = CL_YELLOW; // если директория
+                        uint8_t color_bg = COLOR_BACKGOUND;
+
+                        if (i == (cur_file_index - shift_file_index))
+                        {
+                            color_text = CL_BLACK;
+                            color_bg = COLOR_SELECT;
+                            color_text_d = CL_BLACK;
+                        }
+                        // если файлов меньше, чем отведено экрана - заполняем пустыми строками
+                        if ((i > N_files) || ((cur_dir_index == 0) && (i > (N_files - 1))))
+                        {
+                            draw_text_file(4+ FONT_W, 2 * FONT_H + i * FONT_H, " ", color_text, color_bg, NUMBER_CHAR);
+                            continue;
+                        }
+
+                        if (files[i + shift_file_index][LENF1])
+                        {
+
+                            draw_text_file(4 + FONT_W, 2 * FONT_H + i * FONT_H, files[i + shift_file_index], color_text_d, color_bg, NUMBER_CHAR); 
+                        }
+                        else
+                        {
+
+                            draw_text_file(4 + FONT_W, 2 * FONT_H + i * FONT_H, files[i + shift_file_index], color_text, color_bg, NUMBER_CHAR); 
+                        }
+                    }
+                     // имя длинное должно быть
+                   strcpy(current_lfn, get_current_altname(dir_patch, files[cur_file_index]));
+
+                    // draw_rect(10+FONT_W*13,17,3,5,0xf,true);
+                    int file_inx = cur_file_index - 1;
+                    if (file_inx == -1)
+                        file_inx = 0;
+                    if (file_inx == N_files)
+                        file_inx += 1;
+       
+               //     int shft = 156 * (file_inx) / (N_files <= 1 ? 1 : N_files - 1);
+
+                    if (strcasecmp(files[cur_file_index], "..") == 0)
+                    {
+                        cur_file_index_old = cur_file_index;
+                    
+                    }
+
+
+                 if (cur_file_index)  
+                 {
+//======================================================================================================================
+               strncpy(temp_msg, get_lfn_from_dir(dir_patch, files[cur_file_index]),72); // имя длинное должно быть
+				draw_text_len(12+FONT_W*14,18, temp_msg,CL_INK,COLOR_BACKGOUND,35); // длинное имя должно быть показывается вверху
+                for (size_t i = 0; i < 36; i++)
+                {
+                   temp_msg[i] = temp_msg[i+35];
+                }
+                draw_text_len(12+FONT_W*14,28, temp_msg,CL_INK,COLOR_BACKGOUND,35); // длинное имя длжно быть показывается вверху
+ //=====================================================================================================================
+                 }
+                   else
+                   {
+                    draw_rect(FONT_W*16,18,FONT_W*36,20,COLOR_BACKGOUND,true) ;
+                   }
+
+                    if ((cur_file_index > 0) && (cur_file_index_old == -1))
+                    {
+                        last_action = time_us_32();  
+                    }
+                }
+                //++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                file_info ();
+            }
+//################################################################################
+// информация о файлах
+      // if ((is_menu_mode) && (init_fs==FR_OK))
+void file_info (void)       
+      
+      {
+
+       //     if ((last_action > 0) && (time_us_32() - last_action) > SHOW_SCREEN_DELAY * 1000)
+            {
+                 last_action = 0;
+            //    CLEAR_INFO; // Фон отображения информации о файле
+                 const char* ext = get_file_extension(files[cur_file_index]);
+                //-----------------------------------------------
+                // TRD INFO
+                if (strcasecmp(ext, "trd") == 0)
+                {
+                    strncpy(temp_msg, current_lfn, 22);
+                    strcpy(conf.activefilename, dir_patch);
+                    strcat(conf.activefilename, "/");
+                    strcat(conf.activefilename,files[cur_file_index]);
+                    cur_file_index_old = cur_file_index;
+
+                    if (!ReadCatalog(conf.activefilename, current_lfn, false))
+                    {
+
+                        //    
+                    }
+
+                     return; 
+                }
+                //-----------------------------------------------
+                // FDI INFO
+                if (strcasecmp(ext, "fdi") == 0)
+                {
+                    strncpy(temp_msg, current_lfn, 22);
+                    strcpy(conf.activefilename, dir_patch);
+                    strcat(conf.activefilename, "/");
+                    strcat(conf.activefilename,files[cur_file_index]);
+                    cur_file_index_old = cur_file_index;
+
+                    if (!Read_Info_FDI(conf.activefilename, current_lfn, false))
+                    {
+
+                        //    
+                    }
+
+                     return; 
+                }
+                //-----------------------------------------------               
+                // SCL INFO
+                if (strcasecmp(ext, "scl") == 0)
+                {
+					strncpy(temp_msg,current_lfn,22);
+					strcpy(conf.activefilename,dir_patch);
+					strcat(conf.activefilename,"/");
+					strcat(conf.activefilename,files[cur_file_index]);
+					cur_file_index_old=cur_file_index;		
+			    	if(!ReadCatalog_scl(conf.activefilename,current_lfn,false))
+                    {
+				    } 
+                 return; 
+                 }
+                 //-----------------------------------------------------
+				if(strcasecmp(ext, "z80")==0) {
+					strcpy(conf.activefilename,dir_patch);
+					strcat(conf.activefilename,"/");
+					strcat(conf.activefilename,files[cur_file_index]);
+					cur_file_index_old=cur_file_index;					
+					if(!LoadScreenFromZ80Snapshot(conf.activefilename)){
+						CLEAR_INFO;
+					}
+					return; 
+				} else
+				if(strcasecmp(ext, "scr") == 0) {
+					strcpy(conf.activefilename,dir_patch);
+					strcat(conf.activefilename,"/");
+					strcat(conf.activefilename,files[cur_file_index]);
+				//	printf("LoadScreenshot: %s\n",conf.activefilename);
+					CLEAR_INFO;
+					cur_file_index_old=cur_file_index;
+					if(!LoadScreenshot(conf.activefilename,false)){
+						CLEAR_INFO;
+
+					} 
+					return; 
+				} else
+				if(strcasecmp(ext, "tap") == 0) {
+					strcpy(conf.activefilename,dir_patch);
+					strcat(conf.activefilename,"/");
+					strcat(conf.activefilename,files[cur_file_index]);
+					CLEAR_INFO;
+					cur_file_index_old=cur_file_index;
+					if(!LoadScreenFromTap(conf.activefilename))
+						CLEAR_INFO;;
+					return; 
+				} 
+				if(strcasecmp(ext, "sna") == 0) {
+					strcpy(conf.activefilename,dir_patch);
+					strcat(conf.activefilename,"/");
+					strcat(conf.activefilename,files[cur_file_index]);
+					CLEAR_INFO;;
+					cur_file_index_old=cur_file_index;
+					if(!LoadScreenFromSNASnapshot(conf.activefilename)){
+						CLEAR_INFO;;
+					}
+					return; 
+				} 
+				else {
+					if (cur_file_index_old==-1) CLEAR_INFO;//Фон отображения скринов и информации очистка	
+					 else CLEAR_INFO;
+					cur_file_index_old=cur_file_index;    
+				}
+			}
+
+
+		}
+
+
+
+//################################################################################

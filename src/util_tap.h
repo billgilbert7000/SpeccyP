@@ -10,10 +10,29 @@
 //******************************* */
 #include "pico/stdlib.h"
 
+
+//????????????????????????????????????????????
+#define TEMP_BUFF_SIZE_X 0x0400
+#define TEMP_BUFF_SIZE_Y 0x0A00
+
+//uint8_t temp_buffer_x[TEMP_BUFF_SIZE_X];
+//uint8_t temp_buffer_y[TEMP_BUFF_SIZE_Y];
+//?????????????????????????????????????????????
+
+#define TAPE_OFF			(0x00)
+#define TAPE_INTERNAL_MANU	(0x02) //(1<<1)
+#define TAPE_INTERNAL_AUTO	(0x04) //(1<<2)
+#define TAPE_INTERNAL_ROM	(0x08) //(1<<3)
+#define TAPE_ROM_READY		(0x10) //(1<<4)
+#define TAPE_EXTERNAL		(0x20) //(1<<5)
+
+
+
 // Tape status definitions
-#define TAPE_STOPPED 0
-#define TAPE_LOADING 1
-#define TAPE_PAUSED 2
+#define TAPE_STOPPED	(0)
+#define TAPE_LOADING	(1)
+#define TAPE_PAUSED		(2)
+#define TAPE_LOADED		(3)
 
 // Saving status
 #define SAVE_STOPPED 0
@@ -71,8 +90,8 @@ uint8_t RomLoading; */
 
 uint8_t __not_in_flash_func(TAP_Read)();
 void __not_in_flash_func(TAP_Play)();
-//uint8_t TAP_Read();
-//void TAP_Play();
+
+
 void Init();
 bool TAP_Load(char *file_name);
 void TAP_Rewind();

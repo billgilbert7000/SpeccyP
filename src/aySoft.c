@@ -8,7 +8,9 @@
 #include "hardware/pio.h"
 #include <string.h>
 #include "aySoft.h"
+#ifndef GENERAL_SOUND
 #include "audio_i2s.h"
+#endif
 
 void (*AY_out_FFFD)(uint8_t);// определение указателя на функцию
 void (*AY_out_BFFD)(uint8_t);  // определение указателя на функцию
@@ -22,31 +24,29 @@ uint8_t hardAY_on_off;
 #ifdef  GENERAL_SOUND     
 
 #include "picobus/picobus.h"
+#include "gs_picobus.h"
 
 uint16_t beepPWM;
 
+/* регулировка громкости*/
 void init_vol_ay(void)
 {
-    PBUS_CS_0;
-/* регулировка громкости*/
+ while (picobus_busy) { busy_wait_us(100);} // ожидание свободной шины picobus
+ PBUS_CS_0;
  if (conf.vol_i2s>100) conf.vol_i2s=100;//!!!!!   
  const   uint8_t init_msg[] = { SERVICE_COMMAND, TS_VOLUME , conf.vol_i2s}; 
   send_buffer(init_msg, sizeof(init_msg));
-  
-  PBUS_CS_1;
-
-  busy_wait_us(100);// задержка для стабильности
+ PBUS_CS_1;
 }
-
+/* регулировка усилителя*/
 void set_audio_buster(void)
 {
-    PBUS_CS_0;
-/* регулировка усилителя*/
+  while (picobus_busy) { busy_wait_us(100);} // ожидание свободной шины picobus  
+  PBUS_CS_0;
   const  uint8_t init_msg[] = { SERVICE_COMMAND, TS_BUSTER , conf.audio_buster}; 
   send_buffer(init_msg, sizeof(init_msg));
-  
   PBUS_CS_1;
-  busy_wait_us(10);// задержка для стабильности
+//  busy_wait_us(10);// задержка для стабильности
 
 }
 
@@ -62,11 +62,10 @@ void __not_in_flash_func(gsp_beep_out)(bool val)
     gpio_put(BEEP_PIN,val);
 }
 
-// установи для работы звука GS
+// установки для работы звука GS
  void select_audio(void)
      {
         conf.type_sound=I2S_AY;
-
 
         hw_beep_out = gsp_beep_out;
 
@@ -76,8 +75,8 @@ void __not_in_flash_func(gsp_beep_out)(bool val)
 //--------------------------------------------------------------
      void AY_reset()
      {
-        PBUS_CS_0;
-         /*Заглушка при GS*/
+    while (picobus_busy) { busy_wait_us(10);} // ожидание свободной шины picobus      
+    PBUS_CS_0;
     const uint8_t init_msg[] = { SERVICE_COMMAND, TS_RESET };  
     send_buffer(init_msg, sizeof(init_msg));
     PBUS_CS_1;
@@ -107,24 +106,25 @@ void AY_select_reg(uint8_t N_reg)
 {    /*Заглушка при GS*/
      } 
 
-// выключение звука железных AY
-    void hardAY_off()
-{    /*Заглушка при GS*/
+// выключение звука 
+    void hardAY_off()    
+{    
+    while (picobus_busy) { busy_wait_us(10);} // ожидание свободной шины picobus  
     PBUS_CS_0;
-    const uint8_t init_msg[] = { SERVICE_COMMAND, TS_VOLUME , 0x00}; 
+    const uint8_t init_msg[] = { SERVICE_COMMAND, MUTE_GLOBAL , 0x01}; 
     send_buffer(init_msg, sizeof(init_msg));
     PBUS_CS_1;
-
      } 
 
 // включение звука железных AY
     void hardAY_on()
-{    /*Заглушка при GS*/
+{  
+    while (picobus_busy) { busy_wait_us(100);} // ожидание свободной шины picobus  
     PBUS_CS_0;
-    const uint8_t init_msg[] = { SERVICE_COMMAND, TS_VOLUME , conf.vol_i2s };  
+    const uint8_t init_msg[] = { SERVICE_COMMAND, MUTE_GLOBAL , 0x00}; 
     send_buffer(init_msg, sizeof(init_msg));
     PBUS_CS_1;
-     } 
+} 
 
 
 #endif
@@ -885,7 +885,7 @@ static void PWM_init_pin(uint pinN)
 // выключение звука железных AY
     void hardAY_off()
     { 
-        if (hardAY_on_off==1) return; // два раза регистры AY не стоит писать
+     //   if (hardAY_on_off==1) return; // два раза регистры AY не стоит писать
         hardAY_on_off=1;
 
         // type_sound = conf.type_sound; 
@@ -899,7 +899,7 @@ static void PWM_init_pin(uint pinN)
          case HARD_AY:
          case HARD_TS:
           // отключение AY частотой самый простой способ если CLOCK AY с Pico
-          // pwm_set_gpio_level(CLK_AY_PIN, 0); 
+          pwm_set_gpio_level(CLK_AY_PIN, 0); 
           // остальное извращение из-за внешнего генератора CLOCK AY (
 
          // отключение AY смесителем регистр R7
@@ -921,7 +921,25 @@ static void PWM_init_pin(uint pinN)
          send595_0(AY0_FIX, 10);// регистр 
         send595_0(AY0_WRITE, 0x00); // запись в регистр
         send595_1(AY1_FIX, 10); // регистр 
-        send595_1(AY1_WRITE, 0x00); // запись в регистр     
+        send595_1(AY1_WRITE, 0x00); // запись в регистр  
+
+        // огибающая 11 12 13
+        send595_0(AY0_FIX, 11);// регистр 
+        send595_0(AY0_WRITE, 0x00); // запись в регистр
+        send595_1(AY1_FIX, 11); // регистр 
+        send595_1(AY1_WRITE, 0x00); // запись в регистр  
+
+        send595_0(AY0_FIX, 12);// регистр 
+        send595_0(AY0_WRITE, 0x00); // запись в регистр
+        send595_1(AY1_FIX, 12); // регистр 
+        send595_1(AY1_WRITE, 0x00); // запись в регистр  
+
+        send595_0(AY0_FIX, 13);// регистр 
+        send595_0(AY0_WRITE, 15); // запись в регистр
+        send595_1(AY1_FIX, 13); // регистр 
+        send595_1(AY1_WRITE, 15); // запись в регистр  
+
+
         beep595 = 0;
         send595(AY_Z , 0x00); // неактивны AY
         break;
@@ -945,10 +963,10 @@ static void PWM_init_pin(uint pinN)
         case HARD_AY:
         case HARD_TS:
          // включение AY частотой самый простой способ если CLOCK AY с Pico
-         // pwm_set_gpio_level(CLK_AY_PIN, 2); // включение AY частоты
+          pwm_set_gpio_level(CLK_AY_PIN, 2); // включение AY частоты
          // остальное извращение из-за внешнего генератора CLOCK AY (
 
-         if (hardAY_on_off==0) return;// два раза регистры AY не стоит писать
+    //     if (hardAY_on_off==0) return;// два раза регистры AY не стоит писать
           hardAY_on_off=0;
          // R8  - управление амплитудой канала A
         send595_0(AY0_FIX, 8);// регистр 
@@ -1482,6 +1500,7 @@ void select_audio(void)
         hw_beep_out = hw_out595_beep_out;
         ay595 = 0;
         beep595 = 0;
+      //  pwm_set_gpio_level(CLK_AY_PIN, 2); 
         send595(AY_RES, 0x00);
         send595(AY_Z, 0x00);
         break;
@@ -1495,7 +1514,7 @@ void select_audio(void)
         hw_beep_out = hw_out595_beep_out;
         ay595 = 0;
         beep595 = 0;
-        pwm_set_gpio_level(CLK_AY_PIN, 2); 
+      //  pwm_set_gpio_level(CLK_AY_PIN, 2); 
         send595(AY_RES, 0x00);
         send595(AY_Z, 0x00);
           break;

@@ -59,12 +59,6 @@ const struct pio_program pio_program1 = {
     #endif
 };
 
-
-
-
-
-
-
 //static
 void zx_kb_decode(uint8_t* zx_kb_state)
 {
@@ -86,9 +80,7 @@ void zx_kb_decode(uint8_t* zx_kb_state)
 		}
 		tmp_zx_kb_state8[i]=(~out8);
 	}
-	//для быстрого копирования всего буфера
-	
-	
+	//для быстрого копирования всего буфера	
 	uint64_t* dst_zx_kb_state64=(uint64_t*)zx_kb_state;
 	uint64_t* src_zx_kb_state64=tmp_zx_kb_state64;
 	for(int i=32;i--;)

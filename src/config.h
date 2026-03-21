@@ -63,7 +63,12 @@ extern uint32_t dtcpu;
 #define Z80_7000 CPU_KHZ/7000
 #define Z80_14000 CPU_KHZ/14000
 
-#define VOLTAGE VREG_VOLTAGE_1_30 //VREG_VOLTAGE_1_20 //	vreg_set_voltage(VOLTAGE); // main.h
+//#define VOLTAGE VREG_VOLTAGE_1_30 //VREG_VOLTAGE_1_20 //	vreg_set_voltage(VOLTAGE); // main.h
+#ifdef PICO_RP2350 
+#define VOLTAGE VREG_VOLTAGE_1_50
+#else
+#define VOLTAGE VREG_VOLTAGE_1_30
+#endif
 //=======================================================================================================
 
 // 126MHz SPI
@@ -243,6 +248,10 @@ color:
 #define TRD 0
 #define SCL 1
 #define TRDS 3 // укороченый TRD
+#define FDI 4
+
+extern uint8_t sectors_per_track;
+
 // дефайны меню настроек
 #define M_RAM 0
 #define M_SOUND 1
@@ -283,7 +292,8 @@ extern uint8_t old_data_joy;
 extern bool trdos;
 extern uint32_t sclDataOffset;
 //unsigned char* track0;
-extern char track0 [0x0900];
+extern uint8_t track0 [0x0900];
+//#define track0 sd_buffer
 extern bool write_protected;
 extern uint8_t DriveNum;
 extern uint8_t sound_track;
@@ -323,7 +333,16 @@ extern uint8_t type_psram;
 extern char temp_msg[80]; // Буфер для вывода строк
 //Quorum
 extern bool main_nmi_key ;
+//
+extern bool im_z80_stop;
+//
+#ifdef GENERAL_SOUND
+extern bool picobus_busy;
+#endif
 //=====================================================
+#define TFT_9345   0
+#define TFT_9345I  2
+#define TFT_7789   1
 
 //char Disks[4][160] = {"", "", "", ""};
 //char Disks[4][DIRS_DEPTH*(LENF+16)];//160 // 5*16
@@ -377,7 +396,7 @@ extern struct data_config
    uint32_t shift_img;
 
    uint8_t pallete; //номер палитры
-   bool sclConverted;
+   uint8_t FileAutorunType;
    char DiskName[4][LENF+1];
    char Disks[4][DIRS_DEPTH*(LENF+16)];//110 // 5*22
    char activefilename[DIRS_DEPTH*(LENF+16)]; // 400 // 5*22
@@ -427,6 +446,7 @@ extern bool psram_avaiable;
 #define PSRAM_BASE 0x11000000 // Базовый адрес PSRAM в адресном пространстве
 
 //----------------------------------------------------
+extern uint8_t  dt_cpu;
 ///////////////// nmi
 extern uint8_t z80_pc;
 
@@ -442,6 +462,8 @@ extern uint8_t beep_data;
 #define VIDEO_HDMI 2
 #define VIDEO_TFT  3
 
+
+
  uint8_t video_autodetect(void);
 
 
@@ -452,9 +474,16 @@ extern uint8_t tx_buffer[64];// буфер picobus
 
 extern bool flag_gs;
 #define SERVICE_COMMAND 0x00 // служебная команда 
-#define TS_VOLUME       0x02 // второй байт команды третий  значение
+
+#define GS_INFO         0x00 // информация о GS
+#define GS_RESET        0x01 // Сброс pico GS
+#define TS_VOLUME       0x02 // второй байт команды третий значение
 #define TS_RESET        0x03 // второй байт команды
 #define TS_BUSTER       0x04 // второй байт команды третий  значение 
+#define MUTE_GLOBAL     0x05 // Полное отключение звука
+
+
+
 #define PICOBUS_CONNECT    0x77    // команда инициализации
 // дефайны эмуляции портов GS 
 #define GS_READ_IN_B3      0x01     // in(0xB3)
@@ -479,6 +508,11 @@ extern bool flag_gs;
 #define RTC_READ_IN_DFBA   0x0D
 #define RTC_WRITE_OUT_FFBA 0x0E
 #define RTC_WRITE_OUT_DFBA 0x0F
+// дефайны эмуляции портов MIDI
+#define MIDI_IN            0x10
+#define MIDI_OUT           0x11
+
+
 
 extern uint8_t command_gs;    // Порт 1
 extern uint8_t data_zx;
@@ -487,14 +521,11 @@ extern uint8_t status_gs;     // Порт 4: D0 - флаг команд, D7 - ф
 
 extern uint8_t z_controler_cs;
 
-// макросы для CS PICOBUS
-// Активация CS 
-#define PBUS_CS_0  sio_hw->gpio_clr = 1u<<PBUS_CS
-// Деактивация CS
-#define PBUS_CS_1  sio_hw->gpio_set = 1u<<PBUS_CS
 
-#endif
 
 #ifdef LEDBLINK
 void led_blink(void);
+     #endif
+
+
      #endif

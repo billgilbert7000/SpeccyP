@@ -1,2 +1,2 @@
 bool save_config(void);
- void software_reset(void);
+ void pico_reset(void);

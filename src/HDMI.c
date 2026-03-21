@@ -130,25 +130,22 @@ typedef struct G_BUFFER{
 //данные модуля 
 
 //640x480x75
- static V_MODE v_mode_75=
+ static V_MODE v_mode75=
  {
-     .VS_begin=482,
-     .VS_end=484,
-     .V_total_lines=500,
-     .V_visible_lines=480,
-    
-     .HS_len=64/2,
-     .H_len=840/2,
-     .H_visible_begin=184/2,
-     .H_visible_len=640/2,
+	.VS_begin			=	482,
+	.VS_end				=	484,
+	.V_total_lines		=	500,
+	.V_visible_lines	=	480,
 
+	.HS_len				=	64/2,
+	.H_len				=	840/2,
+	.H_visible_begin	=	184/2,
+	.H_visible_len		=	640/2,
 
-     .VS_TMPL=242,   //шаблоны синхронизации заложены в таблицу палитры после 240 индекса
-     .VHS_TMPL=243,
-     .HS_TMPL=241,
-     .NO_SYNC_TMPL=240
-
-
+	.VS_TMPL			=	242,   //шаблоны синхронизации заложены в таблицу палитры после 240 индекса
+	.VHS_TMPL			=	243,
+	.HS_TMPL			=	241,
+	.NO_SYNC_TMPL		=	240,
 
  };
  //640x480x60
@@ -695,16 +692,13 @@ void graphics_init(g_out g_out)
         case g_out_HDMI:
             //настройка рабочей SM HDMI
             sm_config_set_wrap(&c_c, offs_prg0 , offs_prg0 + (program_PIO_HDMI.length-1));
-         
-
 
             //пины - диффпары  HDMI 
 
             for(int i=0;i<8;i++)
-                {
-   
+                {   
                     pio_gpio_init(PIO_VIDEO, beginVideo_PIN+i);
-                       gpio_set_drive_strength(beginVideo_PIN+i,GPIO_DRIVE_STRENGTH_12MA);
+                       gpio_set_drive_strength(beginVideo_PIN+i,GPIO_DRIVE_STRENGTH_4MA);
                     gpio_set_slew_rate(beginVideo_PIN+i,GPIO_SLEW_RATE_FAST);
                 }
                 
@@ -720,8 +714,6 @@ void graphics_init(g_out g_out)
             pio_sm_set_pins_with_mask(PIO_VIDEO, SM_video, 3u<<beginHDMI_PIN_clk, 3u<<beginHDMI_PIN_clk);
             pio_sm_set_pindirs_with_mask(PIO_VIDEO, SM_video,  3u<<beginHDMI_PIN_clk,  3u<<beginHDMI_PIN_clk); 
             */
-           
-
 
             //настройка side set(пины CLK дифф пары HDMI)
             sm_config_set_sideset_pins(&c_c,beginHDMI_PIN_clk);
@@ -748,7 +740,7 @@ void graphics_init(g_out g_out)
 
                  fdiv=conf.hdmi_fdiv;   // 1.0-> 90Hz  (cpu=378MHz)  1.5->60Hz (cpu=378MHz)
 
-    //  fdiv=1.0;
+   //   fdiv=1.0;
             uint32_t div32=(uint32_t) (fdiv * (1 << 16)+0.0);
             PIO_VIDEO->sm[SM_video].clkdiv=div32&0xffff8000; //делитель для конкретной sm , накладываем маску , чтобы делитель был с шагом в 0.5
 
@@ -764,7 +756,7 @@ void graphics_init(g_out g_out)
                  //   gpio_set_slew_rate(beginVideo_PIN+i,GPIO_SLEW_RATE_FAST);
                     gpio_set_slew_rate(beginVideo_PIN + i, GPIO_SLEW_RATE_SLOW); // Замедление фронтов (если поддерживается)
                     //Каждый GPIO RP2040 может выдавать до 12 mA, но суммарный ток всех пинов не должен превышать 50 mA
-                         gpio_set_drive_strength(beginVideo_PIN+i,GPIO_DRIVE_STRENGTH_8MA);// сбрасывается на murm2 если rp2040 GPIO_DRIVE_STRENGTH_12MA
+                         gpio_set_drive_strength(beginVideo_PIN+i,GPIO_DRIVE_STRENGTH_4MA);// сбрасывается на murm2 если rp2040 GPIO_DRIVE_STRENGTH_12MA
                 }
             pio_sm_set_consecutive_pindirs(PIO_VIDEO, SM_video, beginVideo_PIN, 8, true);//конфигурация пинов на выход            
             sm_config_set_out_pins(&c_c, beginVideo_PIN, 8);
@@ -916,7 +908,7 @@ void graphics_init(g_out g_out)
        
         dma_start_channel_mask((1u << dma_chan_ctrl)) ;
 
-        int hz=50000;
+        int hz=50000;///50000
     	if (!add_repeating_timer_us(1000000 / hz, hdmi_timer_callback, NULL, &hdmi_timer)) {
 	    	return ;
     	}
@@ -954,7 +946,8 @@ void set_palette(uint8_t n) // переключение палитр
             int G = (i >> 2) & 1;
             int R = (i >> 1) & 1;
             int B = (i >> 0) & 1;
-            uint32_t RGB = ((R ? I ? 255 : 170 : 0) << 16) | ((G ? I ? 255 : 170 : 0) << 8) | ((B ? I ? 255 : 170 : 0) << 0);
+           uint32_t RGB = ((R ? I ? 255 : 170 : 0) << 16) | ((G ? I ? 255 : 170 : 0) << 8) | ((B ? I ? 255 : 170 : 0) << 0);
+           // uint32_t RGB = ((R ? I ? 255 : 128: 0) << 16) | ((G ? I ? 255 : 128 : 0) << 8) | ((B ? I ? 255 : 128 : 0) << 0);
             graphics_set_palette(i, RGB);
         }
         return ;

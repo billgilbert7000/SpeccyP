@@ -190,18 +190,8 @@ bool decode_key(bool menu_mode)
     // Обработка событий только если есть активность клавиатуры
     if(!flag_usb_kb) return false;
     // Режим меню - проверяем специфические клавиши
-/*     const bool direction_key = kb_st_ps2.u[3] & (KB_U3_F7 | KB_U3_F8);
-    if(direction_key) 
-    {
-        sleep_ms(DELAY_KEY); // Задержка для антидребезга
-        return true;        // Событие направления обработано
-    }
- */
-
     if(menu_mode)
     {
-
-
         // Проверяем биты направления (UP/DOWN)
          bool direction_key = kb_st_ps2.u[2] & (KB_U2_DOWN | KB_U2_UP | KB_U2_INSERT  );
         
@@ -220,9 +210,6 @@ bool decode_key(bool menu_mode)
           return true;        // Событие  обработано
         }
 
-
-
-
     } 
       bool direction_key = kb_st_ps2.u[3] & ( KB_U3_F7| KB_U3_F8 );
         if( direction_key) 
@@ -237,96 +224,24 @@ bool decode_key(bool menu_mode)
     return true;
 }
 
-/* 
-
-
-
-bool decode_key (bool menu_mode)
-{
-  tuh_task(); // tinyusb host task
-
-if (menu_mode) // если это меню
-{
-if (flag_usb_kb) 
-{
- //flag_usb_kb=false;
-if ((kb_st_ps2.u[2] & KB_U2_DOWN) | (kb_st_ps2.u[2] & KB_U2_UP)) 
-{
-  sleep_ms(DELAY_KEY);
-flag_usb_kb = true;
-}
-
-   else flag_usb_kb = false;   // клавиша клавиатуры usb была нажата / есть событие usb клавиатуры
-
-return true;
-}
-//flag_usb_kb=false;
-return false; 
-}
-
-else // если это не меню
-{
-if (flag_usb_kb) 
-{
-  flag_usb_kb=false;
-return true;
-}
-return false;  
-} */
-/* 
-if (flag_usb_kb)
-{
-  //keyboard();
-  if (menu_mode)
-  {
-    flag_usb_kb = true;
-    sleep_ms(DELAY_KEY);
-  }
-  else
-    flag_usb_kb = false;
-  return true;
-}
-
-return false;
-}
- */
-//================================================
-
 //==============================================================
 bool decode_key_joy()
 {
   
-//tuh_task(); /* tinyusb host task*/
-/*  if (decode_joy_to_keyboard())
- {
-
- // sleep_ms(DELAY_KEY);
- // return true;
- }
- */
  decode_joy_to_keyboard();
  if ((decode_PS2()) | (decode_key(true))) return true;
     return true;
-
-  //return false;
 }
 //==============================================================
-/******************************************************************************************/
-void task_usb(void)
-{
-tuh_task(); // tinyusb host task
-}
-//-------------------------------------------
 uint8_t keyboard_addr = 0;
 uint8_t keyboard_instance = 0;
-//bool keyboard_mounted = false;
 bool auto_toggle_start = false;
  uint32_t successful_led_toggles = 0;
  uint8_t leds = 7;
  bool is_on = false;
  bool set_report_failed = false;
  //----------------------------------------------------------
-void scancode_usb_s(uint8_t code){
+void __not_in_flash_func(scancode_usb_s)(uint8_t code){
 
   if (code & 0x02) kb_st_ps2.u[1]|=KB_U1_L_SHIFT;// left shift  
  //  if (code & 0x02) kb_st_ps2.u[1]|=KB_U1_R_SHIFT;// left shift  переназначение на правый
@@ -343,7 +258,7 @@ void scancode_usb_s(uint8_t code){
    if (code & 0x80) kb_st_ps2.u[1]|=KB_U1_L_WIN;; // win r
    }
 //----------------------------------------------------------
- void scancode_usb(uint8_t code){
+ void __not_in_flash_func(scancode_usb)(uint8_t code){
    
    switch (code)
    {
@@ -463,36 +378,7 @@ void scancode_usb_s(uint8_t code){
    }
  }
 //----------------------------------------------------------------------------
-void keyboard (void)
-{
-    return;
-        /* kb_st_ps2.u[0] = 0;
-    kb_st_ps2.u[1] = 0;
-    kb_st_ps2.u[2] = 0;
-    kb_st_ps2.u[3] = 0;
-
-
-    scancode_usb_s(key_report[0]); // Ctrl, Shift, Alt, Win   
-
-    scancode_usb(key_report[2]);
-    
-    scancode_usb(key_report[3]);
-   
-    scancode_usb(key_report[4]);
-    
-    scancode_usb(key_report[5]);
-
-    scancode_usb(key_report[6]);
- 
-    scancode_usb(key_report[7]);
-    
-
-    */
-
-   
-}
-//--------------------------------------------------------------------
-void keyboard_report (uint8_t const *report, uint16_t len)
+void __not_in_flash_func(keyboard_report) (uint8_t const *report, uint16_t len)
 {
 
  if (report[0]&&report[2]&&report[3]&&report[4]&&report[5]&&report[6]&&report[7]==0) 
@@ -567,11 +453,7 @@ tuh_vid_pid_get(daddr, &vid, &pid);
 // Вызывается, когда устройство с интерфейсом hid отключено
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 {
- // led_blink(1);
- // LED_OFF();
- // keyboard_mounted = false;
-  usb_device = 0;
-   
+  usb_device = 0;   
   print_lsusb(); // print device summary
 }
 
@@ -646,7 +528,7 @@ tuh_vid_pid_get(dev_addr, &vid, &pid);
 }
 //-----------------------------------------------------------------
 /* Отправка отчета мыши через USB CDC */
-static void mouse_report(uint8_t const *report, uint16_t len) {
+static void __not_in_flash_func(mouse_report)(uint8_t const *report, uint16_t len) {
   static uint8_t mouse_buttons = 0xFF;   /* Все кнопки отпущены (активный низкий уровень) */
   static int16_t mouse_x = 0;            /* Накопление координаты X */
   static int16_t mouse_y = 0;            /* Накопление координаты Y */
@@ -923,8 +805,7 @@ if (report[2] !=0x0f)
 
  //----------------------------------------------------------
  //кемпстон джойстик
-//void __not_in_flash_func(gamepad_1)(uint8_t const *report,uint8_t instance)
-void gamepad_1(uint8_t const *report,uint8_t instance)
+void __not_in_flash_func(gamepad_1)(uint8_t const *report,uint8_t instance)
 {
   joy_connected = true;
 //uint8_t joy_k = 0x00 ;//#1F - кемпстон джойстик 0001 1111
@@ -978,16 +859,6 @@ if (report[2] !=0x0f)
 
 
 }
-
-  //  msg_bar=7;
-  //    wait_msg = 1000;  
-  
-// data = data| joy_k;
-
- //joy_key_ext = joy_k;
-
-//data_joy =  joy_k;
-
 }
  //----------------------------------------------------------
 

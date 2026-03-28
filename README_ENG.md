@@ -202,33 +202,37 @@ Pre-compiled firmware for different boards:
 *If you forgot how something works — there's always `[F1]` Help.*
 
 
-
 <div align="center">
   <img src="images/Screenshot 2026-03-28 11-36-59.png" alt="Speccy P" width="600">
   <br>
-  <em>Speccy P start</em>
+  <em>SpeccyP start</em>
 </div>
 
 <div align="center">
   <img src="images/Screenshot 2026-03-28 11-37-10.png" alt="Speccy P" width="600">
   <br>
-  <em>Speccy P at work</em>
+  <em>SpeccyP at work</em>
 </div>
 
 <div align="center">
   <img src="images/Screenshot 2026-03-28 11-37-32.png" alt="Speccy P" width="600">
   <br>
-  <em>Speccy P at work</em>
+  <em>SpeccyP at work</em>
 </div>
 
 <div align="center">
   <img src="images/Screenshot 2026-03-28 11-37-58.png" alt="Speccy P" width="600">
   <br>
-  <em>Speccy P at work</em>
+  <em>SpeccyP at work</em>
 </div>
 
 <div align="center">
   <img src="images/Screenshot 2026-03-02 08-39-51.png" alt="Speccy P" width="600">
   <br>
   <em>Speccy P at work</em>
+</div>
+<div align="center">
+  <img src="images/Screenshot 2026-03-28 11-54-16.png" alt="Speccy P" width="600">
+  <br>
+  <em>SpeccyP file menu</em>
 </div>

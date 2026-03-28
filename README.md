@@ -188,7 +188,7 @@
 - **Автору Fastbeta** — за поддержку и помощь в начале пути, но потом ты заблокировал меня, извини если что не так.(https://t.me/zxpipico)
 - **Виталий Рудик** — за идею эмулятора TR-DOS (https://bitbucket.org/rudolff/fdcduino/src/master/)
 - **Эмулятор Z80** от [Manuel Sainz](https://github.com/redcode/Z80)
-- **Derek Fountain - за идею и код очень быстрого обмена между двумя pico! [Derek Fountain](https://github.com/derekfountain/pico-pio-connect)
+- **Derek Fountain** — за идею и код очень быстрого обмена между двумя pico! [Derek Fountain](https://github.com/derekfountain/pico-pio-connect)
 - **Автору прошивки** — за проделанную работу и "добавленные баги" ;)
 ---
 

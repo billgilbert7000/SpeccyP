@@ -1,4 +1,10 @@
 # Speccy P v1.5.7
+<div align="center">
+  
+[![English](https://img.shields.io/badge/English-README_ENG.md-blue.svg)](README_ENG.md)
+[![Русский](https://img.shields.io/badge/Русский-active-green.svg)](README.md)
+
+</div>
 
 **Эмулятор ZX Spectrum на базе микроконтроллеров Raspberry Pi RP2040 и RP2350A, RP2350B.**
 

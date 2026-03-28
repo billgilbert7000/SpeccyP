@@ -178,8 +178,9 @@
 
 ## 🙏 Благодарности
 - **AlexEkb** — за идею эмулятора и изначальный код ([AlexEkb](https://github.com/AlexEkb4ever))
-- **Эмулятор Z80** от [Manuel Sainz](https://github.com/redcode/Z80)
 - **murmulator.ru** — за поддержку и обратную связь [ZX_MURMULATOR](https://t.me/ZX_MURMULATOR)
+- **Виталий Рудик** — за идею эмулятора TR-DOS (https://bitbucket.org/rudolff/fdcduino/src/master/)
+- **Эмулятор Z80** от [Manuel Sainz](https://github.com/redcode/Z80)
 - **Автор прошивки** — за проделанную работу и "добавленные баги" ;)
 ---
 

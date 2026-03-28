@@ -198,29 +198,35 @@
 <div align="center">
   <img src="images/Screenshot 2026-03-28 11-36-59.png" alt="Speccy P" width="600">
   <br>
-  <em>Speccy P старт</em>
+  <em>SpeccyP старт</em>
 </div>
 
 <div align="center">
   <img src="images/Screenshot 2026-03-28 11-37-10.png" alt="Speccy P" width="600">
   <br>
-  <em>Speccy P в работе</em>
+  <em>SpeccyP в работе</em>
 </div>
 
 <div align="center">
   <img src="images/Screenshot 2026-03-28 11-37-32.png" alt="Speccy P" width="600">
   <br>
-  <em>Speccy P в работе</em>
+  <em>SpeccyP в работе</em>
 </div>
 
 <div align="center">
   <img src="images/Screenshot 2026-03-28 11-37-58.png" alt="Speccy P" width="600">
   <br>
-  <em>Speccy P в работе</em>
+  <em>SpeccyP в работе</em>
 </div>
 
 <div align="center">
   <img src="images/Screenshot 2026-03-02 08-39-51.png" alt="Speccy P" width="600">
   <br>
-  <em>Speccy P в работе</em>
+  <em>SpeccyP в работе</em>
+</div>
+
+<div align="center">
+  <img src="images/Screenshot 2026-03-28 11-54-16.png" alt="Speccy P" width="600">
+  <br>
+  <em>SpeccyP файловое меню</em>
 </div>

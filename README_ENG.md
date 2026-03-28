@@ -1,5 +1,10 @@
 # Speccy P v1.5.7
+<div align="left">
+  
+[![English](https://img.shields.io/badge/English-README_ENG.md-blue.svg)](README_ENG.md)
+[![Русский](https://img.shields.io/badge/Русский-active-green.svg)](README.md)
 
+</div>
 **ZX Spectrum emulator based on Raspberry Pi RP2040, RP2350A, and RP2350B microcontrollers.**
 
 This firmware emulates various Spectrum models with support for HDMI, VGA, TFT displays, I2S audio, PSRAM, USB mouse, and gamepads.

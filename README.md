@@ -1,5 +1,5 @@
 # Speccy P v1.5.7
-<div align="center">
+<div align="left">
   
 [![English](https://img.shields.io/badge/English-README_ENG.md-blue.svg)](README_ENG.md)
 [![Русский](https://img.shields.io/badge/Русский-active-green.svg)](README.md)

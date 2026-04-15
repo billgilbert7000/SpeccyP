@@ -20,28 +20,16 @@ set(PICO_BOARD pico CACHE STRING "Board type")
 set (BASE_VERSION "1.5.7 ")
 set(MOS2 OFF) # компиляция под MOS2 ON
 
-# Выберите конфигурацию (раскомментировать одну строку):
-#set(SPECCY_CONFIG SPECCY)     # Базовая сборка без GSP на одной pico
-#set(SPECCY_CONFIG SPECCY_WSZERO2) # Базовая сборка без GSP для WaveShare pi zero2
-set(SPECCY_CONFIG GSP_FULL)  # Полная версия с PSRAM_BUTTER, TURBOSOUND, Z_CONTROLER
-#set(SPECCY_CONFIG GSP_LITE)  # Облегченная версия без дополнительных опций
+# Конфигурация сборки (можно задать через -DSPECCY_CONFIG=... и -DM_BOARD=...)
+# SPECCY_CONFIG: SPECCY | SPECCY_WSZERO2 | GSP_FULL | GSP_LITE
+# M_BOARD:       MURM1 | MURM2 | PI_CARD | WS_ZERO2 | PICO_DV
+set(SPECCY_CONFIG "SPECCY" CACHE STRING "Конфигурация сборки: SPECCY, SPECCY_WSZERO2, GSP_FULL, GSP_LITE")
+set_property(CACHE SPECCY_CONFIG PROPERTY STRINGS SPECCY SPECCY_WSZERO2 GSP_FULL GSP_LITE)
 
-#----------------------
-# Тип платы
-#----------------------
-set(M_BOARD MURM1)
-#set(M_BOARD MURM2)
-#set(M_BOARD PI_CARD)
-#set(M_BOARD WS_ZERO2)
+set(M_BOARD "MURM1" CACHE STRING "Тип платы: MURM1, MURM2, PI_CARD, WS_ZERO2, PICO_DV")
+set_property(CACHE M_BOARD PROPERTY STRINGS MURM1 MURM2 PI_CARD WS_ZERO2 PICO_DV)
 
-
-if(NOT DEFINED M_BOARD)
-    set(M_BOARD MURM1 )
-endif()
-
-if(NOT DEFINED SPECCY_CONFIG)
-    set(SPECCY_CONFIG SPECCY)
-endif()
+option(PCM5122 "PCM5122 DAC для WS_ZERO2 (I2S 21/18/19 + I2C 2/3, PS/2 на 14/15)" OFF)
 #---------------------
 ###
 
@@ -121,13 +109,22 @@ else()
 endif()
 
 
+# Автовыбор PICO_BOARD по типу платы
+if(M_BOARD STREQUAL "WS_ZERO2" OR M_BOARD STREQUAL "PI_CARD" OR M_BOARD STREQUAL "PICO_DV")
+    set(PICO_BOARD "pico2" CACHE STRING "Board type" FORCE)
+endif()
+
 # Определяем платформу на основе выбранной платы
 if(PICO_BOARD STREQUAL "pico")
     set(PICO_PLATFORM "rp2040" CACHE STRING "Chip type" FORCE)
-  set(CMAKE_BUILD_TYPE MinSizeRel CACHE STRING "Build type" FORCE) 
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE MinSizeRel CACHE STRING "Build type" FORCE)
+    endif()
 elseif(PICO_BOARD STREQUAL "pico2")
     set(PICO_PLATFORM "rp2350" CACHE STRING "Chip type" FORCE)
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    endif()
 else()
     message(FATAL_ERROR "Unsupported PICO_BOARD: ${PICO_BOARD}")
 endif()
@@ -174,6 +171,11 @@ add_subdirectory(drivers/pico_fatfs)
 # Только для MURM1 добавляем psram
 if(${M_BOARD} MATCHES "MURM1")
     add_subdirectory(drivers/psram)
+endif()
+
+# PCM5122 DAC для WS_ZERO2
+if(${M_BOARD} MATCHES "WS_ZERO2" AND PCM5122)
+    add_subdirectory(drivers/pcm5122)
 endif()
 
 
@@ -247,8 +249,10 @@ FREQ_595=50000000  #//750000000  // Например: 75 МГц
 
 ############################################################
 ###   для эмулятора Z80 REDCODE
+Z80_STATIC
+Z80_EXTERNAL_HEADER="Z80_compat.h"
 ##Z80_WITH_EXECUTE
-##Z80_WITH_Q 
+##Z80_WITH_Q
 Z80_WITH_PRECOMPUTED_DAA
 ##Z80_WITH_ZILOG_NMOS_LD_A_IR_BUG
 #Z80_HALT_CANCEL
@@ -598,8 +602,8 @@ BEEP_PIN=12  # на IN
 
 #######################################################################
 #PS/2 клавиатура
-beginPS2_PIN=2
-PIO_PS2=pio1 
+$<IF:$<BOOL:${PCM5122}>,beginPS2_PIN=14,beginPS2_PIN=2>
+PIO_PS2=pio1
 SM_PS2=3 #
 
 #VIDEO
@@ -625,7 +629,7 @@ TFT_CLK_PIN=13
 TFT_DATA_PIN=12
 TFT_RST_PIN=8
 TFT_DC_PIN=10
-TFT_CS_PIN=6 
+TFT_CS_PIN=6
 TFT_LED_PIN=9
 
 
@@ -645,31 +649,36 @@ PSRAM_DIV=2.0 #  1.4 // делитель частоты psram если 315 то 
 PSRAM_BUTTER_PIN_CS=47 #это PSRAM_PIN_CS для  psram бутерброд
 
 ##AUDIO PWM
-ZX_AY_PWM_R=10 
-ZX_AY_PWM_L=11 
-ZX_BEEP_PIN=12 
-BEEP_PWM_WRAP=1000 # ШИМ 
-AY_PWM_WRAP=4000 # ШИМ 
+ZX_AY_PWM_R=10
+ZX_AY_PWM_L=11
+ZX_BEEP_PIN=12
+BEEP_PWM_WRAP=1000 # ШИМ
+AY_PWM_WRAP=4000 # ШИМ
 MAX_VOL_PWM=20
 DEFAULT_VOLUME_PWM=50
 BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
 #BEEP=1 #вывод звук бипера на отдельный шим
-##AUDIO 595  hard AY 
-PIO_AY595=pio1 
+##AUDIO 595  hard AY
+PIO_AY595=pio1
 SM_AY595=3 # не используется
 CLK_AY_PIN=0 # не используется
 CLK_LATCH_595_BASE_PIN=0# и 27 # не используется
 DATA_595_PIN=0 # не используется
 
 ##AUDIO i2s
-I2S_DATA_PIN=10 # 
-I2S_CLK_BASE_PIN=11 #
+$<IF:$<BOOL:${PCM5122}>,I2S_DATA_PIN=21,I2S_DATA_PIN=10>
+$<IF:$<BOOL:${PCM5122}>,I2S_CLK_BASE_PIN=18,I2S_CLK_BASE_PIN=11>
 I2S_FREQ=96000 ##111111 Hz
 PIO_I2S=pio1 #
-SM_I2S=0 
+SM_I2S=0
 
 DEFAULT_VOLUME_I2S=50
 AUDIO_BUSTER_DEFAULT=0
+
+## PCM5122 DAC (I2C control) — только при -DPCM5122=ON
+$<$<BOOL:${PCM5122}>:PCM5122_DAC>
+$<$<BOOL:${PCM5122}>:PCM5122_I2C_SDA=2>
+$<$<BOOL:${PCM5122}>:PCM5122_I2C_SCL=3>
 
 PIN_ZX_LOAD=17
 
@@ -694,6 +703,16 @@ set (M_VERSION dv)# версия платы
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 PICO_DV
 SOUND_I2S_ONLY # только i2s звук
+LED_BOARD=25
+
+#########################################################################
+##PicoBus ONLY GENERAL SOUND
+PBUS_OUT_PIN=26
+PBUS_IN_PIN=27
+PBUS_PIO=pio0   #only pio 0
+## Beep
+BEEP_PIN=28
+
 #PS/2 клавиатура
 beginPS2_PIN=0 # 0 и 1 
 PIO_PS2=pio0 # Only  pio0 !
@@ -708,10 +727,10 @@ beginHDMI_PIN_clk=beginVideo_PIN
 
 PIO_VIDEO=pio1
 PIO_VIDEO_ADDR=pio1
-SM_VIDEO=-1
-SM_CONV=-1
+SM_VIDEO=0
+SM_CONV=1
 #
-#TFT 
+#TFT
 PIO_SPI_TFT=pio1
 SM_SPI_TFT=0
 PIO_SPI_TFT_CONV=pio1
@@ -724,19 +743,19 @@ TFT_DC_PIN=10
 TFT_CS_PIN=6 
 TFT_LED_PIN=9
 
-##SDCARD
-#SDCARD_SPI_BUS spi1
+##SDCARD — пины не на spi1, используем PIO SPI
+SDCARD_USE_PIO
 SDCARD_PIN_CS=22
 SDCARD_PIN_SCK=5
 SDCARD_PIN_MOSI=18
 SDCARD_PIN_MISO=19
 
-SDCARD_PIO=pio0 #
-SDCARD_PIO_SM=0 #
+SDCARD_PIO=pio0 # PIO SPI для SD (pio1 занят видео+I2S)
+SDCARD_PIO_SM=0 # SM2=PS/2 (инициализируется позже)
 
 ##PSRAM
 PSRAM_DIV=2.0 #  1.4 // делитель частоты psram если 315 то 1.4 если меньше то 1.0
-PSRAM_BUTTER_PIN_CS=255 #это PSRAM_PIN_CS для платы murm1 psram бутерброд
+PSRAM_BUTTER_PIN_CS=47 #PSRAM butter CS для PICO_DV
 
 ##AUDIO PWM
 ZX_AY_PWM_R=26 # не используется
@@ -758,12 +777,14 @@ DATA_595_PIN=28 # не используется
 I2S_DATA_PIN=26
 I2S_CLK_BASE_PIN=27
 I2S_FREQ=96000 ##111111 Hz
-PIO_I2S=pio1 # Only  pio0 !
-SM_I2S=0
+PIO_I2S=pio1 # SM0,SM1 заняты видео
+SM_I2S=2
 DEFAULT_VOLUME_I2S=50
 AUDIO_BUSTER_DEFAULT=0
 
-# NES JOY
+PIN_ZX_LOAD=20
+
+# NES JOY — пины 8,9 заняты HDMI, джойстик отключен
 D_JOY_DATA_PIN=255
 D_JOY_CLK_PIN=255
 D_JOY_LATCH_PIN=255
@@ -855,10 +876,10 @@ endif()
 #########################################################################      
 ########### PSRAM для PICO_DV ###########################################
    if( ${M_BOARD} MATCHES "PICO_DV")
-            target_compile_definitions(${PROJECT_NAME} PRIVATE 
-            NO_PSRAM
+            target_compile_definitions(${PROJECT_NAME} PRIVATE
+            PSRAM_BUTTER
             )
-            message("Конфигурация: PICO_DV+ PICO_RP2350 (NO_PSRAM)")
+            message("Конфигурация: PICO_DV+ PICO_RP2350 (PSRAM_BUTTER)")
         endif()
 #########################################################################      
 
@@ -899,14 +920,14 @@ endif()
 
 #SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}_${VOUT}")
 # Модифицируем BUILD_NAME:
-SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}")
-
-
-if(BUILD)
-    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${BUILD_NAME}")
+if(PCM5122)
+    SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}_pcm5122")
 else()
-    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}")
+    SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}")
 endif()
+
+
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${BUILD_NAME}")
 
 
 
@@ -932,9 +953,16 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Условная линковка библиотек
 if(${M_BOARD} MATCHES "MURM1")
-    # Для MURM1 добавляем psram 
+    # Для MURM1 добавляем psram
     target_link_libraries(${PROJECT_NAME} PRIVATE
         psram
+    )
+endif()
+
+# PCM5122 DAC для WS_ZERO2
+if(${M_BOARD} MATCHES "WS_ZERO2" AND PCM5122)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        pcm5122
     )
 endif()
 

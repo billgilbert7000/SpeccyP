@@ -2,7 +2,10 @@
 #ifndef ZX_MASHINE_H_
 #define ZX_MASHINE_H_
 
-#include <Z/constants/pointer.h> /* Z_NULL */
+#include <stddef.h>
+#ifndef Z_NULL
+#define Z_NULL NULL
+#endif
 #include "Z80.h"
 
 #include "inttypes.h"

@@ -36,7 +36,10 @@
 //#include "rom/romScorpion.h"// Scorpion ZS256 Old
 
 //###
-#include <Z/constants/pointer.h> /* Z_NULL */
+#include <stddef.h>
+#ifndef Z_NULL
+#define Z_NULL NULL
+#endif
 #include "Z80.h"
 //###
 

@@ -10,6 +10,9 @@
 #include "aySoft.h"
 #ifndef GENERAL_SOUND
 #include "audio_i2s.h"
+#ifdef PCM5122_DAC
+#include "pcm5122_init.h"
+#endif
 #endif
 
 void (*AY_out_FFFD)(uint8_t);// определение указателя на функцию
@@ -1521,17 +1524,23 @@ void select_audio(void)
         //------------------------------------
     case I2S_AY /*I2S  AY Sound */:
       //  init_audio_tables_optimized();
+#ifdef PCM5122_DAC
+        pcm5122_init(PCM5122_I2C_SDA, PCM5122_I2C_SCL);
+#endif
         i2s_init();
         i2s_out(OUTPUT_MIDPOINT, OUTPUT_MIDPOINT);// обнуление каналов звука
         audio_out = audio_out_i2s_ay;
         AY_out_FFFD = ay_set_reg_soft;
         AY_out_BFFD = AY_set_reg; // ay_set_data_soft
         hw_beep_out = hw_outi2s_beep_out;
-       
+
         break;
    //------------------------------------
     case I2S_TS /*I2S  TS Sound */:
      //   init_audio_tables_optimized();
+#ifdef PCM5122_DAC
+        pcm5122_init(PCM5122_I2C_SDA, PCM5122_I2C_SCL);
+#endif
         i2s_init();
         i2s_out(OUTPUT_MIDPOINT, OUTPUT_MIDPOINT);// обнуление каналов звука
         audio_out =   audio_out_i2s_ts;

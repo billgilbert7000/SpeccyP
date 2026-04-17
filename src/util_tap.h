@@ -72,13 +72,11 @@ typedef struct TapeBlock{
 } __attribute__((packed)) TapeBlock;
 
 
-// uint8_t tape_autoload_status;
-//uint16_t tap_block_position;
-
-//char tapeFileName[160];
-/* uint8_t TapeStatus;
- uint8_t SaveStatus;
-uint8_t RomLoading; */
+extern bool tap_loader_active;
+extern uint8_t TapeStatus;
+extern uint64_t tape_cycle_count;
+extern uint8_t SaveStatus;
+extern uint8_t RomLoading;
 
 //FIL f;
 //size_t file_pos;
@@ -97,6 +95,7 @@ bool TAP_Load(char *file_name);
 void TAP_Rewind();
 void TAP_NextBlock();
 void TAP_PrevBlock();
+void TAP_SwitchMode(void);
 
 
 /*

@@ -26,8 +26,17 @@
 #define PIN_SPI1_SCK_DEFAULT    10
 #define PIN_SPI1_MOSI_DEFAULT   11 */
 
+#ifdef SDCARD_PIO
+#define SPI_PIO_DEFAULT_PIO (SDCARD_PIO)
+#else
 #define SPI_PIO_DEFAULT_PIO (pio0)
+#endif
+
+#ifdef SDCARD_PIO_SM
+#define SPI_PIO_DEFAULT_SM  (SDCARD_PIO_SM)
+#else
 #define SPI_PIO_DEFAULT_SM  (0)
+#endif
 
 typedef struct _pico_fatfs_spi_config_t {
     spi_inst_t* spi_inst;  // spi0 or spi1

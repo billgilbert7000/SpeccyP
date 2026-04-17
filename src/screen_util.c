@@ -4,7 +4,7 @@
 #include "tft_driver.h"
 
 #include "util_sd.h"
-//#include "util_tap.h"
+#include "util_tap.h"
 #include "SpeccyP.h"
 #include "usb_key.h"// это добавить
 #include "hardware/pwm.h"
@@ -907,7 +907,7 @@ wait_enter(); // ожидание отпускания enter
 char __in_flash() *menu_trdos[2]={
     " TR-DOS   5.04T  ",
     " TR-DOS   5.05D  ",
-    };   
+    };
  	// меню cpu z80 version
 	char __in_flash() *menu_cpu_version [5]={
     " ZILOG  NMOS ",
@@ -920,10 +920,10 @@ char __in_flash() *menu_trdos[2]={
 
 
 // Массив для хранения строк меню
-char menu_advanced_strings[10][18] = {0};
+char menu_advanced_strings[11][19] = {0};
 
 // Массив указателей на строки
-char *menu_advanced[10] = {
+char *menu_advanced[11] = {
     menu_advanced_strings[0],
     menu_advanced_strings[1],
     menu_advanced_strings[2],
@@ -933,7 +933,8 @@ char *menu_advanced[10] = {
     menu_advanced_strings[6],
     menu_advanced_strings[7],
     menu_advanced_strings[8],
-    menu_advanced_strings[9]
+    menu_advanced_strings[9],
+    menu_advanced_strings[10]
 };
 
 // Инициализация меню
@@ -942,14 +943,14 @@ void init_menu_advanced() {
   {
   case SOFT_AY:
   case SOFT_TS:
-    sprintf(menu_advanced_strings[0], " Volume      %3d ", conf.vol_ay);
+    sprintf(menu_advanced_strings[0], " Volume       %3d ", conf.vol_ay);
     break;
   case I2S_AY:
   case I2S_TS:
-    sprintf(menu_advanced_strings[0], " Volume      %3d ", conf.vol_i2s);
-    break;  
+    sprintf(menu_advanced_strings[0], " Volume       %3d ", conf.vol_i2s);
+    break;
   default:
-    sprintf(menu_advanced_strings[0], " Volume      N/A ");
+    sprintf(menu_advanced_strings[0], " Volume       N/A ");
     break;
   }
 
@@ -957,31 +958,37 @@ void init_menu_advanced() {
   {
   case I2S_AY:
   case I2S_TS:
-    sprintf(menu_advanced_strings[1], " I2S  buster  %d ", conf.audio_buster);
-    break;  
+    sprintf(menu_advanced_strings[1], " I2S  buster   %d ", conf.audio_buster);
+    break;
   default:
-    sprintf(menu_advanced_strings[1], " I2S  buster N/A ");
+    sprintf(menu_advanced_strings[1], " I2S  buster  N/A ");
     break;
   }
-   if (conf.sound_fdd) strcpy(menu_advanced_strings[2], " Noise FDD   OFF "); 
-  else strcpy(menu_advanced_strings[2], " Noise FDD    ON "); 
-    
-     sprintf(menu_advanced_strings[3], " Volume LOAD  %2d ", conf.vol_load );
+   if (conf.sound_fdd) strcpy(menu_advanced_strings[2], " Noise FDD    OFF ");
+  else strcpy(menu_advanced_strings[2], " Noise FDD     ON ");
 
-     sprintf(menu_advanced_strings[4], " Mouse Speed *%2d ", conf.mouse_dpi);
+     sprintf(menu_advanced_strings[3], " Volume LOAD   %2d ", conf.vol_load );
 
-         if (conf.vout==VIDEO_AUTO) strcpy(menu_advanced_strings[5], " Video OUT  AUTO ");; 
-         if (conf.vout==VIDEO_VGA)  strcpy(menu_advanced_strings[5], " Video OUT   VGA ");; 
-         if (conf.vout==VIDEO_HDMI) strcpy(menu_advanced_strings[5], " Video OUT  HDMI ");
-         if (conf.vout==VIDEO_TFT)  strcpy(menu_advanced_strings[5], " Video OUT   TFT ");
+     sprintf(menu_advanced_strings[4], " Mouse Speed  *%2d ", conf.mouse_dpi);
 
-    sprintf(menu_advanced_strings[6], "%s", menu_trdos[conf.trdos_version]);
-   
+         if (conf.vout==VIDEO_AUTO) strcpy(menu_advanced_strings[5], " Video OUT   AUTO ");
+         if (conf.vout==VIDEO_VGA)  strcpy(menu_advanced_strings[5], " Video OUT    VGA ");
+         if (conf.vout==VIDEO_HDMI) strcpy(menu_advanced_strings[5], " Video OUT   HDMI ");
+         if (conf.vout==VIDEO_TFT)  strcpy(menu_advanced_strings[5], " Video OUT    TFT ");
+
+    sprintf(menu_advanced_strings[6], "%s ", menu_trdos[conf.trdos_version]);
+
     if (conf.cpu_version>4) conf.cpu_version = 0;
-    sprintf(menu_advanced_strings[7], " Z80%s", menu_cpu_version[conf.cpu_version]);
-    
-    strcpy(menu_advanced_strings[8], " Save config     ");
-    strcpy(menu_advanced_strings[9], " Return          ");
+    sprintf(menu_advanced_strings[7], " Z80 %s", menu_cpu_version[conf.cpu_version]);
+
+    conf.tape_mode &= 1; // защита от мусора в старом конфиге
+    if (conf.tape_mode==0)
+        strcpy(menu_advanced_strings[8], " Tape Load   FAST ");
+    else
+        strcpy(menu_advanced_strings[8], " Tape Load NORMAL ");
+
+    strcpy(menu_advanced_strings[9], " Save config      ");
+    strcpy(menu_advanced_strings[10]," Return           ");
 }
 
 
@@ -1105,8 +1112,15 @@ wait_enter(); // ожидание отпускания enter
          if (conf.vout==VIDEO_AUTO) conf.vout=VIDEO_AUTO;
           else conf.vout--;
              init_menu_advanced();
-        draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+        draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
         break;
+
+          case 8:// tape load mode
+          conf.tape_mode = conf.tape_mode ? 0 : 1;
+          TAP_SwitchMode();
+          init_menu_advanced();
+          draw_text(xPos,yPos+10*8,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+          break;
       }
    
     }
@@ -1175,8 +1189,15 @@ wait_enter(); // ожидание отпускания enter
          if (conf.vout>=VIDEO_TFT) conf.vout=VIDEO_TFT;
          else conf.vout++;
              init_menu_advanced();
-        draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
-         break;   
+        draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+         break;
+
+          case 8:// tape load mode
+          conf.tape_mode = conf.tape_mode ? 0 : 1;
+          TAP_SwitchMode();
+          init_menu_advanced();
+          draw_text(xPos,yPos+10*8,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+          break;
 
       default:
         break;
@@ -1212,11 +1233,18 @@ wait_enter(); // ожидание отпускания enter
        }
        break;
 
-       case 8:// Save config
+       case 8:// tape load mode
+       conf.tape_mode = conf.tape_mode ? 0 : 1;
+       TAP_SwitchMode();
+       init_menu_advanced();
+       draw_text(xPos,yPos+10*8,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+       continue;
+
+       case 9:// Save config
        save_config();
        break;
 
-      case 9:// Return menu
+      case 10:// Return menu
       return 0xff; // ESC exit
      }
 

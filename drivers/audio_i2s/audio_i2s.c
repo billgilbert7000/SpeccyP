@@ -32,9 +32,9 @@ static uint32_t i2s_data;
 void i2s_init(void)
 {
     // Настройка drive strength для пинов
-    gpio_set_drive_strength(I2S_DATA_PIN, GPIO_DRIVE_STRENGTH_4MA); 
-    gpio_set_drive_strength(I2S_DATA_PIN + 1, GPIO_DRIVE_STRENGTH_4MA); 
-    gpio_set_drive_strength(I2S_DATA_PIN + 2, GPIO_DRIVE_STRENGTH_4MA); 
+    gpio_set_drive_strength(I2S_DATA_PIN, GPIO_DRIVE_STRENGTH_4MA);
+    gpio_set_drive_strength(I2S_CLK_BASE_PIN, GPIO_DRIVE_STRENGTH_4MA);
+    gpio_set_drive_strength(I2S_CLK_BASE_PIN + 1, GPIO_DRIVE_STRENGTH_4MA);
 
     // Настройка GPIO
     uint func = (PIO_I2S == pio0) ? GPIO_FUNC_PIO0 : GPIO_FUNC_PIO1;

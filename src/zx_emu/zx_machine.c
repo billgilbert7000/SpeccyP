@@ -36,7 +36,10 @@
 //#include "rom/romScorpion.h"// Scorpion ZS256 Old
 
 //###
-#include <Z/constants/pointer.h> /* Z_NULL */
+#include <stddef.h>
+#ifndef Z_NULL
+#define Z_NULL NULL
+#endif
 #include "Z80.h"
 //###
 
@@ -68,6 +71,7 @@ unsigned long prev_ticks, cur_ticks;
 //bool z80_gen_nmi_from_main = false;
 bool im_z80_stop = false;
 bool im_ready_loading = false;
+uint64_t tape_cycle_count = 0; // глобальный счётчик тактов Z80 для ленты
 //bool vbuf_en=true;
 
 ////////////////////////////////
@@ -664,17 +668,28 @@ inline static void fast(_write_z80_cash)(Machine *self, uint16_t addr, uint8_t v
 //#define PIN_ZX_LOAD (22)
 //функции ввода звука спектрума
 
+static uint64_t loadLastCycle = 0;
+static uint16_t loadFastCount = 0; // счётчик быстрых вызовов подряд
+
 bool fast (hw_zx_get_bit_LOAD)()
 {
     bool x;
-/*     if (tap_loader_active){ // Переменная определена в util_tap.h
-        if (TapeStatus==TAPE_LOADING){
-            out = TAP_Read(); // Переменная определена в util_tap.h
-		}	
-	} else { */
-      x = gpio_get(PIN_ZX_LOAD);
-//	};
-    valLoad=conf.vol_load * x; 
+    if (tap_loader_active && TapeStatus==TAPE_LOADING){
+        x = TAP_Read();
+        uint64_t gap = tape_cycle_count - loadLastCycle;
+        loadLastCycle = tape_cycle_count;
+        if (gap < 3000)
+            loadFastCount++;
+        else
+            loadFastCount = 0;
+        // Звук только если мы в устойчивом tight loop (>30 быстрых IN подряд)
+        valLoad = (loadFastCount > 30) ? conf.vol_load * x : 0;
+    } else {
+        x = gpio_get(PIN_ZX_LOAD);
+        valLoad=0;
+        loadLastCycle = 0;
+        loadFastCount = 0;
+    }
     return x;
 };
 //###############################################
@@ -2279,6 +2294,9 @@ void zx_machine_reset(uint8_t rom_x)
     cash_f = 0;// отключение кеш для Пентагон 512 CASH
 
     seekbuf =0;// обнуление счетчика tape при сбросе
+    tap_loader_active = false;
+    enable_tape = false;
+    TapeStatus = TAPE_STOPPED;
     init_vol_ay(); 
 
      machine_reset(z1);// Используем  для сброса регистров
@@ -2422,7 +2440,11 @@ if (enable_tape)
 if (Z80_PC(z1->cpu) == 0x0556)  tape_load(); // вход в меню tape // CALL 1366 (0x0556)
 ////if (Z80_PC(z1->cpu) == 0x0562)  tape_load_0562(); // вход в меню tape // CALL 0x0562
 if (Z80_PC(z1->cpu) == 0x056a)  tape_load_056a(); // вход в меню tape // CALL 0x056a
-
+}
+// NORMAL режим: запуск ленты когда ROM-загрузчик начинает читать
+if (tap_loader_active && TapeStatus==TAPE_STOPPED)
+{
+if (Z80_PC(z1->cpu) == 0x0556 || Z80_PC(z1->cpu) == 0x056a) TAP_Play();
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 		// tr-dos
@@ -2547,6 +2569,7 @@ if (   (inx_tick_screen<32) &&  (int_enable))
      //  else
      
         dt_cpu = z80_run(&z1->cpu, 1);
+        tape_cycle_count += dt_cpu;
 //gpio_put(LED_BOARD, 0);
 
         // Сброс линии INT после обработки

@@ -1352,7 +1352,7 @@ int fast(main)(void){
             // кнопка выхода из меню файлов по [start] joy
              if ( (joy_key_ext  == 0x80) & (is_menu_mode))  key_menu_state = true;// exit [start] joy
 
-            if (key_menu_state & !old_key_menu_state) // выход из файлового меню 
+            if (key_menu_state & !old_key_menu_state) // выход из файлового меню
             {
                 data_joy =0;
                 is_menu_mode ^= 1;
@@ -1363,7 +1363,7 @@ int fast(main)(void){
             }
 
             else // останов эмуляции и вход в файловое меню
-            {  
+            {
                 is_new_screen = false;
                 im_z80_stop = true;
             }
@@ -2030,7 +2030,7 @@ if (numsetup == M_JOY)
 
   if (numsetup == M_ADVANCED)
         {
-          uint8_t x = MenuBox_advanced_setup(94, 44, 16, 10, "Advanced setup", 10, 9, 1);
+          uint8_t x = MenuBox_advanced_setup(94, 44, 17, 11, "Advanced setup", 11, 10, 1);
            if (x==0xff) continue;
 
            continue;

@@ -12,8 +12,11 @@
    SPI and Pin selection
 ---------------------------------------------------------------------------*/
 static pico_fatfs_spi_config_t _config = {
-  //  spi0,
+#ifdef SDCARD_USE_PIO
+    NULL,
+#else
     SDCARD_SPI_BUS,
+#endif
     CLK_SLOW_DEFAULT,
     CLK_FAST_DEFAULT,
     SDCARD_PIN_MISO,
@@ -156,8 +159,9 @@ static void CS_LOW(void)
 /* Initialize for SPI PIO */
 static void pico_fatfs_init_spi_pio(void)
 {
+    /* Match pico-spec init: all pins as GPIO_OUT before PIO init */
     gpio_set_dir(_config.pin_sck,  GPIO_OUT);
-    gpio_set_dir(_config.pin_miso, GPIO_IN);
+    gpio_set_dir(_config.pin_miso, GPIO_OUT);
     gpio_set_dir(_config.pin_mosi, GPIO_OUT);
     gpio_set_dir(_config.pin_cs,   GPIO_OUT);
 
@@ -166,29 +170,21 @@ static void pico_fatfs_init_spi_pio(void)
 
     _pio_spi.cs_pin = _config.pin_cs;
 
-    uint f_clk_sys = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
-
-    uint offset = pio_add_program(_pio_spi.pio, &spi_cpha0_program);
-    pio_spi_init(_pio_spi.pio, _pio_spi.sm, offset,
+    uint cpha0_prog_offs = pio_add_program(_pio_spi.pio, &spi_cpha0_program);
+    pio_spi_init(_pio_spi.pio, _pio_spi.sm, cpha0_prog_offs,
         8,       // 8 bits per SPI frame
-        (float) f_clk_sys / (_config.clk_slow / KHZ) / 4,  // 4 PIO input clock cycles to generate one SPI clock cycle
+        3.0f,    // clkdiv (same as pico-spec)
         false,   // CPHA = 0
         false,   // CPOL = 0
         _config.pin_sck,
         _config.pin_mosi,
         _config.pin_miso
     );
-    // Get CLKDIV register and slow/fast settings
+
+    // clkdiv settings for FCLK_SLOW/FCLK_FAST
     _reg_clkdiv      = &(_pio_spi.pio->sm[_pio_spi.sm].clkdiv);
     _pio_clkdiv_slow = *_reg_clkdiv;
-    _pio_clkdiv_fast = (io_rw_32) ((float) _pio_clkdiv_slow * _config.clk_slow / _config.clk_fast);
-    _pio_clkdiv_fast &= 0xffffff00;
-    if (_pio_clkdiv_fast < PIO_CLKDIV_LIMIT) {
-        _pio_clkdiv_fast = PIO_CLKDIV_LIMIT;
-    }
-
-    _config.clk_fast = (uint64_t) f_clk_sys * 1000 * 256 / (_pio_clkdiv_fast / 256)  / 4;
-    _config.clk_slow = (uint64_t) f_clk_sys * 1000 * 256 / (_pio_clkdiv_slow / 256)  / 4;
+    _pio_clkdiv_fast = _pio_clkdiv_slow;  // same speed for now
 }
 
 /* Initialize SPI */

@@ -218,7 +218,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/s
 ###################################################
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=140326
+CONFIG_VERSION=140327
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1

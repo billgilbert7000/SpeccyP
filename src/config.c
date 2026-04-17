@@ -27,6 +27,7 @@ void config_defain(void)
         conf.activefilename[0] = 0;
 
               conf.turbo=0; // при включении TURBO OFF!
+      conf.tape_mode=0; // 0=fast, 1=slow
       turbo_switch();
 }
 
@@ -81,7 +82,7 @@ void config_defain(void)
         conf.activefilename[0] = 0;
 
       conf.turbo=0; // при включении TURBO OFF!
-   
+      conf.tape_mode=0; // 0=fast, 1=slow
 }
 #endif
 
@@ -121,7 +122,7 @@ void config_defain(void)
         conf.activefilename[0] = 0;
 
       conf.turbo=0; // при включении TURBO OFF!
-     
+      conf.tape_mode=0; // 0=fast, 1=slow
 }
 #endif
 
@@ -161,7 +162,7 @@ void config_defain(void)
         conf.activefilename[0] = 0;
 
       conf.turbo=0; // при включении TURBO OFF!
-     
+      conf.tape_mode=0; // 0=fast, 1=slow
 }
 #endif
 

@@ -391,6 +391,7 @@ extern struct data_config
    uint8_t sound_fdd;
    uint8_t audio_buster;
    uint8_t spi_bd;
+   uint8_t tape_mode; // 0=fast (ROM trap), 1=normal (real tape emulation)
 
 
    uint32_t shift_img;

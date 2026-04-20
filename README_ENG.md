@@ -1,4 +1,4 @@
-# Speccy P 
+# SpeccyP 
 <div align="left">
   
 [![English](https://img.shields.io/badge/English-active-green.svg)](README_ENG.md)

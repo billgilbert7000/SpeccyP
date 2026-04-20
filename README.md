@@ -1,4 +1,4 @@
-# Speccy P v1.5.7
+# Speccy P 
 <div align="left">
   
 [![English](https://img.shields.io/badge/English-README_ENG.md-blue.svg)](README_ENG.md)
@@ -10,7 +10,6 @@
 
 Прошивка обеспечивает эмуляцию различных моделей Spectrum с поддержкой HDMI, VGA, TFT дисплеев, звука I2S, PSRAM, USB-мыши и геймпадов.
 
-![Version](https://img.shields.io/badge/version-1.5.7-blue)
 ![RP2040](https://img.shields.io/badge/RP2040-supported-green)
 ![RP2350](https://img.shields.io/badge/RP2350-supported-green)
 ![License](https://img.shields.io/badge/license-GPLv3-blue.svg)

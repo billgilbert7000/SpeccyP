@@ -16,8 +16,10 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico CACHE STRING "Board type")
 
+set(DEBUG OFF)
+
 # == Конфигурация  SpeccyP ==
-set (BASE_VERSION "1.5.7 ")
+set (BASE_VERSION "1.5.8")
 set(MOS2 OFF) # компиляция под MOS2 ON
 
 # Конфигурация сборки (можно задать через -DSPECCY_CONFIG=... и -DM_BOARD=...)
@@ -70,11 +72,12 @@ elseif(SPECCY_CONFIG STREQUAL "GSP_LITE")
 elseif(SPECCY_CONFIG STREQUAL "SPECCY_WSZERO2")
     set(SPECCY_CONFIG_DEFINITIONS  
 
-        CPU_MHZ=252 # 378 MHz
+      #  CPU_MHZ=252 # 378 MHz
+        CPU_MHZ=378 # 
         FLASH_MAX_FREQ_MHZ=66
         PSRAM_MAX_FREQ_MHZ=100
-        #HDMI_DIV=1.5 # hdmi 60Hz
-        HDMI_DIV=1.0 # hdmi 75Hz 378  60Hz 252
+        HDMI_DIV=1.5 # hdmi 60Hz
+       # HDMI_DIV=1.0 # hdmi 75Hz 378  60Hz 252
         TEST_DEBUG #
 
     )
@@ -90,7 +93,7 @@ else()
         FLASH_MAX_FREQ_MHZ=166
         PSRAM_MAX_FREQ_MHZ=166
 
-      #  TEST_DEBUG #
+        #TEST_DEBUG #
  
         HDMI_DIV=1.5 # hdmi 60Hz
 
@@ -218,7 +221,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/s
 ###################################################
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=140327
+CONFIG_VERSION=200426
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1
@@ -901,7 +904,6 @@ endif()
 
 if( ${M_BOARD} MATCHES "PI_CARD")
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-  ##  FW_VERSION="${PORT_VERSION} []"
     FW_VERSION="${PORT_VERSION} [picard]"
 )
 endif()
@@ -920,15 +922,19 @@ endif()
 
 #SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}_${VOUT}")
 # Модифицируем BUILD_NAME:
+ 
 if(PCM5122)
     SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}_pcm5122")
 else()
     SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}")
 endif()
 
+if(DEBUG)
+    SET(BUILD_NAME "${PROJECT_NAME}")
+endif()
+
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${BUILD_NAME}")
-
 
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

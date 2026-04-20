@@ -1,4 +1,4 @@
-# Speccy P v1.5.7
+# Speccy P 
 <div align="left">
   
 [![English](https://img.shields.io/badge/English-active-green.svg)](README_ENG.md)
@@ -10,7 +10,6 @@
 
 This firmware emulates various Spectrum models with support for HDMI, VGA, TFT displays, I2S audio, PSRAM, USB mouse, and gamepads.
 
-![Version](https://img.shields.io/badge/version-1.5.7-blue)
 ![RP2040](https://img.shields.io/badge/RP2040-supported-green)
 ![RP2350](https://img.shields.io/badge/RP2350-supported-green)
 ![License](https://img.shields.io/badge/license-GPLv3-blue.svg)

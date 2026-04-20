@@ -241,3 +241,21 @@ Pre-compiled firmware for different boards:
   <br>
   <em>SpeccyP file menu</em>
 </div>
+
+<div align="center">
+  <img src="DOCS/Murmulator_M1.JPG.webp" alt="Murmulator M1" width="600">
+  <br>
+  <em>MURMULATOR M1</em>
+</div>
+
+<div align="center">
+  <img src="DOCS/Murmulator_M1_TFT_PSR.JPG.webp" alt="Murmulator M1 TFT" width="600">
+  <br>
+  <em>MURMULATOR M1 TFT</em>
+</div>
+
+<div align="center">
+  <img src="DOCS/Murmulator2_38NJU24_.JPG.webp" alt="Murmulator M2" width="600">
+  <br>
+  <em>MURMULATOR M2</em>
+</div>

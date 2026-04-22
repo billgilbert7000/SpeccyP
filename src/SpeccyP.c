@@ -3157,7 +3157,6 @@ void file_manager (void)
                                 conf.FileAutorunType = FDI;
                                 file_type[0] = FDI;
                                 strncpy(conf.DiskName[0], files[cur_file_index], LENF);// disk A
-                                Run_file_scl(conf.activefilename, 0);
                                 OpenFDI_File(conf.activefilename,0);
 
                                 draw_main_window(); // восстановление текста

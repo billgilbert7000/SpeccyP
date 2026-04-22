@@ -2,115 +2,136 @@
 #ifndef _AYSOFT_H_
 #define _AYSOFT_H_
 
-
 #include "inttypes.h" 
 #include "pico/stdlib.h"
 
-//регистры состояния AY0
-extern  uint8_t reg_ay0[16];
-extern  uint16_t ay0_R12_R11;
-//uint8_t ay0_R7_m;// копия регистра смесителя
-extern  uint16_t ay0_A_freq;
-extern  uint16_t ay0_B_freq;
-extern  uint16_t ay0_C_freq;
+//==================================================================================================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ СОСТОЯНИЯ ЗВУКОВЫХ ЧИПОВ
+//==================================================================================================
 
-// регистры состояния AY1
-extern  uint8_t reg_ay1[16];
-extern  uint16_t ay1_R12_R11;
-//uint8_t ay1_R7_m; // копия регистра смесителя
-extern  uint16_t ay1_A_freq;
-extern  uint16_t ay1_B_freq;
-extern  uint16_t ay1_C_freq;
+// Регистры состояния AY0 (Основной чип / Левый канал Turbo Sound)
+extern uint8_t reg_ay0[16];
+extern uint16_t ay0_R12_R11;        // Совмещенное значение периода огибающей (Reg 11 и 12)
+extern uint16_t ay0_A_freq;         // Частота тона канала A
+extern uint16_t ay0_B_freq;         // Частота тона канала B
+extern uint16_t ay0_C_freq;         // Частота тона канала C
 
+// Регистры состояния AY1 (Второй чип для режимов Turbo Sound / TSFM)
+extern uint8_t reg_ay1[16];
+extern uint16_t ay1_R12_R11;        // Совмещенное значение периода огибающей (Reg 11 и 12)
+extern uint16_t ay1_A_freq;         // Частота тона канала A (чип 1)
+extern uint16_t ay1_B_freq;         // Частота тона канала B (чип 1)
+extern uint16_t ay1_C_freq;         // Частота тона канала C (чип 1)
 
-void select_audio(void);   
-extern void (*audio_out)(void);
-
-void AY_select_reg(uint8_t N_reg);
-
-uint8_t  AY_get_reg();
-void (AY_set_reg(uint8_t val));
-
-uint16_t*  get_AY_Out(uint8_t delta);
-//==============================================
-void AY_select_reg1 (uint8_t N_reg);
-uint8_t AY_get_reg1();
-void AY_set_reg1(uint8_t val);
-uint16_t*  get_AY_Out1(uint8_t delta);
-//==============================================
-
- void  AY_reset();
- uint8_t __not_in_flash_func(AY_in_FFFD)(void);
-
- void hardAY_off();
- void hardAY_on();
-
- void init_vol_ay(void);
- void set_audio_buster(void);
-
- void ay_mute(void);
- void ay_reinit(void);
-
-extern void (*AY_out_FFFD)(uint8_t);// определение указателя на функцию
-extern void (*AY_out_BFFD)(uint8_t);  // определение указателя на функцию
-extern void (*hw_beep_out)(bool); // определение указателя на функцию  
-
-//------------------------
-// данные портов SOUND DRIVE
+// Данные для эмуляции портов Sound Drive (Covox)
 extern uint8_t SoundLeft_A;
 extern uint8_t SoundLeft_B;
 extern uint8_t SoundRight_A;
 extern uint8_t SoundRight_B;
 
+extern uint8_t valLoad;             // Внешняя загрузка данных для смешивания с аудио (например, Covox)
+
 //==================================================================================================
-//                    0Rsb00IB
-//   #define AY_Z     0b01000000 //неактивен 
+// УКАЗАТЕЛИ НА ФУНКЦИИ ВВОДА/ВЫВОДА (Эмуляция портов ZX Spectrum)
+//==================================================================================================
+extern void (*AY_out_FFFD)(uint8_t);    // Указатель на функцию записи номера регистра (порт FFFD)
+extern void (*AY_out_BFFD)(uint8_t);    // Указатель на функцию записи данных в регистр (порт BFFD)
+extern void (*hw_beep_out)(bool);       // Указатель на функцию вывода бипера (порт FE)
 
+// Указатель на функцию рендеринга звука, вызывается по прерыванию таймера
+extern void (*audio_out)(void);
 
-// all chip AY
-#define AY_Z      0b0100110000000000 //неактивны оба чипа
-#define FM_Z      0b0100111100000000 //неактивны оба чипа
-#define AY_RES    0b0000001100000000// reset
-// chip AY 1
-#define AY0_Z     0b0100100000000000 // 0x4800 активен чип 0
-#define AY1_Z     0b0100010000000000 // 0x4400 активен чип 1
-//#define AY1_READ  0b0100010100000000// чтение 
-#define AY1_WRITE 0b0100011000000000// запись
-#define AY1_FIX   0b0100011100000000// фиксация адреса
-//#define AY1_RES   0b0000011100000000// reset
+//==================================================================================================
+// ПРОТОТИПЫ ФУНКЦИЙ УПРАВЛЕНИЯ AY
+//==================================================================================================
 
-// chip AY 0
-#define AY0_Z     0b0100100000000000 // 0x4800 активен чип 0
-//#define AY0_READ  0b0100100100000000// чтение 
-#define AY0_WRITE 0b0100101000000000// запись
-#define AY0_FIX   0b0100101100000000// фиксация адреса
-#define AY0_RES   0b0000101100000000// reset
+// Выбор типа звуковой подсистемы (SOFT, HARD, I2S и т.д.)
+void select_audio(void);   
 
-//--------------------------------------------------------------------------------------------------
+// Установка номера регистра (устаревший интерфейс для util_z80.c)
+void AY_select_reg(uint8_t N_reg);
 
-void Init_AY_595();
+// Чтение/запись данных в регистры программной эмуляции AY
+uint8_t AY_get_reg(void);
+void AY_set_reg(uint8_t val);
 
-bool __not_in_flash_func(get_random)();
+// Получение готовых сэмплов каналов A, B, C для программного AY (чип 0)
+uint16_t* get_AY_Out(uint8_t delta);
 
-void __not_in_flash_func(send595)(uint16_t comand,uint8_t data);
+// Аналогичный интерфейс для второго чипа (Turbo Sound)
+uint8_t AY_get_reg1(void);
+void AY_set_reg1(uint8_t val);
+uint16_t* get_AY_Out1(uint8_t delta);
+
+// Сброс всех аудиочипов в начальное состояние
+void AY_reset(void);
+
+// Чтение данных из регистра (эмуляция IN FFFD)
+uint8_t __not_in_flash_func(AY_in_FFFD)(void);
+
+// Управление питанием/активностью железных AY (отключение/включение)
+void hardAY_off(void);
+void hardAY_on(void);
+
+// Установка громкости
+void init_vol_ay(void);
+void set_audio_buster(void);
+
+// Заглушки для совместимости
+void ay_mute(void);
+void ay_reinit(void);
+
+//==================================================================================================
+// МАКРОСЫ КОМАНД ДЛЯ СДВИГОВОГО РЕГИСТРА 74HC595 (Управление железным AY)
+// Формат посылки: *R*B10WA--------
+// R - RESET, B - BEEP, 1/0 - Chip Select, W - WR, A - A0
+//==================================================================================================
+
+// Общие команды
+#define AY_Z      0b0100110000000000  // Оба чипа в Z-состоянии (неактивны)
+#define FM_Z      0b0100111100000000  // Z-состояние для FM (TSFM)
+#define AY_RES    0b0000001100000000  // Сброс (Reset)
+
+// Команды для Чипа 0 (Основной)
+#define AY0_Z     0b0100100000000000  // Активен чип 0 (Z-состояние снято)
+#define AY0_WRITE 0b0100101000000000  // Запись данных в регистр (WR=1, A0=0)
+#define AY0_FIX   0b0100101100000000  // Фиксация адреса регистра (WR=1, A0=1)
+
+// Команды для Чипа 1 (Turbo Sound)
+#define AY1_Z     0b0100010000000000  // Активен чип 1
+#define AY1_WRITE 0b0100011000000000  // Запись данных в регистр чипа 1
+#define AY1_FIX   0b0100011100000000  // Фиксация адреса регистра чипа 1
+
+//==================================================================================================
+// ПРОТОТИПЫ НИЗКОУРОВНЕВЫХ ФУНКЦИЙ ДЛЯ РАБОТЫ С ЖЕЛЕЗОМ
+//==================================================================================================
+
+// Инициализация PIO и сдвигового регистра 595
+void Init_AY_595(void);
+
+// Генератор случайного шума (LFSR)
+bool __not_in_flash_func(get_random)(void);
+
+// Отправка данных в сдвиговые регистры
+void __not_in_flash_func(send595)(uint16_t comand, uint8_t data);
 void __not_in_flash_func(send595_0)(uint16_t comand, uint8_t data);
 void __not_in_flash_func(send595_1)(uint16_t comand, uint8_t data);
+
+// Функции для работы с TSFM (подготовка)
 void __not_in_flash_func(set_reg_tsfm0)(uint8_t data);
 void __not_in_flash_func(set_reg_tsfm1)(uint8_t data); 
 void __not_in_flash_func(set_data_tsfm0)(uint8_t data); 
 void __not_in_flash_func(set_data_tsfm1)(uint8_t data); 
 
+// Управление бипером через 595 регистр
 void out_beep595(bool val);
 
-/* void (*hw_beep_out)(bool val); // определение указателя на функцию */
-void (hw_out595_beep_out)(bool val);
-void (hw_outpin_beep_out)(bool val);
-void (hw_outi2s_beep_out)(bool val);
+// Различные реализации вывода бипера
+void hw_out595_beep_out(bool val);
+void hw_outpin_beep_out(bool val);
+void hw_outi2s_beep_out(bool val);
 
-//void init_i2s_sound();
+// Отправка данных в чип SAA1099
+void __not_in_flash_func(saa1099_write)(uint8_t addr, uint16_t byte);
 
-
- void __not_in_flash_func(saa1099_write)(uint8_t addr, uint16_t byte);
-
-extern uint8_t valLoad;
- #endif
+#endif // _AYSOFT_H_

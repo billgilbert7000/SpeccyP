@@ -12,7 +12,7 @@
 
 #include "ff.h"
 #include "config.h"
-#include "aySoft.h"  
+#include "aySoft.h"
 //#define ZX_RAM_PAGE_SIZE 0x4000
 #define BUFF_PAGE_SIZE 0x200
 TapeBlock tap_blocks[TAPE_BLK_SIZE];
@@ -57,7 +57,7 @@ typedef struct TapeBlock{
 	uint32_t FPos;
 } __attribute__((packed)) TapeBlock;
 */
-/* 
+/*
 
 
 uint8_t TapeStatus;
@@ -71,15 +71,15 @@ size_t bytesToRead;
 static uint8_t tapePhase;
 static uint64_t tapeStart;
 static uint32_t tapePulseCount;
-static uint16_t tapeBitPulseLen;   
-static uint8_t tapeBitPulseCount;     
+static uint16_t tapeBitPulseLen;
+static uint8_t tapeBitPulseCount;
 
 
 static uint16_t tapeHdrPulses;
 static uint32_t tapeBlockLen;
 static uint8_t* tape;
 static uint8_t tapeEarBit;
-static uint8_t tapeBitMask; 
+static uint8_t tapeBitMask;
 
 uint8_t tapeCurrentBlock;
 size_t tapeFileSize;
@@ -115,7 +115,7 @@ uint8_t __not_in_flash_func(TAP_Read)(){
         if (tapeCurrent > TAPE_SYNC2_LEN) {
             tapeStart=Z80_C(z1->cpu)yc;
             tapeEarBit ^= 1;
-            if (tape[tapebufByteCount] & tapeBitMask) tapeBitPulseLen=TAPE_BIT1_PULSELEN; else tapeBitPulseLen=TAPE_BIT0_PULSELEN;            
+            if (tape[tapebufByteCount] & tapeBitMask) tapeBitPulseLen=TAPE_BIT1_PULSELEN; else tapeBitPulseLen=TAPE_BIT0_PULSELEN;
             tapePhase=TAPE_PHASE_DATA;
         }
         break;
@@ -141,7 +141,7 @@ uint8_t __not_in_flash_func(TAP_Read)(){
 							f_close(&f);
 							tap_loader_active = false;
 							tapebufByteCount=0;
-							//im_z80_stop = false;       
+							//im_z80_stop = false;
 							TapeStatus=TAPE_STOPPED;
 							return false;
 						}
@@ -162,7 +162,7 @@ uint8_t __not_in_flash_func(TAP_Read)(){
 							return false;
 						}
                         break;
-					}					
+					}
                 }
                 if (tape[tapebufByteCount] & tapeBitMask) tapeBitPulseLen=TAPE_BIT1_PULSELEN; else tapeBitPulseLen=TAPE_BIT0_PULSELEN;
             }
@@ -201,8 +201,8 @@ uint8_t __not_in_flash_func(TAP_Read)(){
 			break;
 		}
         return false;
-    } 
-  
+    }
+
     return tapeEarBit;
 }
 
@@ -225,7 +225,7 @@ void __not_in_flash_func(TAP_Play)(){
 		bytesToRead = tapeBlockLen<BUFF_PAGE_SIZE ? tapeBlockLen : BUFF_PAGE_SIZE;
 		tfd = f_read(&f,sd_buffer,bytesToRead,&bytesRead);
 		if (tfd != FR_OK){f_close(&f);break;}
-		//printf("Block:%d Seek:%d Length:%d Read:%d\n",tapeCurrentBlock,tap_blocks[tapeCurrentBlock].FPos,tapeBlockLen,bytesRead);		
+		//printf("Block:%d Seek:%d Length:%d Read:%d\n",tapeCurrentBlock,tap_blocks[tapeCurrentBlock].FPos,tapeBlockLen,bytesRead);
        	tapebufByteCount=2;
 		tapeBlockByteCount=0;
        	tapeStart=Z80_C(z1->cpu)yc;
@@ -252,7 +252,7 @@ void Init(){
 }
 
 bool TAP_Load(char *file_name){
-	
+
 	//printf("Tap Load begin\n");
     TapeStatus = TAPE_STOPPED;
 	//printf("Tap FN:%s\n",file_name);
@@ -302,7 +302,7 @@ bool TAP_Load(char *file_name){
 
 
 
-	
+
     return true;
 }
 
@@ -311,7 +311,7 @@ void TAP_Rewind(){
 	//printf("Tape Rewind\n");
 	tapebufByteCount=0;
 	tapeBlockByteCount=0;
-	tapeCurrentBlock=0;	
+	tapeCurrentBlock=0;
 	tapeTotByteCount=0;
 };
 
@@ -357,109 +357,95 @@ void TAP_PrevBlock(){
 */
 
 bool LoadScreenFromTap(char *file_name){
-
 	bool screen_found = false;
 	uint8_t* bufferOut;
 
-	memset(sd_buffer, 0, sizeof(sd_buffer));
+	// Используем только вторую половину sd_buffer [0x2000..0x3FFF] —
+	// первая половина [0..BUFF_PAGE_SIZE-1] содержит активную страницу ленты.
+	bufferOut = &sd_buffer[0x2000];
+	memset(bufferOut, 0, sizeof(sd_buffer) - 0x2000);
+
+	// Локальные переменные — глобальные FIL f и tap_blocks[] не трогаем
+	FIL f_prev;
+	size_t lBR;
+	size_t lFileSize;
+	uint32_t lTotByteCount;
+	uint8_t lBlocksCount;
+	char lBHbuffer[20];
+	static TapeBlock lBlocks[TAPE_BLK_SIZE];
 
 	for(uint8_t i=0;i<TAPE_BLK_SIZE;i++){
-		tap_blocks[i].DataType=0;
-		tap_blocks[i].Flag=0;
-		tap_blocks[i].FPos=0;
-		tap_blocks[i].Size=0;
-		tap_blocks[i].NAME[0]=0;
+		lBlocks[i].DataType=0;
+		lBlocks[i].Flag=0;
+		lBlocks[i].FPos=0;
+		lBlocks[i].Size=0;
+		lBlocks[i].NAME[0]=0;
 	}
-	//FIL f;
-    int tfd =-1; //tape file descriptor
 
-	tfd = f_open(&f,file_name,FA_READ);
-    //printf("f_open=%d\n",tfd);
-	if (tfd!=FR_OK){f_close(&f);return false;}
-   	tapeFileSize = sd_file_size(&f);
-    //printf(".TAP Filesize %u bytes\n", tapeFileSize);
-	tapBlocksCount=0;
-	tapebufByteCount=0;
-	tapeBlockByteCount=0;
-	tapeTotByteCount=0;
-	while (tapeTotByteCount<=tapeFileSize){
-		tfd = f_read(&f,tapeBHbuffer,14,&bytesRead);
-		if (tfd != FR_OK){f_close(&f);return false;}
-		//printf(" Readbuf:%d\n", bytesRead);
-		//printf(" pos:%d\n", tapeTotByteCount);
-		TapeBlock* block = (TapeBlock*) &tapeBHbuffer;
-		tap_blocks[tapBlocksCount].Size = block->Size;
-		//printf(" block:%d, size:%d ",tapBlocksCount,block->Size);
-		memset(tap_blocks[tapBlocksCount].NAME, 0, sizeof(tap_blocks[tapBlocksCount].NAME));
+	int tfd = f_open(&f_prev, file_name, FA_READ);
+	if (tfd!=FR_OK){f_close(&f_prev);return false;}
+	lFileSize = sd_file_size(&f_prev);
+	lBlocksCount=0;
+	lTotByteCount=0;
+	while (lTotByteCount<=lFileSize){
+		tfd = f_read(&f_prev,lBHbuffer,14,&lBR);
+		if (tfd != FR_OK){f_close(&f_prev);return false;}
+		TapeBlock* block = (TapeBlock*) &lBHbuffer;
+		lBlocks[lBlocksCount].Size = block->Size;
+		memset(lBlocks[lBlocksCount].NAME, 0, sizeof(lBlocks[lBlocksCount].NAME));
 		if (block->Flag==0){
-			memcpy(tap_blocks[tapBlocksCount].NAME,block->NAME,10);
-			//printf(" header:%s", block->NAME);
+			memcpy(lBlocks[lBlocksCount].NAME,block->NAME,10);
 		}
-		tap_blocks[tapBlocksCount].Flag = block->Flag;
-		tap_blocks[tapBlocksCount].DataType = block->DataType;
-		//printf(" flag:%d, datatype:%d \n", block->Flag,block->DataType);
-		tap_blocks[tapBlocksCount].FPos=tapeTotByteCount;
-		tapeTotByteCount+=block->Size+2;
-		f_lseek(&f,tapeTotByteCount);
-		tapBlocksCount++;
-		if(tapeTotByteCount>=tapeFileSize){
+		lBlocks[lBlocksCount].Flag = block->Flag;
+		lBlocks[lBlocksCount].DataType = block->DataType;
+		lBlocks[lBlocksCount].FPos=lTotByteCount;
+		lTotByteCount+=block->Size+2;
+		f_lseek(&f_prev,lTotByteCount);
+		lBlocksCount++;
+		if(lTotByteCount>=lFileSize){
 			break;
 		}
-		if(tapBlocksCount==TAPE_BLK_SIZE){
+		if(lBlocksCount==TAPE_BLK_SIZE){
 			break;
 		}
 	}
-	tapebufByteCount=0;
-	tapeBlockByteCount=0;
-	tapeTotByteCount=0;
-	tapeCurrentBlock=0;
-	f_lseek(&f,0);
 
-	for (int8_t i=0;i<tapBlocksCount;i++){
-		if (tap_blocks[i].Flag>0){
-			if((tap_blocks[i].Size>=0x1AFE)&&(tap_blocks[i].Size<=0x1B02)){
-				f_lseek(&f,tap_blocks[i].FPos);
-				//bufferOut = (SD_BUFFER_SIZE>0x2000) ? &sd_buffer[0x2000] : &RAM[5*ZX_RAM_PAGE_SIZE];
-               bufferOut = (sizeof(sd_buffer)>0x2000) ? &sd_buffer[0x2000] : &RAM[5*ZX_RAM_PAGE_SIZE];
-
-				memset(sd_buffer, 0, sizeof(sd_buffer));
-				tfd = f_read(&f,bufferOut,tap_blocks[i].Size,&bytesRead);
-	        	//printf("bytesRead=%d\n",bytesRead);
-	        	if (tfd!=FR_OK){f_close(&f);return false;}
+	for (int8_t i=0;i<lBlocksCount;i++){
+		if (lBlocks[i].Flag>0){
+			if((lBlocks[i].Size>=0x1AFE)&&(lBlocks[i].Size<=0x1B02)){
+				f_lseek(&f_prev,lBlocks[i].FPos);
+				memset(bufferOut, 0, sizeof(sd_buffer) - 0x2000);
+				tfd = f_read(&f_prev,bufferOut,lBlocks[i].Size,&lBR);
+	        	if (tfd!=FR_OK){f_close(&f_prev);return false;}
 		        ShowScreenshot(bufferOut);
 				screen_found = true;
 				break;
 			}
-		}			
+		}
 	}
 
 	if (!screen_found){
 		draw_text_len(18+FONT_W*14,42+20,"File TAPE:",COLOR_TEXT,COLOR_BACKGOUND,14);
 		uint8_t j =1;
 		for (uint8_t i = 0; i < 22; i++){
-			if (tap_blocks[i].Size>0){
-				if (tap_blocks[i].Flag==0){
+			if (lBlocks[i].Size>0){
+				if (lBlocks[i].Flag==0){
 					memset(temp_msg, 0, sizeof(temp_msg));
-					sprintf(temp_msg,"%s",tap_blocks[i].NAME);
+					sprintf(temp_msg,"%s",lBlocks[i].NAME);
 					draw_text_len(10+FONT_W*15,62+FONT_H*(j),temp_msg,CL_GRAY,COLOR_BACKGOUND,10);
 					j++;
-				} 
-				
- 				else 
+				}
+ 				else
 				{
 					memset(temp_msg, 0, sizeof(temp_msg));
-					sprintf(temp_msg," %d",(tap_blocks[i].Size));
+					sprintf(temp_msg," %d",(lBlocks[i].Size));
 					draw_text_len(90+FONT_W*15,62+FONT_H*(j-1),temp_msg,CL_LT_CYAN,COLOR_BACKGOUND,10);
-				}  
-				
-			//	draw_text_len(18+FONT_W*15,24+FONT_H*i,temp_msg,COLOR_TEXT,COLOR_BACKGOUND,10);
+				}
 			}
 		}
 	}
 
-
-	f_close(&f);
-	
+	f_close(&f_prev);
 	memset(temp_msg, 0, sizeof(temp_msg));
     return true;
 }
@@ -504,10 +490,10 @@ void load_to_zx(uint16_t adr, uint16_t len)
 {
 
   //  int tfd =-1; //tape file descriptor
-	
+
 	while (1)
 	{
-		//tfd = 
+		//tfd =
 		f_read(&f, sd_buffer, 512, &bytesRead);
 		for (uint16_t i = 0; i < 512; i++)
 		{
@@ -525,24 +511,24 @@ void load_to_zx(uint16_t adr, uint16_t len)
 	{
 		f_open(&f, tape_file_name, FA_READ);
 		uint16_t x;
-		uint16_t adr_s = Z80_IX(z1->cpu); // адрес загрузки в spectrum				   
+		uint16_t adr_s = Z80_IX(z1->cpu); // адрес загрузки в spectrum
 		uint16_t len_s = Z80_DE(z1->cpu); // длина в DE
 
 		x = sd_buffer[1];
 		uint16_t lenBlk = (x << 8) | sd_buffer[0]; // длина блока +0 +1
 
 		f_lseek(&f, seekbuf); // смещаемся в файле на seekbuf байт
- 
+
 		f_read(&f, sd_buffer, 3, &bytesRead); // считываем 3 байта
-		
+
 		lenBlk = (sd_buffer[1] << 8) | sd_buffer[0]; // длина блока
 
 		load_to_zx(adr_s, len_s);
 
 		seekbuf = seekbuf + lenBlk + 2;
-		
+
 		Z80_F(z1->cpu)= 1;		 //	cpu.zf = 1;	 // ошибка
-		
+
 		Z80_PC(z1->cpu) = 0x0555; // ret c9 там
 		Z80_IX(z1->cpu) = Z80_IX(z1->cpu) + len_s;
 
@@ -556,14 +542,14 @@ void load_to_zx(uint16_t adr, uint16_t len)
 		//   seekbuf = 0;
 
 		//printf("tape_load_0562: %d\n", seekbuf);
-		//tfd = 
+		//tfd =
 		f_open(&f, tape_file_name, FA_READ);
 		//	tfd = f_open(&f, "0:/TEST_TAP.TAP ", FA_READ);
 
 		uint16_t x;
 		uint16_t adr_s = Z80_IX(z1->cpu); // адрес загрузки в spectrum
 		uint16_t len_s = Z80_DE(z1->cpu); // длина в DE
-		/* x = Z80_D(z1->cpu) ;						   
+		/* x = Z80_D(z1->cpu) ;
 		uint16_t len_s = (x << 8) | Z80_E(z1->cpu); // длина */
 
 		//x = sd_buffer[1];
@@ -582,7 +568,7 @@ void load_to_zx(uint16_t adr, uint16_t len)
 		load_to_zx(adr_s, len_s);
 
 		seekbuf = seekbuf + lenBlk + 2;
-		
+
 		Z80_F(z1->cpu) = 1;		 // ошибка
 		Z80_PC(z1->cpu) = 0x0555; // ret c9 там
 		Z80_IX(z1->cpu) = Z80_IX(z1->cpu) + len_s;
@@ -591,13 +577,13 @@ void load_to_zx(uint16_t adr, uint16_t len)
 
 	void tape_load(void)
 	{
-		
+
 	//	FIL f;
        // int tfd =-1; //tape file descriptor
 		//printf("seekbuf1: %d\n", seekbuf);
 		//tfd =
 		 f_open(&f, tape_file_name, FA_READ);
-		
+
 		if (Z80_A(z1->cpu) == 0) // то заголовок
 		{
 			// чтение заголовка
@@ -605,7 +591,7 @@ void load_to_zx(uint16_t adr, uint16_t len)
 			uint16_t adr_s = Z80_IX(z1->cpu); // адрес загрузки в spectrum
 			uint16_t len_s = Z80_DE(z1->cpu); // длина в DE
 
-											   // изначально  seekbuf = 0;
+												   // изначально  seekbuf = 0;
 			f_lseek(&f, seekbuf);		   // смещаемся в файле на seekbuf байт
 
 			 f_read(&f, sd_buffer, 20, &bytesRead); // считывание 20 байт заголовка
@@ -622,7 +608,7 @@ void load_to_zx(uint16_t adr, uint16_t len)
 			for (uint8_t i = 0; i < 17; i++)
 			{
 				z1->cpu.write   (z1, adr_s + i, sd_buffer[i + 3]);
-				
+
 			}
 
 			Z80_F(z1->cpu) = 1;		 // ошибка
@@ -645,7 +631,7 @@ void load_to_zx(uint16_t adr, uint16_t len)
 
 			f_lseek(&f, seekbuf); // смещаемся в файле на seekbuf байт
 
-			//tfd = 
+			//tfd =
 			f_read(&f, sd_buffer, 3, &bytesRead); // считываем 3 байта
 
 			lenBlk = (sd_buffer[1] << 8) | sd_buffer[0]; // длина блока
@@ -672,6 +658,9 @@ static uint16_t tapeHdrPulses;
 static uint32_t tapeBlockLen;
 static uint8_t tapeEarBit;
 static uint8_t tapeBitMask;
+// Позиция и размер текущей страницы sd_buffer в TAP-файле — для восстановления после меню
+static uint32_t tape_page_fpos = 0;
+static size_t   tape_page_size = 0;
 
 
 // ============================================================================
@@ -741,6 +730,8 @@ uint8_t __not_in_flash_func(TAP_Read)(){
 					// Буфер исчерпан - читаем следующую страницу с SD
 					if(tapebufByteCount>=BUFF_PAGE_SIZE){
 						im_z80_stop = true;
+						tape_page_fpos = f_tell(&f);
+						tape_page_size = BUFF_PAGE_SIZE;
 						int tfd = f_read(&f,sd_buffer,BUFF_PAGE_SIZE,&bytesRead);
 						im_z80_stop = false;
 						if (tfd!=FR_OK){
@@ -783,6 +774,8 @@ uint8_t __not_in_flash_func(TAP_Read)(){
 				f_lseek(&f,tap_blocks[tapeCurrentBlock].FPos);
 				tapeBlockLen=tap_blocks[tapeCurrentBlock].Size + 2;
 				bytesToRead = tapeBlockLen<BUFF_PAGE_SIZE ? tapeBlockLen : BUFF_PAGE_SIZE;
+				tape_page_fpos = tap_blocks[tapeCurrentBlock].FPos;
+				tape_page_size = bytesToRead;
 				int tfd = f_read(&f,sd_buffer,bytesToRead,&bytesRead);
 				if (tfd != FR_OK){
 					f_close(&f);
@@ -833,6 +826,8 @@ void __not_in_flash_func(TAP_Play)(){
 		tapeTotByteCount = tap_blocks[tapeCurrentBlock].FPos;
 		tapeBlockLen=tap_blocks[tapeCurrentBlock].Size + 2;
 		bytesToRead = tapeBlockLen<BUFF_PAGE_SIZE ? tapeBlockLen : BUFF_PAGE_SIZE;
+		tape_page_fpos = tap_blocks[tapeCurrentBlock].FPos;
+		tape_page_size = bytesToRead;
 		int tfd = f_read(&f,sd_buffer,bytesToRead,&bytesRead);
 		if (tfd != FR_OK){f_close(&f);break;}
 	   	tapebufByteCount=2;
@@ -849,6 +844,19 @@ void __not_in_flash_func(TAP_Play)(){
 		break;
 	}
 #endif
+}
+
+// ============================================================================
+// Восстановление страницы sd_buffer после операций меню/SD, которые её затёрли.
+// Вызывать из SpeccyP.c после возврата из file_manager, save_slot, load_slot.
+// ============================================================================
+void TAP_RestorePage(void) {
+	if (!tap_loader_active || TapeStatus != TAPE_LOADING) return;
+	if (tape_page_size == 0) return;
+	f_lseek(&f, tape_page_fpos);
+	f_read(&f, sd_buffer, tape_page_size, &bytesRead);
+	// После f_read указатель файла стоит на tape_page_fpos + tape_page_size —
+	// это корректная позиция для чтения следующей страницы.
 }
 
 // ============================================================================

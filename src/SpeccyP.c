@@ -1371,12 +1371,12 @@ int fast(main)(void){
 
 //########################################################################################           
                 // меню если is_menu_mode =true файловое меню
-                if ((is_menu_mode) && (!trdos))   file_manager();// файловое меню                   
+                if ((is_menu_mode) && (!trdos))   { file_manager(); TAP_RestorePage(); }// файловое меню
 //########################################################################################
     if ((!is_menu_mode)) // что нажимается вне файлового менеджера
-    {  
-            if (((kb_st_ps2.u[3] & KB_U3_F2) | (joy_key_ext== 0x82)) )  save_slot();   // [START]+стрелка влево - вход в меню SAVE
-            if (((kb_st_ps2.u[3] & KB_U3_F3) | (joy_key_ext == 0x81)) )  load_slot();   // [START]+стрелка вправо - вход в меню LOAD
+    {
+            if (((kb_st_ps2.u[3] & KB_U3_F2) | (joy_key_ext== 0x82)) )  { save_slot();  TAP_RestorePage(); }  // [START]+стрелка влево - вход в меню SAVE
+            if (((kb_st_ps2.u[3] & KB_U3_F3) | (joy_key_ext == 0x81)) )  { load_slot();  TAP_RestorePage(); }  // [START]+стрелка вправо - вход в меню LOAD
             if (kb_st_ps2.u[3] & KB_U3_F5)   save_all(); // запись всей памяти и файла конфигурации
             if (END) disasm(); // Дизассемблер
             if (F10) // TURBO

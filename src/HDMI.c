@@ -431,8 +431,12 @@ void graphics_set_palette(uint8_t i, uint32_t color888)
         //   #ifdef HDMI_PIN_ORDER_REVERSE
         //    conv_color64[i*2]=get_ser_diff_data(tmds_encoder(B),tmds_encoder(G),tmds_encoder(R));//реверс
          //  #else
+        #ifdef HDMI_PIN_SWAP_RG
+            conv_color64[i*2]=get_ser_diff_data(tmds_encoder(G),tmds_encoder(R),tmds_encoder(B));// Olimex PICO-PC: swap R/G lanes
+        #else
             conv_color64[i*2]=get_ser_diff_data(tmds_encoder(R),tmds_encoder(G),tmds_encoder(B));// оригинал
-         //  #endif 
+        #endif
+         //  #endif
         //   conv_color64[i*2+1]=conv_color64[i*2]^0xff03ffffffffffc0l;
           conv_color64[i*2+1]=conv_color64[i*2]^0x0003ffffffffffffl;
             };

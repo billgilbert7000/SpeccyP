@@ -1357,32 +1357,44 @@ void __not_in_flash_func(out_beep595)(bool val)
  * Вызывается по прерыванию таймера.
  */
 void __not_in_flash_func(audio_out_soft_ay)(void)
-{	 
+{
     pwm_set_gpio_level(ZX_AY_PWM_R, outR);  // Правый канал
     pwm_set_gpio_level(ZX_AY_PWM_L, outL);  // Левый канал
-    
+
     sound_fdd();  // Генерация шума дисковода
-    
+
     AY_data = get_AY_Out(AY_DELTA);
     outL = (AY_data[0] + AY_data[1]) * vol_soft_ay;        // A + B в левый канал
     outR = (AY_data[2] + AY_data[1]) * vol_soft_ay;        // C + B в правый канал
+#if BEEP == 2
+    outL += beepPWM * 4;
+    outR += beepPWM * 4;
+    outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
+    outR += valLoad * 8;
+#endif
 }
 
 /**
  * @brief Вывод звука для режима SOFT_TS (Turbo Sound) через PWM.
  */
 void __not_in_flash_func(audio_out_soft_ts)(void)
-{	
+{
     pwm_set_gpio_level(ZX_AY_PWM_R, outR);
     pwm_set_gpio_level(ZX_AY_PWM_L, outL);
-    
+
     AY_data = get_AY_Out(AY_DELTA);
     AY_data1 = get_AY_Out1(AY_DELTA);
     sound_fdd();
-    
+
     // Микширование каналов обоих чипов
     outL = (AY_data1[0] + AY_data1[1] + AY_data[0] + AY_data[1]) * vol_soft_ay;
     outR = (AY_data1[2] + AY_data1[1] + AY_data[2] + AY_data[1]) * vol_soft_ay;
+#if BEEP == 2
+    outL += beepPWM * 4;
+    outR += beepPWM * 4;
+    outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
+    outR += valLoad * 8;
+#endif
 }
 
 /**

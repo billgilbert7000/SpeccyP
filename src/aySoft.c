@@ -1364,14 +1364,24 @@ void __not_in_flash_func(audio_out_soft_ay)(void)
     sound_fdd();  // Генерация шума дисковода
 
     AY_data = get_AY_Out(AY_DELTA);
+
+
+#if BEEP == 0
     outL = (AY_data[0] + AY_data[1]) * vol_soft_ay;        // A + B в левый канал
     outR = (AY_data[2] + AY_data[1]) * vol_soft_ay;        // C + B в правый канал
-#if BEEP == 2
-    outL += beepPWM * 4;
-    outR += beepPWM * 4;
     outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
     outR += valLoad * 8;
 #endif
+
+#if BEEP == 2
+    outL = (AY_data[0] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;        // A + B в левый канал
+    outR = (AY_data[2] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;        // C + B в правый канал
+ //   outL += beepPWM * 4;
+ //   outR += beepPWM * 4;
+ //   outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
+ //   outR += valLoad * 8;
+#endif
+
 }
 
 /**
@@ -1387,13 +1397,20 @@ void __not_in_flash_func(audio_out_soft_ts)(void)
     sound_fdd();
 
     // Микширование каналов обоих чипов
+#if BEEP == 0
     outL = (AY_data1[0] + AY_data1[1] + AY_data[0] + AY_data[1]) * vol_soft_ay;
     outR = (AY_data1[2] + AY_data1[1] + AY_data[2] + AY_data[1]) * vol_soft_ay;
-#if BEEP == 2
-    outL += beepPWM * 4;
-    outR += beepPWM * 4;
     outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
     outR += valLoad * 8;
+#endif
+
+#if BEEP == 2
+    outL = (AY_data1[0] + AY_data1[1] + AY_data[0] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;
+    outR = (AY_data1[2] + AY_data1[1] + AY_data[2] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;
+  //  outL += beepPWM * 4;
+  //  outR += beepPWM * 4;
+  //  outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
+  //  outR += valLoad * 8;
 #endif
 }
 
@@ -1479,7 +1496,7 @@ void __not_in_flash_func(audio_out_i2s_ts)(void)
     
     // Суммирование каналов обоих чипов
     uint32_t sumL = AY_data[0] + AY_data[1] + AY_data1[0] + AY_data1[1] + beepPWM + valLoad;
-    uint32_t sumR = AY_data[2] + AY_data[1] + AY_data1[2] + AY_data1[1] + beepPWM;
+    uint32_t sumR = AY_data[2] + AY_data[1] + AY_data1[2] + AY_data1[1] + beepPWM + valLoad;
     
     // Ограничение максимального значения
     sumL = (sumL > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumL;
@@ -1508,7 +1525,7 @@ void __not_in_flash_func(audio_out_i2s_ay)(void)
     AY_data = get_AY_Out(AY_DELTA);
     
     uint32_t sumL = AY_data[0] + AY_data[1] + beepPWM + valLoad;
-    uint32_t sumR = AY_data[2] + AY_data[1] + beepPWM;
+    uint32_t sumR = AY_data[2] + AY_data[1] + beepPWM + valLoad;
     
     sumL = (sumL > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumL;
     sumR = (sumR > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumR;

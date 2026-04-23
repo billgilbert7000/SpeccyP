@@ -312,12 +312,25 @@ extern ZX_Input_t zx_input;
     " Pentagon 512CASH ",
 };
 
+
+#ifdef RP2350_256K
+	// меню menu_ram_48_128_256
+	char __in_flash() *menu_ram_128_48[4]={
+        //char*  menu_ram[7]={	
+        " Pentagon 128     ",
+        " ZX Spectrum 48   ",
+        " Scorpion ZS 256  ",
+        " Navigator 256    ",
+       };
+#else
 	// меню menu_ram_128_48
 	char __in_flash() *menu_ram_128_48[2]={
         //char*  menu_ram[7]={	
         " Pentagon 128     ",
         " ZX Spectrum 48   ",
        };
+#endif
+
 	// меню sound
 	 char __in_flash() *menu_sound[8]={
 	//char*  menu_sound[4]={	
@@ -937,9 +950,19 @@ switch (type_psram)
 {
 case NOT_PSRAM:
     draw_text_len(10+XPOS,y_info,"PSRAM not found",CL_RED,CL_BLACK,16); 
-    if (conf.mashine > 1) conf.mashine = 0;// only 128kB
+    #ifdef RP2350_256K
+	{
+		if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
+        else conf.mashine = SCORP256;    
+	}
+    #else
+	{
+		if (conf.mashine > 1) conf.mashine = 0;
+	}
+    #endif
     psram_avaiable =0;
     break;
+
 case BUTTER_PSRAM:
     snprintf(temp_msg, sizeof temp_msg, "PSRAM %d Mb QSPI CS:%d", size_psram, psram_pin_cs );//BUTTER  'butter'
 	draw_text(10+XPOS,y_info,temp_msg,CL_GREEN,CL_BLACK);
@@ -952,15 +975,25 @@ case BOARD_PSRAM:
     psram_type = 1;
     psram_avaiable =1;
     break;
-case NOT_PSRAM_PIN21:    
+/* case NOT_PSRAM_PIN21:    
 	draw_text(10+XPOS,y_info,"NO PSRAM / Clock AY on pin21",CL_LT_PINK,CL_BLACK);
     if (conf.mashine > 1) conf.mashine = 0;// only 128kB
     psram_avaiable = 0;
-    break;
+    break; */
 case BOARD_PSRAM_NOSUPORT:
     snprintf(temp_msg, sizeof temp_msg, "PSRAM board is not supported");
 	draw_text(10+XPOS,y_info,temp_msg,CL_BLUE,CL_BLACK);
-    if (conf.mashine > 1) conf.mashine = 0;// only 128kB
+    #ifdef RP2350_256K
+	{
+		if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
+        else conf.mashine = SCORP256;    
+	}
+    #else
+	{
+		if (conf.mashine > 1) conf.mashine = 0;
+	}
+    #endif
+    psram_avaiable =0;
     psram_avaiable =0;
     break;
 }
@@ -1371,12 +1404,12 @@ int fast(main)(void){
 
 //########################################################################################           
                 // меню если is_menu_mode =true файловое меню
-                if ((is_menu_mode) && (!trdos))   { file_manager(); TAP_RestorePage(); }// файловое меню
+                if ((is_menu_mode) && (!trdos))   file_manager();// файловое меню                   
 //########################################################################################
     if ((!is_menu_mode)) // что нажимается вне файлового менеджера
-    {
-            if (((kb_st_ps2.u[3] & KB_U3_F2) | (joy_key_ext== 0x82)) )  { save_slot();  TAP_RestorePage(); }  // [START]+стрелка влево - вход в меню SAVE
-            if (((kb_st_ps2.u[3] & KB_U3_F3) | (joy_key_ext == 0x81)) )  { load_slot();  TAP_RestorePage(); }  // [START]+стрелка вправо - вход в меню LOAD
+    {  
+            if (((kb_st_ps2.u[3] & KB_U3_F2) | (joy_key_ext== 0x82)) )  save_slot();   // [START]+стрелка влево - вход в меню SAVE
+            if (((kb_st_ps2.u[3] & KB_U3_F3) | (joy_key_ext == 0x81)) )  load_slot();   // [START]+стрелка вправо - вход в меню LOAD
             if (kb_st_ps2.u[3] & KB_U3_F5)   save_all(); // запись всей памяти и файла конфигурации
             if (END) disasm(); // Дизассемблер
             if (F10) // TURBO
@@ -1937,11 +1970,17 @@ void setup_zx(void)
 		draw_text(x1 + 206+12, y1 + 3, temp_msg, CL_BLACK, CL_GRAY);
     }
     else
+    #ifdef RP2350_256K
+	{
+		if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
+        else conf.mashine = SCORP256;
+        
+	}
+    #else
 	{
 		if (conf.mashine > 1) conf.mashine = 0;
-	//	draw_text(x1 + 206, y1 + 3, "128Kb", CL_BLACK, CL_GRAY);
 	}
-
+    #endif
 
 	// меню выбора setup
     while (1)
@@ -1987,7 +2026,26 @@ void setup_zx(void)
                 continue;
             }
         }
-        else // только 128 и 48 машина
+
+        #ifdef RP2350_256K
+        else // только 256 128 48 машины
+        {
+            if (numsetup == M_RAM)
+            {
+            uint8_t x = MenuBox(90, 52, 17, 4, "RAM Seting", menu_ram_128_48, 4, 0, 1);
+            if (x==0xff) continue;
+            switch (x)
+            {
+            case 0: conf.mashine = PENT128;  break;
+            case 1: conf.mashine = SPEC48 ;  break;
+            case 2: conf.mashine = SCORP256; break;    
+            case 3: conf.mashine = NOVA256;  break;
+            }
+            init_mashine_and_extram(conf.mashine);
+            continue;
+            }
+        }
+        #else // только 128 и 48 машина
         {
             if (numsetup == M_RAM)
             {
@@ -1998,7 +2056,7 @@ void setup_zx(void)
             continue;
             }
         }
-
+        #endif
 
         #ifndef GENERAL_SOUND
         if (numsetup == M_SOUND)

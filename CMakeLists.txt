@@ -14,12 +14,12 @@ if (EXISTS ${picoVscode})
 endif()
 # ====================================================================================
 # Устанавливаем параметры платы и чипа и так далее
-set(PICO_BOARD pico CACHE STRING "Board type")
+set(PICO_BOARD pico2 CACHE STRING "Board type")
 
 set(DEBUG OFF)
 
 # == Конфигурация  SpeccyP ==
-set (BASE_VERSION "1.5.8")
+set (BASE_VERSION "1.5.9")
 set(MOS2 OFF) # компиляция под MOS2 ON
 
 # Конфигурация сборки (можно задать через -DSPECCY_CONFIG=... и -DM_BOARD=...)
@@ -349,7 +349,8 @@ BEEP_PWM_WRAP=1000 # ШИМ
 AY_PWM_WRAP=4000 # ШИМ 
 MAX_VOL_PWM=100
 DEFAULT_VOLUME_PWM=50
-BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
+BEEP=2 # бипер микшируется в PWM R/L 
+#BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
 #BEEP=1 #вывод звук бипера на отдельный шим
 ##AUDIO 595  hard AY 
 PIO_AY595=pio0 
@@ -446,7 +447,8 @@ BEEP_PWM_WRAP=1000 # ШИМ
 AY_PWM_WRAP=4000 # ШИМ 
 MAX_VOL_PWM=100
 DEFAULT_VOLUME_PWM=50
-BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
+BEEP=2 # бипер микшируется в PWM R/L 
+#BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
 #BEEP=1 #вывод звук бипера на отдельный шим
 ##AUDIO 595  hard AY 
 PIO_AY595=pio0 
@@ -915,6 +917,7 @@ set (P_VERSION p2)# версия чипа
 target_compile_definitions(${PROJECT_NAME} PRIVATE
       ##  PICO_PIO_USE_GPIO_BASE # для использования GPIO >31 раскомментировать если RP2350B 
         PICO_RP2350
+        RP2350_256K   ##для памяти RAM 256kB на RP2350 не используя PSRAM
         ## AY-3-8910 
         AY_DELTA=2
         AY_SAMPLE_RATE=-9#(-1000000 / (4* 48000) ) ##//-9// 
@@ -939,9 +942,11 @@ endif()
         elseif( ${PICO_PLATFORM} MATCHES "rp2350")
             # Для PICO_RP2350 определяем все три варианта
             target_compile_definitions(${PROJECT_NAME} PRIVATE 
-              PSRAM_BUTTER_OR_PSRAM_PSRAM_BOARD
-             # PSRAM_BOARD
-               # PSRAM_BUTTER
+            PSRAM_BUTTER_OR_PSRAM_PSRAM_BOARD
+           # PSRAM_BOARD
+           # PSRAM_BUTTER
+           # PSRAM_NOSUPORT   
+           # NO_PSRAM
             )
             message("Конфигурация: MURM1 + PICO_RP2350 (PSRAM + PSRAM_BUTTER)")
         endif()
@@ -964,8 +969,7 @@ endif()
 ########### PSRAM для PI CARD ###########################################
    if( ${M_BOARD} MATCHES "PI_CARD")
             target_compile_definitions(${PROJECT_NAME} PRIVATE 
-     #PSRAM_BUTTER_OR_PSRAM
-          PSRAM_BUTTER
+            PSRAM_BUTTER
             )
             message("Конфигурация: PI CARD + PICO_RP2350 (PSRAM_BUTTER)")
         endif()
@@ -1046,6 +1050,11 @@ endif()
 
 if(DEBUG)
     SET(BUILD_NAME "${PROJECT_NAME}")
+    # 
+pico_enable_stdio_usb(${PROJECT_NAME} 0)
+pico_enable_stdio_uart(${PROJECT_NAME} 1)
+
+
 endif()
 
 

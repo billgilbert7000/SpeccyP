@@ -280,7 +280,7 @@ extern uint8_t color_zx[16];
 extern bool vbuf_en;// экран эмуляции
 extern bool is_menu_mode;
 //**********************************************
-extern  uint8_t RAM[16384*8]; //Реальная память куском 128Кб
+extern uint8_t RAM[]; //Реальная память RAM
 //------------------------------------------------
 // Joystick
 extern uint8_t joy_key_ext;

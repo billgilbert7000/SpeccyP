@@ -113,5 +113,6 @@ void tape_load(void);
 void tape_load_056a(void);
 
 void Set_load_tape(char *filename,char *current_lfn);
+void TAP_RestorePage(void);
 
 #endif

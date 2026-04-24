@@ -1604,7 +1604,7 @@ void __not_in_flash_func(hw_outpin_beep_out)(bool val)
 
 #if BEEP == 2
 /**
- * @brief Вывод бипера через микширование в PWM/I2S.
+ * @brief Вывод бипера через микширование в PWM.
  */
 void __not_in_flash_func(hw_outpin_beep_out)(bool val)
 {
@@ -1612,7 +1612,13 @@ void __not_in_flash_func(hw_outpin_beep_out)(bool val)
     beep_data = (beep_data & 0b10) | (val << 0);
     out ^= (beep_data == beep_data_old) ? 0 : 1;
     beep_data_old = beep_data;
-    beepPWM = beep_data * 256;  // Вывод бипера на ШИМ
+    beepPWM = beep_data * 64;  // Вывод бипера на ШИМ
+
+      outL = (beepPWM) * vol_soft_ay;        // A + B в левый канал
+      outR = (beepPWM) * vol_soft_ay;        // C + B в правый канал
+    pwm_set_gpio_level(ZX_AY_PWM_R, outR);  // Правый канал
+    pwm_set_gpio_level(ZX_AY_PWM_L, outL);  // Левый канал
+
 }
 #endif
 

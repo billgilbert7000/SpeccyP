@@ -1,3 +1,13 @@
+SPECCY P v1.5.9 (RP2040 и RP2350)
+24.04.2026 
+FIX - вывод звука beeper в i2s + увеличенна частота дискредитации 
+FIX - вывод звука beeper PWM теперь это микшируется в каналы
+
+FIX - beeper audio output in i2s+ increased discrediting frequency 
+FIX - beeper PWM audio output now it is mixed into channels
+
+--------------------------------------------------------------
+
 SPECCY P v1.5.8 (RP2040 и RP2350)
 20.04.2026 
 - благодаря Drew @Drew2812 добавленна загрузка файлов TAP

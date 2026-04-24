@@ -16,7 +16,7 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
-set(DEBUG OFF)
+set(DEBUG ON)
 
 # == Конфигурация  SpeccyP ==
 set (BASE_VERSION "1.5.9")
@@ -221,7 +221,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/s
 ###################################################
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=200426
+CONFIG_VERSION=240426
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1
@@ -361,7 +361,7 @@ DATA_595_PIN=28
 ##AUDIO i2s
 I2S_DATA_PIN=26
 I2S_CLK_BASE_PIN=27
-I2S_FREQ=96000 ##111111 Hz
+I2S_FREQ=111111 ##111111 Hz
 PIO_I2S=pio0 # Only  pio0 !
 SM_I2S=0
 DEFAULT_VOLUME_I2S=50
@@ -460,7 +460,7 @@ DATA_595_PIN=9
 ##AUDIO i2s
 I2S_DATA_PIN=9
 I2S_CLK_BASE_PIN=10
-I2S_FREQ=96000 ##111111 #48000
+I2S_FREQ=111111 ##111111 #48000
 PIO_I2S=pio0
 SM_I2S=0
 DEFAULT_VOLUME_I2S=50
@@ -555,7 +555,7 @@ DATA_595_PIN=9
 ##AUDIO i2s
 I2S_DATA_PIN=45
 I2S_CLK_BASE_PIN=46 # и 47
-I2S_FREQ=96000 ##111111 #48000
+I2S_FREQ=111111 ##111111 #48000
 PIO_I2S=pio0 # использование GPIO 16...48
 SM_I2S=0
 DEFAULT_VOLUME_I2S=50
@@ -673,7 +673,7 @@ DATA_595_PIN=0 # не используется
 ##AUDIO i2s
 $<IF:$<BOOL:${PCM5122}>,I2S_DATA_PIN=21,I2S_DATA_PIN=10>
 $<IF:$<BOOL:${PCM5122}>,I2S_CLK_BASE_PIN=18,I2S_CLK_BASE_PIN=11>
-I2S_FREQ=96000 ##111111 Hz
+I2S_FREQ=111111 ##111111 Hz
 PIO_I2S=pio1 #
 SM_I2S=0
 
@@ -781,7 +781,7 @@ DATA_595_PIN=28 # не используется
 ##AUDIO i2s
 I2S_DATA_PIN=26
 I2S_CLK_BASE_PIN=27
-I2S_FREQ=96000 ##111111 Hz
+I2S_FREQ=111111 ##111111 Hz
 PIO_I2S=pio1 # SM0,SM1 заняты видео
 SM_I2S=2
 DEFAULT_VOLUME_I2S=50
@@ -882,7 +882,7 @@ DATA_595_PIN=28 # не используется
 ##AUDIO i2s — не используется
 I2S_DATA_PIN=255
 I2S_CLK_BASE_PIN=255
-I2S_FREQ=96000
+I2S_FREQ=111111
 PIO_I2S=pio1
 SM_I2S=2
 DEFAULT_VOLUME_I2S=50
@@ -1051,8 +1051,8 @@ endif()
 if(DEBUG)
     SET(BUILD_NAME "${PROJECT_NAME}")
     # 
-pico_enable_stdio_usb(${PROJECT_NAME} 0)
-pico_enable_stdio_uart(${PROJECT_NAME} 1)
+#pico_enable_stdio_usb(${PROJECT_NAME} 0)
+#pico_enable_stdio_uart(${PROJECT_NAME} 1)
 
 
 endif()

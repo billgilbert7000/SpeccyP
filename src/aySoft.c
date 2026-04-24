@@ -1653,6 +1653,28 @@ void __not_in_flash_func(hw_outi2s_beep_out)(bool val)
     beep_data_old = beep_data;
     
     beepPWM = val ? vol_beep : 0;
+
+/////////////////
+ // Суммирование каналов обоих чипов
+  //  uint32_t sumL =  beepPWM ;
+        
+    // Ограничение максимального значения
+ //   sumL = (sumL > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumL;
+ //   sumR = (sumR > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumR;
+    
+    // Масштабирование через таблицу
+    uint32_t totalL = ay_scale_table[beepPWM];
+    
+    
+    // Преобразование в знаковый int16_t диапазон
+    int32_t outL = (int32_t)totalL - OUTPUT_MIDPOINT;
+        
+    // Применение громкости (умножение и сдвиг)
+    outL = (outL * volume_mult_table[current_volume]) >> 8;
+        
+    i2s_out((int16_t)outL, (int16_t)outL);
+
+////////////////
 }
 
 //==================================================================================================

@@ -177,35 +177,6 @@ extern ZX_Input_t zx_input;
         return conf.vout;
     }
 //---------------------------------------------
-// запуск с определенным видеовыходом по наличию файла Не используется
-/*     uint8_t video_filedetect(void)
-    {
-        FIL f;
-        sprintf(temp_msg, "0:/speccy_p_tft");
-        int fd = f_open(&f, temp_msg, FA_READ);
-        if (fd == FR_OK)
-        {  
-            f_close(&f);
-            return VIDEO_TFT;
-        }
-  
-        sprintf(temp_msg, "0:/speccy_p_vga");
-        fd = f_open(&f, temp_msg, FA_READ);
-        if (fd == FR_OK)
-        { 
-            f_close(&f);
-            return VIDEO_VGA;
-        }
-        sprintf(temp_msg, "0:/speccy_p_hdmi");
-        fd = f_open(&f, temp_msg, FA_READ);
-        if (fd == FR_OK)
-        { 
-            f_close(&f);
-            return VIDEO_HDMI;
-        }
-        return video_autodetect();
-    } */
-//---------------------------------------------
 
 //----------------------------
 	// меню  initial
@@ -222,8 +193,8 @@ extern ZX_Input_t zx_input;
         " Joystick      ",
         " AutoRun       ",
         " Setting TFT   ",
+        " Sound setup   ", 
         " Advanced setup", 
-        "               ",
         "               ",
         " Save config   ",
         " Z80  reset    ",
@@ -249,8 +220,8 @@ extern ZX_Input_t zx_input;
     " Joystick      ",
     " AutoRun       ",
     " Palette       ",
+    " Sound setup   ", 
     " Advanced setup", 
-    "               ",
     "               ",
 	" Save config   ",
 	" Z80  reset    ",
@@ -638,6 +609,8 @@ void pico_reset(){
 //AIRCR_Register = 0x5FA0004;
 	watchdog_enable(1, 1);// сброс watch dog
 	while(1);
+
+
 }
 //-----------------------------------------------------
 //bool b_beep;
@@ -719,7 +692,7 @@ void fast(init_pico)(void) // настройка и разгон для RP2350
 {  
     volatile uint32_t *qmi_m0_timing=(uint32_t *)0x400d000c;
     vreg_disable_voltage_limit();
-    vreg_set_voltage(VOLTAGE);
+    vreg_set_voltage(VOLTAGE_MIN);
 
 #if (FLASH_MAX_FREQ_MHZ==166)
     real_flash_freq = CPU_MHZ/3;
@@ -738,7 +711,7 @@ void fast(init_pico)(void) // настройка и разгон для RP2040
 {  
    // hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
    // sleep_ms(10);
-    vreg_set_voltage(VOLTAGE);
+    vreg_set_voltage(VREG_VOLTAGE_1_30);
    sleep_ms(500);
    // запуск на пониженной частоте 
    set_sys_clock_khz(CPU_KHZ , false);
@@ -754,18 +727,31 @@ static uint inx=0;
 void init_and_info()
 {
 
+/* //#else // RP2040 или RP2350A
+   for (int gpio = 0; gpio < 30; gpio++) {
+    gpio_init(gpio);          // Сброс в SIO, вход
+    gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
+    gpio_set_dir(gpio, GPIO_IN); // Направление: вход
+    }
+//#endif     */
 
 #if LED_BOARD != 255
     gpio_init(LED_BOARD);
     gpio_set_dir(LED_BOARD, GPIO_OUT);
 //	g_delay_ms(100);
-    gpio_put(LED_BOARD, 0);
+    gpio_put(LED_BOARD, 1);
 #endif 
 
 #ifdef PICO_RP2350 
   // определение RP2350 A или B  
      rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
       psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
+
+
+
+
+
+
 
     // для корректного запуска с бутербродом PSRAM  
     gpio_init(psram_pin_cs);
@@ -832,7 +818,10 @@ void init_and_info()
 
     config_init();
 
-
+#ifdef PICO_RP2350 
+vreg_set_voltage(conf.voltage);
+#endif
+    gpio_put(LED_BOARD, 0);
 //------------------------------------------------------------------
     turbo_switch(); // переключение режима turbo
  
@@ -1000,7 +989,7 @@ case BOARD_PSRAM_NOSUPORT:
 }
 
         #ifdef TEST_DEBUG
-uint8_t table_voltage[] = {55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,150,160,165};
+
 #ifdef GENERAL_SOUND
 snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq); 
         draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
@@ -1010,27 +999,28 @@ snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq);
       
         draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK); 
 
-        snprintf(temp_msg, sizeof temp_msg, "Ucpu    %.1fV",table_voltage[VOLTAGE]/ 100.0); 
+          snprintf(temp_msg, sizeof temp_msg, "  Ucpu   %.2f V ",table_voltage[conf.voltage]/ 100.0 ); 
         draw_text(210+XPOS,YPOS+30,temp_msg,CL_GRAY ,CL_BLACK); 
-        snprintf(temp_msg, sizeof temp_msg, "PicoBus %dMbps",PICOBUS_SPEED); 
-        draw_text(210+XPOS,YPOS+40,temp_msg,CL_GRAY ,CL_BLACK); 
+     //   snprintf(temp_msg, sizeof temp_msg, "PicoBus %dMbps",PICOBUS_SPEED); 
+     //   draw_text(210+XPOS,YPOS+40,temp_msg,CL_GRAY ,CL_BLACK); 
 
         #else
-snprintf(temp_msg, sizeof temp_msg, " FLASH   %dMHz", real_flash_freq); 
-        draw_text(204+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
-        snprintf(temp_msg, sizeof temp_msg, "PSRAM   N/A",real_psram_freq);
+//snprintf(temp_msg, sizeof temp_msg, " FLASH   %dMHz", real_flash_freq); 
+    //    draw_text(204+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
+   //     snprintf(temp_msg, sizeof temp_msg, "PSRAM   N/A",real_psram_freq);
 /*         if (type_psram==BUTTER_PSRAM) snprintf(temp_msg, sizeof temp_msg, "PSRAM   %dMHz",real_psram_freq); 
         else snprintf(temp_msg, sizeof temp_msg, " ");
         draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK);  */
-
-        snprintf(temp_msg, sizeof temp_msg, " Ucpu    %.2fV",table_voltage[VOLTAGE]/ 100.0); 
-        draw_text(204+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK); 
-
+    #ifdef PICO_RP2350 
+        snprintf(temp_msg, sizeof temp_msg, "  Ucpu   %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
+      // snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %d mV ",conf.voltage );
+        draw_text(204+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
+    #endif
 #if POWER_MODE_WEACT == 0
-        draw_text(210+XPOS,YPOS+30,"MODE    PFM",CL_GRAY ,CL_BLACK); 
+      //  draw_text(210+XPOS,YPOS+30,"MODE    PFM",CL_GRAY ,CL_BLACK); 
 #endif 
 #if POWER_MODE_WEACT == 1
-        draw_text(210+XPOS,YPOS+30,"MODE    PWM",CL_GRAY ,CL_BLACK); 
+     //   draw_text(210+XPOS,YPOS+30,"MODE    PWM",CL_GRAY ,CL_BLACK); 
 #endif 
 
         #endif
@@ -1291,6 +1281,15 @@ void Message_Print()
             draw_text(8,Y_INFO,menu_pallete[conf.pallete],CL_WHITE ,CL_BLUE);//232
              break;
 
+ case 77:
+           sprintf(temp_msg, dir_patch_info);
+
+           sprintf(temp_msg, "C:%2X H:%2X  R:%2X   " ,WD1793.RealTrack ,WD1793.Side, WD1793.RealSector);//%%zx_7ffd_lastOut
+           draw_text(8,Y_INFO-10,temp_msg,CL_WHITE ,CL_BLUE);//232
+           sprintf(temp_msg, "C:%2X H:%2X  R:%2X   N:%2X  SIZE:%d " ,sector_inf->c ,sector_inf->h, sector_inf->r,sector_inf->n ,sector_inf->size );//
+           draw_text(8,Y_INFO,temp_msg,CL_WHITE ,CL_BLUE);//232
+           wait_msg = 1000;
+            break;  
 
         default:
             wait_msg = 0;
@@ -1314,7 +1313,7 @@ int fast(main)(void){
   } 
 // tuh_task(); // tinyusb host task
 // Инициализация последовательного порта
-    stdio_init_all(); // для автоматической загрузки прошивки RP2350
+  //  stdio_init_all(); // для автоматической загрузки прошивки RP2350
 
     init_and_info();
 
@@ -1652,7 +1651,9 @@ void  config_init(void)
     if (fd != FR_OK)
     {
         f_close(&f);
-        config_defain();// если нет файла конфигурации
+        config_defain();// если нет файла конфигурации       
+        config_ini_load("0:/speccy_p.ini");//текстовый файл конфига
+        // если его нет то загружается дефолтная конфигурация и файл записывается
         return;
     }
      UINT bytesRead;
@@ -1660,7 +1661,7 @@ void  config_init(void)
     if (fd != FR_OK)  // если ошибка то конфиг по умолчанию
     {
       f_close(&f);
-      config_defain();
+      config_defain(); 
       return ;
    
     }  
@@ -1668,13 +1669,15 @@ void  config_init(void)
     {
         f_close(&f);
         config_defain();// если файл конфигурации неправильной версии
-
+        config_ini_load("0:/speccy_p.ini");//текстовый файл конфига
+        // если его нет то загружается дефолтная конфигурация и файл записывается
         return;
     }
  
 
     f_close(&f);
 
+    config_ini_load("0:/speccy_p.ini");//текстовый файл конфига
     conf.turbo=0; // при включении TURBO OFF!
     return ;
 }
@@ -1689,7 +1692,8 @@ void  config_init(void)
 #define ZX4096 6 */
 
 bool save_config(void)
-{   // config_save("speccy_p.ini"); на потом оставил текстовый файл конфига
+{   
+    
 	FIL f;
 
 /*     int fd = f_mkdir("0:/");
@@ -1719,6 +1723,9 @@ bool save_config(void)
         return false;
     }
     f_close(&f);
+
+    config_ini_save("0:/speccy_p.ini");//текстовый файл конфига
+
 
     return true;
 }
@@ -2088,9 +2095,19 @@ if (numsetup == M_JOY)
            continue;
         }
 
+  if (numsetup == M_SOUND_SETUP) // Sound setup
+        {
+          uint8_t x = MenuBox_sound_setup(94, 44, 17, 7, "Sound setup", 7, 6, 1);
+           if (x==0xff) continue;
+
+           continue;
+        }    
+
+
+
   if (numsetup == M_ADVANCED)
         {
-          uint8_t x = MenuBox_advanced_setup(94, 44, 17, 11, "Advanced setup", 11, 10, 1);
+          uint8_t x = MenuBox_advanced_setup(94, 44, 17, 8, "Advanced setup", 8, 7, 1);
            if (x==0xff) continue;
 
            continue;
@@ -3340,7 +3357,7 @@ void file_manager (void)
 
                     for (int i = 0; i < num_show_files; i++)
                     {
-                        uint8_t color_text = CL_GREEN;
+                        uint8_t color_text = CL_GREEN;//!!!!!
                         uint8_t color_text_d = CL_YELLOW; // если директория
                         uint8_t color_bg = COLOR_BACKGOUND;
 

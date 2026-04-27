@@ -364,8 +364,8 @@ void start_PS2_capture(){
     gpio_disable_pulls(beginPS2_PIN+1);
     // Установка повышенной выходной мощности (12 мА) для обеспечения 
     // стабильного сигнала (актуально для режима OUTPUT)
-    gpio_set_drive_strength(beginPS2_PIN, GPIO_DRIVE_STRENGTH_12MA); 
-    gpio_set_drive_strength(beginPS2_PIN+1, GPIO_DRIVE_STRENGTH_12MA); 
+    gpio_set_drive_strength(beginPS2_PIN, GPIO_DRIVE_STRENGTH_8MA); 
+    gpio_set_drive_strength(beginPS2_PIN+1, GPIO_DRIVE_STRENGTH_8MA); 
     // Настройка направления пинов на ВХОД (PS/2 - bidirectional протокол, 
     // но на начальном этапе контроллер работает как устройство)
     gpio_set_dir(beginPS2_PIN, GPIO_IN); 

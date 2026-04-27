@@ -152,8 +152,8 @@ fdi_stream_result_t fdi_stream_load_track(fdi_stream_ctx_t *ctx, uint8_t cylinde
 fdi_sector_info_t* fdi_stream_get_sector(fdi_stream_ctx_t *ctx, uint8_t sector_r);
 fdi_stream_result_t fdi_stream_read_sector_data(fdi_stream_ctx_t *ctx, fdi_sector_info_t *sector, uint8_t *buffer, uint16_t buffer_size);
 
-uint16_t wd93_crc_simple(const uint8_t *data, uint16_t size);
-uint16_t wd93_crc_fast(const uint8_t *data, uint16_t size);
+//uint16_t wd93_crc_simple(const uint8_t *data, uint16_t size);
+//uint16_t wd93_crc_fast(const uint8_t *data, uint16_t size);
 // Вспомогательные функции
 static inline uint16_t fdi_sector_size(uint8_t n) {
     return 128 << (n & 3);

@@ -38,7 +38,7 @@ uint8_t MenuBox_help(uint8_t xPos, uint8_t yPos,uint8_t lPos ,uint8_t hPos, char
 uint8_t MenuBox_tft(uint8_t xPos, uint8_t yPos,uint8_t lPos ,uint8_t hPos, char *text, uint8_t over_emul);
 uint8_t MenuBox_tft_setup(uint8_t xPos, uint8_t yPos,uint8_t lPos ,uint8_t hPos, char *text,  char *m_text[], uint8_t Pos,uint8_t cPos,uint8_t over_emul);
 uint8_t MenuBox_advanced_setup(uint8_t xPos, uint8_t yPos,uint8_t lPos ,uint8_t hPos, char *text,  uint8_t Pos,uint8_t cPos,uint8_t over_emul);
-
+uint8_t MenuBox_sound_setup(uint8_t xPos, uint8_t yPos,uint8_t lPos ,uint8_t hPos, char *text,  uint8_t Pos,uint8_t cPos,uint8_t over_emul);
 //
 //-------------------------------------------------------
 void MessageBox(char *text,char *text1,uint8_t colorFG,uint8_t colorBG,uint8_t over_emul);

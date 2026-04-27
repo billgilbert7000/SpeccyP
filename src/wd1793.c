@@ -158,7 +158,7 @@ static fdi_file_io_t fdi_io = {
 };
 
 //-----------------------------------------------------------------------------
-// Открытие FDI файла (гибкий формат образов дисков)
+// Открытие FDI файла (образов дисков)
 //-----------------------------------------------------------------------------
 bool OpenFDI_File(char *sn, uint8_t drv)
 {
@@ -579,6 +579,8 @@ l_povtor:
 //-----------------------------------------------------------------------------
 // Чтение сектора для FDI формата (с поддержкой защиты и CRC)
 //-----------------------------------------------------------------------------
+fdi_sector_info_t *sector_inf;
+
 bool FDI_read_sector(uint8_t track, uint8_t side, uint8_t sector_num)
 {
     // Загрузка трека (если он еще не загружен)
@@ -590,16 +592,23 @@ bool FDI_read_sector(uint8_t track, uint8_t side, uint8_t sector_num)
         last_track = track;
         last_side = side;
     }
-    
+
+    // Установка сообщения в статус баре
+    #ifdef  DEBUG_MSG
+    msg_bar = 77;   // DEBUG:
+    wait_msg = 9000; 
+    #endif
+
+
     // Получение информации о секторе
-    fdi_sector_info_t *sec = fdi_stream_get_sector(&fdi_ctx, sector_num);
-    if (!sec) return false;
-    fdd.sector_size = sec->size;
-    fdd.sector_n = sec->n;
-    fdd.sector_f = sec->flags;
+    sector_inf = fdi_stream_get_sector(&fdi_ctx, sector_num);
+    if (!sector_inf) return false;
+    fdd.sector_size = sector_inf->size;
+    fdd.sector_n = sector_inf->n;
+    fdd.sector_f = sector_inf->flags;
     
     // Чтение данных сектора
-    if (fdi_stream_read_sector_data(&fdi_ctx, sec, DiskBuf, fdd.sector_size) != FDI_STREAM_OK) 
+    if (fdi_stream_read_sector_data(&fdi_ctx, sector_inf, DiskBuf, fdd.sector_size) != FDI_STREAM_OK) 
         return false;
 
     // Здесь должна быть обработка флагов CRC и удаленных данных
@@ -790,37 +799,61 @@ void WD1793_CmdWritingTrack() // Вызывается из WD1793_Cmd_WriteTrack
 //-----------------------------------------------------------------------------
 void ReadingAddressFDI() 
 {   
-    gpio_put(LED_BOARD, 1);
+    
+
+    // Установка сообщения в статус баре
+    #ifdef  DEBUG_MSG
+    msg_bar = 77;   // DEBUG:
+    wait_msg = 3000; 
+    #endif
+
     uint8_t crc_bit = 1 << (fdd.sector_f & 3);
     DiskSector = (DiskSector + 1) & 0x0f;
 
-    if((SectorPos != 0) && Requests & _BV(rqDRQ))
+
+
+
+/*     if((SectorPos != 0) && Requests & _BV(rqDRQ))
     {
         WD1793.StatusRegister |= _BV(stsLostData);
     }    
-
+ */
     if (BufferPos >= 6)
     {
         CurrentCommand = WD1793_CmdStartIdle; // Завершение команды
-        gpio_put(LED_BOARD, 0);
+      //  gpio_put(LED_BOARD, 0);
         return;
     }
         
     switch(BufferPos)
     {
         case 0: // Байт 0: Номер дорожки
-            WD1793.DataRegister = WD1793.TrackRegister;  
+//gpio_put(LED_BOARD, 1);
+//fdi_stream_load_track(&fdi_ctx, WD1793.TrackRegister, WD1793.Side);
+
+// Получение информации о секторе
+   //sector_inf = fdi_stream_get_sector(&fdi_ctx, WD1793.SectorRegister);
+//FDI_read_sector(WD1793.TrackRegister, WD1793.Side,DiskSector);
+
+                WD1793.DataRegister =  WD1793.TrackRegister;  // 0xA4;//  sector_inf->c;//
+
+
             break;
         case 1: // Байт 1: Номер стороны
-            WD1793.DataRegister = WD1793.Side;
+            WD1793.DataRegister = sector_inf->h;// WD1793.Side;
             break;
         case 2: // Байт 2: Номер сектора
-            WD1793.DataRegister = WD1793.SectorRegister;
+
+
+
+            WD1793.DataRegister = sector_inf->r;//WD1793.SectorRegister;//
             break;
         case 3: // Байт 3: Код размера сектора
-            WD1793.DataRegister = fdd.sector_n;
+            WD1793.DataRegister = sector_inf->n;//fdd.sector
             break;
         case 4: // Байт 4: CRC (младший)
+
+          gpio_put(LED_BOARD, 0);
             if (!(fdd.sector_f & crc_bit)) {
                 WD1793.DataRegister = 0x00; // Ошибка CRC
             } else {

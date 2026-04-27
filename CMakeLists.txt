@@ -16,10 +16,10 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
-set(DEBUG ON)
+set(DEBUG OFF)
 
 # == Конфигурация  SpeccyP ==
-set (BASE_VERSION "1.5.9")
+set (BASE_VERSION "1.6.0")
 set(MOS2 OFF) # компиляция под MOS2 ON
 
 # Конфигурация сборки (можно задать через -DSPECCY_CONFIG=... и -DM_BOARD=...)
@@ -93,7 +93,7 @@ else()
         FLASH_MAX_FREQ_MHZ=166
         PSRAM_MAX_FREQ_MHZ=166
 
-        #TEST_DEBUG #
+        TEST_DEBUG #
  
         HDMI_DIV=1.5 # hdmi 60Hz
 
@@ -221,11 +221,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/s
 ###################################################
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=240426
+CONFIG_VERSION=270426
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1
 
+##DEBUG_MSG
 ##LEDBLINK           #define LEDBLINK
 ###################################################
     # Дата и время компиляции
@@ -349,8 +350,8 @@ BEEP_PWM_WRAP=1000 # ШИМ
 AY_PWM_WRAP=4000 # ШИМ 
 MAX_VOL_PWM=100
 DEFAULT_VOLUME_PWM=50
-BEEP=2 # бипер микшируется в PWM R/L 
-#BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
+BEEP=12 # бипер микшируется в PWM R/L  или на gpio
+
 #BEEP=1 #вывод звук бипера на отдельный шим
 ##AUDIO 595  hard AY 
 PIO_AY595=pio0 
@@ -447,7 +448,7 @@ BEEP_PWM_WRAP=1000 # ШИМ
 AY_PWM_WRAP=4000 # ШИМ 
 MAX_VOL_PWM=100
 DEFAULT_VOLUME_PWM=50
-BEEP=2 # бипер микшируется в PWM R/L 
+BEEP=12 # бипер микшируется в PWM R/L 
 #BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
 #BEEP=1 #вывод звук бипера на отдельный шим
 ##AUDIO 595  hard AY 
@@ -543,7 +544,7 @@ BEEP_PWM_WRAP=1000 # ШИМ
 AY_PWM_WRAP=4000 # ШИМ 
 MAX_VOL_PWM=20
 DEFAULT_VOLUME_PWM=50
-BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
+BEEP=12# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
 #BEEP=1 #вывод звук бипера на отдельный шим
 ##AUDIO 595  hard AY на PiCard это отсутствует
 PIO_AY595=pio0 
@@ -661,7 +662,7 @@ BEEP_PWM_WRAP=1000 # ШИМ
 AY_PWM_WRAP=4000 # ШИМ
 MAX_VOL_PWM=20
 DEFAULT_VOLUME_PWM=50
-BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
+BEEP=12# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
 #BEEP=1 #вывод звук бипера на отдельный шим
 ##AUDIO 595  hard AY
 PIO_AY595=pio1
@@ -770,7 +771,7 @@ BEEP_PWM_WRAP=1000 # ШИМ
 AY_PWM_WRAP=4000 # ШИМ 
 MAX_VOL_PWM=20
 DEFAULT_VOLUME_PWM=50
-BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
+BEEP=12# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
 #BEEP=1 #вывод звук бипера на отдельный шим
 ##AUDIO 595  hard AY 
 PIO_AY595=pio1 
@@ -1050,6 +1051,7 @@ endif()
 
 if(DEBUG)
     SET(BUILD_NAME "${PROJECT_NAME}")
+    
     # 
 #pico_enable_stdio_usb(${PROJECT_NAME} 0)
 #pico_enable_stdio_uart(${PROJECT_NAME} 1)

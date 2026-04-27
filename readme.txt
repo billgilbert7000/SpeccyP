@@ -1,3 +1,57 @@
+SPECCY P v1.6.0 TEST 
+27.04.2026 
+
+FIX - работа с FDI образами, защишенные FDI попрежнему не читает ((
+
+NEW - Настройки звука вынесены в Sound setup
+NEW - Вывод звука BEEPer в режиме  PWM (Soft) 
+    - 3 варианта  
+    - микширование в основные каналы 
+    - вывод на GPIO 28 (M1) или GPIO 9 (M2)
+    - вывод на GPIO 29 (M1 и M2)
+
+NEW - Вывод звука BEEPer в режиме  i2s 
+    - 2 варианта  
+    - микширование в основные каналы 
+    - вывод на GPIO 29 (M1 и M2)   
+    N.B. Пункт Beeper Mode GP28 в i2s будет выбирать GP29 
+    N.B. для WS ZERO2 эти настройки лучше не троогать ))
+        
+NEW - возможность выбора напряжения ядра для RP2350 
+    - в Advanced setup => Voltage 
+    - 1.30В, 1.35В, 1.40В, 1.50В, 1.60В 
+
+NEW - возможность настройки некоторых пераметров в файле speccy_p.ini
+    - который создается автоматически в корне SD, если его там нет.
+    - усли что-то пойдет не так, удалить speccy_p.ini и speccy_p.cnf с SD 
+-----------------------
+*speccy_p.ini*
+; SpeccyP Configuration
+; =====================
+[system]
+; Version (do not modify)
+version = 120426
+
+; Voltage 1.30V=130 ,1.35V=135, 1.40V=140, 1.50V=150, 1.60V=160 
+voltage = 135
+
+[video]
+; 0=AUTO 1=VGA, 2=HDMI, 3=TFT
+video_out = 0
+; TFT type: 0=ILI9341, 1=ST7789, 2=ILI9341_IPS
+tft_type = 2
+; TFT inversion: 0=normal, 1=inverted
+tft_invert = 0
+; TFT rotation: 0=0 degrees, 192=180 degrees
+tft_rotate = 0
+; TFT color mode: 0=RGB, 1=BGR
+tft_rgb = 1
+; TFT backlight  0-100%
+tft_brightness = 70
+; HDMI frequency divider (1.0=90Hz, 1.5=60Hz)
+hdmi_divider = 1.50
+----------------------------------------------
+##############################################################
 SPECCY P v1.5.9 (RP2040 и RP2350)
 24.04.2026 
 Возможность запуска машин с памятью 256kB на RP2350 без PSRAM.

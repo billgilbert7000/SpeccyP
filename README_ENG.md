@@ -160,20 +160,40 @@ Configured in the `[F12]` menu:
 
 ---
 
-## 🧩 Resource Usage
+## 🧩 Additional information and new content
 
-### RP2350
-| Memory | Used | Total | % |
-|--------|------|-------|-----|
-| FLASH  | 515884 B | 4 MB  | 12.30% |
-| RAM    | 244860 B | 512 KB| 46.70% |
+v1.5.8 27.04.2026 
 
-### RP2040
-| Memory | Used | Total | % |
-|--------|------|-------|-----|
-| FLASH  | 411896 B | 2 MB  | 19.64% |
-| RAM    | 241484 B | 256 KB| 92.12% |
+FIX - working with FDI images, still does not read protected FDI ((
 
+NEW - Sound settings are set to Sound setup
+NEW - BEEPer sound output in PWM (Soft) mode 
+    - 3 options  
+    - mixing into the main channels 
+    - output to GPIO 28 (M1) or GPIO 9 (M2)
+- output to GPIO 29 (M1 and M2)
+
+NEW - BEEPer audio output in i2s mode
+- 2 options  
+    - mixing into the main channels 
+    - output to GPIO 29 (M1 and M2)   
+    N.B. The Beeper Mode GP28 option in i2s will select GP29
+
+    N.B. for WS ZERO2, it is better not to touch these settings))
+        
+NEW - the ability to select the core voltage for RP2350 
+    - in Advanced setup => Voltage 
+    - 1.30V, 1.35V, 1.40V, 1.50V, 1.60V 
+
+NEW - the ability to configure some parameters in the speccy_p.ini file
+, which is created automatically in the SD root if it is not there.
+    - if something goes wrong, delete speccy_p.ini and speccy_p.cnf from SD 
+    
+v1.5.8 20.04.2026
+ 
+- thanks to Drew @Drew2812, the download of TAP files has been added
+- in classic mode, slow and with stripes on the border :)
+- turns on in Advanced setup => Tape Load => NORMAL/FAST
 ---
 
 ## 📂 Firmware Files

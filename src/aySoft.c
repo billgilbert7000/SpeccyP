@@ -41,6 +41,11 @@ uint8_t beep_data;              // Текущее состояние: бит 0 -
 uint8_t beep_data_old;          // Предыдущее состояние для детектирования изменений
 uint8_t hardAY_on_off;          // Флаг состояния железного AY (1 - выключен, 0 - включен)
 
+uint32_t sumL; 
+uint32_t sumR;
+int32_t outL;
+int32_t outR;
+
 //==================================================================================================
 // СЕКЦИЯ ДЛЯ GENERAL_SOUND (Внешний сопроцессор на отдельном микроконтроллере)
 //==================================================================================================
@@ -239,8 +244,8 @@ uint8_t maskAY[16] = {
 //--------------------------------------------------------------------------------------------------
 uint16_t *AY_data;              // Указатель на массив выходных данных AY0 [A, B, C]
 uint16_t *AY_data1;             // Указатель на массив выходных данных AY1 [A, B, C]
-uint16_t outL = 0;              // Выходной сэмпл левого канала
-uint16_t outR = 0;              // Выходной сэмпл правого канала
+//uint16_t outL = 0;              // Выходной сэмпл левого канала
+//uint16_t outR = 0;              // Выходной сэмпл правого канала
 uint inx;
 
 void (*audio_out)(void);        // Указатель на текущую функцию вывода звука (по прерыванию)
@@ -1365,21 +1370,24 @@ void __not_in_flash_func(audio_out_soft_ay)(void)
 
     AY_data = get_AY_Out(AY_DELTA);
 
+#if BEEP == 12     //бипер на отдельном gpio БЕЗ PWM или PWM
+    if (conf.beep_mode == 0) // MIX
+    {
+    outL = (AY_data[0] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;        // A + B в левый канал
+    outR = (AY_data[2] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;        // C + B в правый канал
+    }
 
-#if BEEP == 0
-    outL = (AY_data[0] + AY_data[1]) * vol_soft_ay;        // A + B в левый канал
-    outR = (AY_data[2] + AY_data[1]) * vol_soft_ay;        // C + B в правый канал
-    outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
-    outR += valLoad * 8;
+    else  //бипер на отдельном gpio БЕЗ PWM или PWM
+    {
+    outL = (AY_data[0] + AY_data[1] + valLoad ) * vol_soft_ay;        // A + B в левый канал
+    outR = (AY_data[2] + AY_data[1] + valLoad ) * vol_soft_ay;        // C + B в правый канал   
+    }
 #endif
+
 
 #if BEEP == 2
     outL = (AY_data[0] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;        // A + B в левый канал
     outR = (AY_data[2] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;        // C + B в правый канал
- //   outL += beepPWM * 4;
- //   outR += beepPWM * 4;
- //   outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
- //   outR += valLoad * 8;
 #endif
 
 }
@@ -1396,21 +1404,24 @@ void __not_in_flash_func(audio_out_soft_ts)(void)
     AY_data1 = get_AY_Out1(AY_DELTA);
     sound_fdd();
 
-    // Микширование каналов обоих чипов
-#if BEEP == 0
-    outL = (AY_data1[0] + AY_data1[1] + AY_data[0] + AY_data[1]) * vol_soft_ay;
-    outR = (AY_data1[2] + AY_data1[1] + AY_data[2] + AY_data[1]) * vol_soft_ay;
-    outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
-    outR += valLoad * 8;
+// Микширование каналов обоих чипов
+#if BEEP == 12     //бипер на отдельном gpio БЕЗ PWM или PWM
+    if (conf.beep_mode == 0)// MIX
+    {
+    outL = (AY_data1[0] + AY_data1[1] + AY_data[0] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;
+    outR = (AY_data1[2] + AY_data1[1] + AY_data[2] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;
+    }
+
+    else // отдельный GPIO BEEP
+    {
+    outL = (AY_data1[0] + AY_data1[1] + AY_data[0] + AY_data[1] + valLoad ) * vol_soft_ay;
+    outR = (AY_data1[2] + AY_data1[1] + AY_data[2] + AY_data[1] + valLoad ) * vol_soft_ay; 
+    }
 #endif
 
 #if BEEP == 2
     outL = (AY_data1[0] + AY_data1[1] + AY_data[0] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;
     outR = (AY_data1[2] + AY_data1[1] + AY_data[2] + AY_data[1] + beepPWM + valLoad ) * vol_soft_ay;
-  //  outL += beepPWM * 4;
-  //  outR += beepPWM * 4;
-  //  outL += valLoad * 8;        // звук нормальной (slow) TAP-загрузки
-  //  outR += valLoad * 8;
 #endif
 }
 
@@ -1495,9 +1506,16 @@ void __not_in_flash_func(audio_out_i2s_ts)(void)
     AY_data1 = get_AY_Out1(AY_DELTA);
     
     // Суммирование каналов обоих чипов
-    uint32_t sumL = AY_data[0] + AY_data[1] + AY_data1[0] + AY_data1[1] + beepPWM + valLoad;
-    uint32_t sumR = AY_data[2] + AY_data[1] + AY_data1[2] + AY_data1[1] + beepPWM + valLoad;
-    
+    if (conf.beep_mode==0)
+    {
+    sumL = AY_data[0] + AY_data[1] + AY_data1[0] + AY_data1[1] + beepPWM + valLoad;
+    sumR = AY_data[2] + AY_data[1] + AY_data1[2] + AY_data1[1] + beepPWM + valLoad;
+    }
+    else
+    {
+    sumL = AY_data[0] + AY_data[1] + AY_data1[0] + AY_data1[1] + valLoad;
+    sumR = AY_data[2] + AY_data[1] + AY_data1[2] + AY_data1[1] + valLoad;
+    }  
     // Ограничение максимального значения
     sumL = (sumL > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumL;
     sumR = (sumR > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumR;
@@ -1507,8 +1525,8 @@ void __not_in_flash_func(audio_out_i2s_ts)(void)
     uint32_t totalR = ay_scale_table[sumR];
     
     // Преобразование в знаковый int16_t диапазон
-    int32_t outL = (int32_t)totalL - OUTPUT_MIDPOINT;
-    int32_t outR = (int32_t)totalR - OUTPUT_MIDPOINT;
+     outL = (int32_t)totalL - OUTPUT_MIDPOINT;
+     outR = (int32_t)totalR - OUTPUT_MIDPOINT;
     
     // Применение громкости (умножение и сдвиг)
     outL = (outL * volume_mult_table[current_volume]) >> 8;
@@ -1523,15 +1541,21 @@ void __not_in_flash_func(audio_out_i2s_ts)(void)
 void __not_in_flash_func(audio_out_i2s_ay)(void)
 {	
     AY_data = get_AY_Out(AY_DELTA);
-    
-    uint32_t sumL = AY_data[0] + AY_data[1] + beepPWM + valLoad;
-    uint32_t sumR = AY_data[2] + AY_data[1] + beepPWM + valLoad;
-    
+    if (conf.beep_mode==0)
+    {
+    sumL = AY_data[0] + AY_data[1] + beepPWM + valLoad;
+    sumR = AY_data[2] + AY_data[1] + beepPWM + valLoad;
+    }
+    else
+    {
+    sumL = AY_data[0] + AY_data[1]  + valLoad;
+    sumR = AY_data[2] + AY_data[1]  + valLoad;
+    }
     sumL = (sumL > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumL;
     sumR = (sumR > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumR;
     
-    int32_t outL = (int32_t)ay_scale_table[sumL] - OUTPUT_MIDPOINT;
-    int32_t outR = (int32_t)ay_scale_table[sumR] - OUTPUT_MIDPOINT;
+    outL = (int32_t)ay_scale_table[sumL] - OUTPUT_MIDPOINT;
+    outR = (int32_t)ay_scale_table[sumR] - OUTPUT_MIDPOINT;
     
     outL = (outL * volume_mult_table[current_volume]) >> 8;
     outR = (outR * volume_mult_table[current_volume]) >> 8;
@@ -1565,19 +1589,33 @@ void __not_in_flash_func(hw_out595_beep_out)(bool val)
     beep_data_old = beep_data;
 }
 
-#if BEEP == 0
+#if BEEP == 12
 /**
- * @brief Вывод бипера на отдельный пин (классический режим).
+ * @brief Вывод бипера через микширование в PWM.
  */
 void __not_in_flash_func(hw_outpin_beep_out)(bool val)
 {
     static bool out;
     beep_data = (beep_data & 0b10) | (val << 0);
     out ^= (beep_data == beep_data_old) ? 0 : 1;
-    gpio_put(ZX_BEEP_PIN, out);
     beep_data_old = beep_data;
+
+     if (conf.beep_mode==0)
+     {
+      beepPWM = beep_data * 64;  // Вывод бипера на ШИМ
+      outL = (beepPWM) * vol_soft_ay;        // A + B в левый канал
+      outR = (beepPWM) * vol_soft_ay;        // C + B в правый канал
+      pwm_set_gpio_level(ZX_AY_PWM_R, outR);  // Правый канал
+      pwm_set_gpio_level(ZX_AY_PWM_L, outL);  // Левый канал
+    return; 
+    }
+    else // Вывод бипера на отдельный пин (классический режим).
+    {
+    gpio_put(beep_pin, out);
+    }
 }
 #endif
+
 
 #if BEEP == 1
 /**
@@ -1622,24 +1660,6 @@ void __not_in_flash_func(hw_outpin_beep_out)(bool val)
 }
 #endif
 
-#if BEEP == 3
-/**
- * @brief Альтернативный вывод бипера через PWM.
- */
-void __not_in_flash_func(hw_outpin_beep_out)(bool val)
-{
-    static bool out;
-    beep_data = (beep_data & 0b10);  // |(val<<0);
-    out ^= (beep_data == beep_data_old) ? 0 : 1;
-    
-    if (out)
-        pwm_set_gpio_level(ZX_BEEP_PIN, conf.vol_ay);
-    else
-        pwm_set_gpio_level(ZX_BEEP_PIN, 0);
-        
-    beep_data_old = beep_data;
-}
-#endif
 
 /**
  * @brief Вывод бипера для режима I2S.
@@ -1652,19 +1672,13 @@ void __not_in_flash_func(hw_outi2s_beep_out)(bool val)
     out ^= (beep_data == beep_data_old) ? 0 : 1;
     beep_data_old = beep_data;
     
-    beepPWM = val ? vol_beep : 0;
 
-/////////////////
- // Суммирование каналов обоих чипов
-  //  uint32_t sumL =  beepPWM ;
-        
-    // Ограничение максимального значения
- //   sumL = (sumL > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumL;
- //   sumR = (sumR > CH_TS_MAX_VALUE) ? CH_TS_MAX_VALUE : sumR;
+    if (conf.beep_mode==0)
+ {
+    beepPWM = val ? vol_beep : 0;
     
     // Масштабирование через таблицу
     uint32_t totalL = ay_scale_table[beepPWM];
-    
     
     // Преобразование в знаковый int16_t диапазон
     int32_t outL = (int32_t)totalL - OUTPUT_MIDPOINT;
@@ -1673,8 +1687,11 @@ void __not_in_flash_func(hw_outi2s_beep_out)(bool val)
     outL = (outL * volume_mult_table[current_volume]) >> 8;
         
     i2s_out((int16_t)outL, (int16_t)outL);
-
-////////////////
+}
+    else // Вывод бипера на отдельный пин (классический режим).
+    {
+    gpio_put(beep_pin, out);
+    }
 }
 
 //==================================================================================================
@@ -1731,7 +1748,12 @@ void select_audio(void)
     maskAY[1] = maskAY[3] = maskAY[5] = 0x0f;  // Маска по умолчанию для AY
     
     if (conf.type_sound >= AY_END) conf.type_sound = 0;
-    
+                //  !!! навсякий случай вдруг это soft AY 
+                gpio_init( ZX_BEEP_PIN);
+                gpio_set_dir(ZX_BEEP_PIN, GPIO_OUT);
+                gpio_init(29);
+                gpio_set_dir(29, GPIO_OUT);
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     switch (conf.type_sound)
     {
         case SOFT_AY:  // Программная эмуляция AY
@@ -1742,10 +1764,17 @@ void select_audio(void)
             PWM_init_pin_SoftAY(ZX_AY_PWM_R, AY_PWM_WRAP);
             PWM_init_pin_SoftAY(ZX_AY_PWM_L, AY_PWM_WRAP);
             
-            #if BEEP == 0
-                gpio_init(ZX_BEEP_PIN);
-                gpio_set_dir(ZX_BEEP_PIN, GPIO_OUT);
+
+            #if BEEP == 12
+                if (conf.beep_mode != 0)
+                {
+                if (conf.beep_mode==1) beep_pin = ZX_BEEP_PIN;
+                else if (conf.beep_mode==2) beep_pin = 29; // альтернативный выход на beep
+                gpio_init(beep_pin);
+                gpio_set_dir(beep_pin, GPIO_OUT);
+                }
             #endif
+
             #if BEEP == 1
                 PWM_init_pin_SoftBeep(ZX_BEEP_PIN, BEEP_PWM_WRAP);
             #endif
@@ -1761,10 +1790,16 @@ void select_audio(void)
             PWM_init_pin_SoftAY(ZX_AY_PWM_R, AY_PWM_WRAP);
             PWM_init_pin_SoftAY(ZX_AY_PWM_L, AY_PWM_WRAP);
             
-            #if BEEP == 0
-                gpio_init(ZX_BEEP_PIN);
-                gpio_set_dir(ZX_BEEP_PIN, GPIO_OUT);
+            #if BEEP == 12
+                if (conf.beep_mode != 0)
+                {
+                if (conf.beep_mode==1) beep_pin = ZX_BEEP_PIN;
+                else if (conf.beep_mode==2) beep_pin = 29; // альтернативный выход на beep
+                gpio_init(beep_pin);
+                gpio_set_dir(beep_pin, GPIO_OUT);
+                }
             #endif
+
             #if BEEP == 1
                 PWM_init_pin_SoftBeep(ZX_BEEP_PIN, BEEP_PWM_WRAP);
             #endif
@@ -1808,6 +1843,16 @@ void select_audio(void)
             AY_out_FFFD = ay_set_reg_soft;
             AY_out_BFFD = AY_set_reg;
             hw_beep_out = hw_outi2s_beep_out;
+
+            #if BEEP == 12
+                if (conf.beep_mode==2)// альтернативный выход на beep gpio 28 занят i2s
+                {
+                beep_pin = 29; 
+                gpio_init(beep_pin);
+                gpio_set_dir(beep_pin, GPIO_OUT);
+                }
+            #endif
+
             break;
             
         case I2S_TS:  // I2S вывод (Turbo Sound)
@@ -1820,6 +1865,16 @@ void select_audio(void)
             AY_out_FFFD = ay_set_reg_soft_ts;
             AY_out_BFFD = ay_set_data_soft_ts;
             hw_beep_out = hw_outi2s_beep_out;
+
+            #if BEEP == 12
+                if (conf.beep_mode==2)// альтернативный выход на beep  gpio 28 занят i2s
+                {
+                beep_pin = 29; 
+                gpio_init(beep_pin);
+                gpio_set_dir(beep_pin, GPIO_OUT);
+                }
+            #endif
+
             break;
             
         case TSFM:  // Turbo Sound FM

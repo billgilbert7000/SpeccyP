@@ -33,6 +33,7 @@
 
 #include "pico/bootrom.h"
 
+#include "hardware/vreg.h"
 /********************************* */
 #include "tf_card.h"
 #include "ff.h"
@@ -45,7 +46,7 @@
 
 #include "wd1793.h"
 
-
+extern uint8_t table_voltage[];
 extern uint32_t dtcpu;
 
 //////////////////////////////////////////
@@ -65,7 +66,8 @@ extern uint32_t dtcpu;
 
 //#define VOLTAGE VREG_VOLTAGE_1_30 //VREG_VOLTAGE_1_20 //	vreg_set_voltage(VOLTAGE); // main.h
 #ifdef PICO_RP2350 
-#define VOLTAGE VREG_VOLTAGE_1_50
+#define VOLTAGE_MIN VREG_VOLTAGE_1_30
+#define VOLTAGE VREG_VOLTAGE_1_40
 #else
 #define VOLTAGE VREG_VOLTAGE_1_30
 #endif
@@ -260,8 +262,8 @@ extern uint8_t sectors_per_track;
 #define M_AUTORUN 4
 #define M_PALLETE 5
 #define M_TFT_BRIGHT 5
-#define M_ADVANCED 6
-#define M_EMPTY_1  7
+#define M_SOUND_SETUP 6
+#define M_ADVANCED 7
 #define M_EMPTY_2  8
 
 #define M_SAVE_CONFIG 9
@@ -365,6 +367,8 @@ strncpy для безопасного копирования строк
 extern struct data_config
 {
    uint64_t version;// версия конф. файла  
+   uint8_t voltage;// Possible voltage values that can be applied to the regulator
+
    uint8_t vol_ay; //громкость soft AY
    uint8_t vol_i2s; //громкость i2s AY
    uint8_t vol_load;// громкость аудио загрузки
@@ -392,7 +396,7 @@ extern struct data_config
    uint8_t audio_buster;
    uint8_t spi_bd;
    uint8_t tape_mode; // 0=fast (ROM trap), 1=normal (real tape emulation)
-
+   uint8_t beep_mode; // 0 - pwm  , 1 - gpio
 
    uint32_t shift_img;
 
@@ -401,7 +405,7 @@ extern struct data_config
    char DiskName[4][LENF+1];
    char Disks[4][DIRS_DEPTH*(LENF+16)];//110 // 5*22
    char activefilename[DIRS_DEPTH*(LENF+16)]; // 400 // 5*22
-   uint32_t z80_freq_hz; //вычисленная частота эмуляции Z80
+  
    float hdmi_fdiv; // 1.0-> 90Hz  (cpu=378MHz)  1.5->60Hz (cpu=378MHz)
 }  conf;
 
@@ -454,6 +458,7 @@ extern uint8_t z80_pc;
 extern uint8_t hardAY_on_off;
 extern uint8_t beep_data_old;
 extern uint8_t beep_data;
+extern uint8_t beep_pin;
 //////////////////////////////////
 
 
@@ -522,11 +527,16 @@ extern uint8_t status_gs;     // Порт 4: D0 - флаг команд, D7 - ф
 
 extern uint8_t z_controler_cs;
 
-
+#include "fdi_stream.h"
+extern fdi_sector_info_t *sector_inf;
 
 #ifdef LEDBLINK
 void led_blink(void);
      #endif
 
-
+//####################################################
+bool config_ini_save(const char *filename); 
+bool config_ini_load(const char *filename);
+//####################################################
      #endif
+

@@ -1,5 +1,8 @@
 
 #include "config.h"  
+#include "hardware/vreg.h"
+
+
 #include "screen_util.h"
 #include "tft_driver.h"
 
@@ -496,7 +499,7 @@ if (!decode_key_joy()) continue; // если нажата кнопка на кл
       cPos++;
       if (cPos == Pos)
         cPos = 0;
-        if (cPos == M_EMPTY_1 )  cPos++;
+      //  if (cPos == M_EMPTY_1 )  cPos++;
         if (cPos == M_EMPTY_2 )  cPos++; 
       draw_text(xPos + 1, yPos + 8 + 10 * cPos, m_text[cPos], CL_BLACK, CL_INK);// рисование курсора
       ; // курсор
@@ -511,7 +514,7 @@ if (!decode_key_joy()) continue; // если нажата кнопка на кл
         if (cPos == 0) cPos = Pos;
         cPos--;
         if (cPos == M_EMPTY_2 )  cPos--; 
-        if (cPos == M_EMPTY_1 )  cPos--;
+     //   if (cPos == M_EMPTY_1 )  cPos--;
 
  
       draw_text(xPos + 1, yPos + 8 + 10 * cPos, m_text[cPos], CL_BLACK, CL_INK);
@@ -892,17 +895,6 @@ wait_enter(); // ожидание отпускания enter
   }
 }
 //==========================================================================================
-//extern uint8_t type_sound;
-/* 	// меню table of amplitudes
-	char __in_flash() *menu_ampl[7]={
-    " 0.default     ",
-    " 1.Chinese     ",
-    " 2.linear      ",
-    " 3.curved      ",
-    " 4.depending   ",
-    " 5.hybrid      ",
-    " 6.Rampa table ",
-    }; */
  	// меню tr-dos version
 char __in_flash() *menu_trdos[2]={
     " TR-DOS   5.04T  ",
@@ -920,10 +912,10 @@ char __in_flash() *menu_trdos[2]={
 
 
 // Массив для хранения строк меню
-char menu_advanced_strings[11][19] = {0};
+char menu_advanced_strings[12][19] = {0};
 
 // Массив указателей на строки
-char *menu_advanced[11] = {
+char *menu_advanced[12] = {
     menu_advanced_strings[0],
     menu_advanced_strings[1],
     menu_advanced_strings[2],
@@ -934,61 +926,39 @@ char *menu_advanced[11] = {
     menu_advanced_strings[7],
     menu_advanced_strings[8],
     menu_advanced_strings[9],
-    menu_advanced_strings[10]
+    menu_advanced_strings[10],
+    menu_advanced_strings[11]
 };
+
+
 
 // Инициализация меню
 void init_menu_advanced() {
-    switch (conf.type_sound)
-  {
-  case SOFT_AY:
-  case SOFT_TS:
-    sprintf(menu_advanced_strings[0], " Volume       %3d ", conf.vol_ay);
-    break;
-  case I2S_AY:
-  case I2S_TS:
-    sprintf(menu_advanced_strings[0], " Volume       %3d ", conf.vol_i2s);
-    break;
-  default:
-    sprintf(menu_advanced_strings[0], " Volume       N/A ");
-    break;
-  }
+ 
+ 
+     sprintf(menu_advanced_strings[0], " Mouse Speed  *%2d ", conf.mouse_dpi);
 
-    switch (conf.type_sound) // i2s buster
-  {
-  case I2S_AY:
-  case I2S_TS:
-    sprintf(menu_advanced_strings[1], " I2S  buster   %d ", conf.audio_buster);
-    break;
-  default:
-    sprintf(menu_advanced_strings[1], " I2S  buster  N/A ");
-    break;
-  }
-   if (conf.sound_fdd) strcpy(menu_advanced_strings[2], " Noise FDD    OFF ");
-  else strcpy(menu_advanced_strings[2], " Noise FDD     ON ");
+         if (conf.vout==VIDEO_AUTO) strcpy(menu_advanced_strings[1], " Video OUT   AUTO ");
+         if (conf.vout==VIDEO_VGA)  strcpy(menu_advanced_strings[1], " Video OUT    VGA ");
+         if (conf.vout==VIDEO_HDMI) strcpy(menu_advanced_strings[1], " Video OUT   HDMI ");
+         if (conf.vout==VIDEO_TFT)  strcpy(menu_advanced_strings[1], " Video OUT    TFT ");
 
-     sprintf(menu_advanced_strings[3], " Volume LOAD   %2d ", conf.vol_load );
-
-     sprintf(menu_advanced_strings[4], " Mouse Speed  *%2d ", conf.mouse_dpi);
-
-         if (conf.vout==VIDEO_AUTO) strcpy(menu_advanced_strings[5], " Video OUT   AUTO ");
-         if (conf.vout==VIDEO_VGA)  strcpy(menu_advanced_strings[5], " Video OUT    VGA ");
-         if (conf.vout==VIDEO_HDMI) strcpy(menu_advanced_strings[5], " Video OUT   HDMI ");
-         if (conf.vout==VIDEO_TFT)  strcpy(menu_advanced_strings[5], " Video OUT    TFT ");
-
-    sprintf(menu_advanced_strings[6], "%s ", menu_trdos[conf.trdos_version]);
+    sprintf(menu_advanced_strings[2], "%s ", menu_trdos[conf.trdos_version]);
 
     if (conf.cpu_version>4) conf.cpu_version = 0;
-    sprintf(menu_advanced_strings[7], " Z80 %s", menu_cpu_version[conf.cpu_version]);
+    sprintf(menu_advanced_strings[3], " Z80 %s", menu_cpu_version[conf.cpu_version]);
 
     conf.tape_mode &= 1; // защита от мусора в старом конфиге
     if (conf.tape_mode==0)
-        strcpy(menu_advanced_strings[8], " Tape Load   FAST ");
+        strcpy(menu_advanced_strings[4], " Tape Load   FAST ");
     else
-        strcpy(menu_advanced_strings[8], " Tape Load NORMAL ");
+        strcpy(menu_advanced_strings[4], " Tape Load NORMAL ");
 
-    strcpy(menu_advanced_strings[9], " Save config      ");
-    strcpy(menu_advanced_strings[10]," Return           ");
+   // sprintf(menu_advanced_strings[5], " Voltage  %4d V ",table_voltage[conf.voltage]* 10 );
+    sprintf(menu_advanced_strings[5], " Voltage   %.2f V ",table_voltage[conf.voltage]/ 100.0 );
+    
+    strcpy(menu_advanced_strings[6], " Save config      ");
+    strcpy(menu_advanced_strings[7]," Return           ");
 }
 
 
@@ -1051,6 +1021,279 @@ wait_enter(); // ожидание отпускания enter
 
       switch (cPos)
       {
+
+
+          case 0:// скорость мыши -
+          if (conf.mouse_dpi==1) conf.mouse_dpi=1;
+             else conf.mouse_dpi--;
+           init_menu_advanced();
+           draw_text(xPos,yPos+10*0,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+           break;    
+
+         case 1:// video out -
+         if (conf.vout==VIDEO_AUTO) conf.vout=VIDEO_AUTO;
+          else conf.vout--;
+             init_menu_advanced();
+        draw_text(xPos,yPos+10*1,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+        break;
+
+          case 4:// tape load mode
+          conf.tape_mode = conf.tape_mode ? 0 : 1;
+          TAP_SwitchMode();
+          init_menu_advanced();
+          draw_text(xPos,yPos+10*4,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+          break;
+
+          case 5:// voltage
+          if (conf.voltage==15) conf.voltage=15;
+             else conf.voltage--;
+           init_menu_advanced();
+           draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+           break;   
+
+
+      }
+   
+    }
+   
+    if (kb_st_ps2.u[2] & KB_U2_RIGHT)
+   
+    {
+      kb_st_ps2.u[2] = 0;
+      switch (cPos)
+      {
+
+         case 0:// скорость мыши +
+         if (conf.mouse_dpi==9) conf.mouse_dpi=9;
+            else conf.mouse_dpi++;
+             init_menu_advanced();
+        draw_text(xPos,yPos+10*0,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+          break;    
+
+         case 1:// video out +
+         if (conf.vout>=VIDEO_TFT) conf.vout=VIDEO_TFT;
+         else conf.vout++;
+             init_menu_advanced();
+        draw_text(xPos,yPos+10*1,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+         break;
+
+          case 4:// tape load mode
+          conf.tape_mode = conf.tape_mode ? 0 : 1;
+          TAP_SwitchMode();
+          init_menu_advanced();
+          draw_text(xPos,yPos+10*4,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+          break;
+
+          case 5:// voltage
+          if (conf.voltage==19) conf.voltage=19;
+             else conf.voltage++;
+           init_menu_advanced();
+           draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+           break;   
+
+      default:
+        break;
+      }
+    }
+
+
+
+
+    if (kb_st_ps2.u[1]&KB_U1_ENTER) // enter
+    {
+     switch (cPos)
+     {
+      uint8_t x;
+
+      case 2:// версия TR-DOS
+         x = MenuBox(140, 80, 16, 2, "Version", menu_trdos, 2, conf.trdos_version , 1);
+         if (x!=0xff) conf.trdos_version  = x;
+         break;
+
+      case 3:// версия Z80
+         x = MenuBox(155, 90, 12, 5, "Z80 CPU", menu_cpu_version, 5, conf.cpu_version , 1);
+       if (x!=0xff)
+       {
+       conf.cpu_version  = x;
+       select_cpu_z80(z1);
+       }
+       break;
+
+       case 4:// tape load mode
+       conf.tape_mode = conf.tape_mode ? 0 : 1;
+       TAP_SwitchMode();
+       init_menu_advanced();
+       draw_text(xPos,yPos+10*4,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+       continue;
+
+          case 5:// voltage
+           draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_WHITE, CL_LT_RED); 
+       //    g_delay_ms(100);
+           #ifdef PICO_RP2350 
+           vreg_set_voltage(conf.voltage);
+           #endif
+           g_delay_ms(300);
+           draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+          continue;// break;   
+
+
+
+
+
+       case 6:// Save config
+       save_config();
+       break;
+
+      case 7:// Return menu
+      return 0xff; // ESC exit
+     }
+
+
+    wait_enter();
+
+
+
+      return cPos;
+    }
+
+    if (kb_st_ps2.u[1]&KB_U1_ESC) 
+    {
+      wait_esc();
+    return 0xff; // ESC exit
+    }
+
+  }
+}
+//##############################################################
+// Массив для хранения строк меню
+char menu_sound_setup_strings[12][19] = {0};
+
+// Массив указателей на строки
+char *menu_sound_setup[12] = {
+    menu_sound_setup_strings[0],
+    menu_sound_setup_strings[1],
+    menu_sound_setup_strings[2],
+    menu_sound_setup_strings[3],
+    menu_sound_setup_strings[4],
+    menu_sound_setup_strings[5],
+    menu_sound_setup_strings[6],
+    menu_sound_setup_strings[7],
+    menu_sound_setup_strings[8],
+    menu_sound_setup_strings[9],
+    menu_sound_setup_strings[10],
+    menu_sound_setup_strings[11]
+};
+
+// Инициализация меню
+void init_menu_sound_setup() {
+    switch (conf.type_sound)
+  {
+  case SOFT_AY:
+  case SOFT_TS:
+    sprintf(menu_sound_setup_strings[0], " Volume       %3d ", conf.vol_ay);
+    break;
+  case I2S_AY:
+  case I2S_TS:
+    sprintf(menu_sound_setup_strings[0], " Volume       %3d ", conf.vol_i2s);
+    break;
+  default:
+    sprintf(menu_sound_setup_strings[0], " Volume       N/A ");
+    break;
+  }
+
+    switch (conf.type_sound) // i2s buster
+  {
+  case I2S_AY:
+  case I2S_TS:
+    sprintf(menu_sound_setup_strings[1], " I2S  buster   %d ", conf.audio_buster);
+    break;
+  default:
+    sprintf(menu_sound_setup_strings[1], " I2S  buster  N/A ");
+    break;
+  }
+   if (conf.sound_fdd) strcpy(menu_sound_setup_strings[2], " Noise FDD    OFF ");
+  else strcpy(menu_sound_setup_strings[2], " Noise FDD     ON ");
+
+     sprintf(menu_sound_setup_strings[3], " Volume LOAD   %2d ", conf.vol_load );
+
+   
+
+    if (conf.beep_mode==0)
+        strcpy(menu_sound_setup_strings[4], " Beep Mode  MIX   ");
+    else if (conf.beep_mode==1)
+    {
+       beep_pin = ZX_BEEP_PIN;
+      sprintf(menu_sound_setup_strings[4], " Beep Mode  GP%d  ",ZX_BEEP_PIN);
+    }
+    else if (conf.beep_mode==2)
+    {
+      beep_pin = 29;
+      sprintf(menu_sound_setup_strings[4], " Beep Mode  GP%d  ", beep_pin);
+    }
+    strcpy(menu_sound_setup_strings[5], " Save config      ");
+    strcpy(menu_sound_setup_strings[6]," Return           ");
+}
+
+
+
+//    
+uint8_t MenuBox_sound_setup(uint8_t xPos, uint8_t yPos,uint8_t lPos ,uint8_t hPos, char *text,  uint8_t Pos,uint8_t cPos,uint8_t over_emul)
+{
+
+  init_menu_sound_setup();
+
+	if(over_emul) zx_machine_enable_vbuf(false);
+    uint16_t lFrame = (lPos*FONT_W)+8;
+    uint16_t hFrame = ((1+hPos)*(FONT_H+1))+20;
+    draw_rect(xPos-2,yPos-2,lFrame+4,hFrame+4,CL_BLACK,false);// рамка 1
+    draw_rect(xPos-1,yPos-1,lFrame+2,hFrame+2,CL_GRAY,false);// рамка 2
+    draw_rect(xPos,yPos,lFrame,hFrame,CL_BLACK,true);// рамка 3 фон
+    draw_rect(xPos,yPos,lFrame,9,CL_GRAY,true); // шапка меню
+    draw_text(xPos+10,yPos+0,text,CL_PAPER,CL_INK);// шапка меню
+    yPos=yPos+18;
+    xPos++;
+  for(uint8_t i=0;i<hPos;i++){
+    if (i >= Pos) {draw_text(xPos,yPos+10*i,menu_sound_setup[i],CL_BLUE,CL_PAPER); continue;}
+    if (i == cPos)  {draw_text(xPos,yPos+10*i,menu_sound_setup[i],CL_PAPER,CL_LT_CYAN);continue;} // курсор
+    else { draw_text(xPos,yPos+10*i,menu_sound_setup[i],CL_INK,CL_PAPER);continue;} 
+  }
+
+
+wait_enter(); // ожидание отпускания enter
+  while (1)
+  {
+
+ if (!decode_key_joy()) continue;
+  
+    if (kb_st_ps2.u[2] & KB_U2_DOWN)
+    {
+      kb_st_ps2.u[2] = 0;
+      draw_text(xPos, yPos+ 10 * cPos, menu_sound_setup[cPos], CL_INK, CL_BLACK); // стирание курсора
+      cPos++;
+      if (cPos == Pos)
+        cPos = 0;
+      draw_text(xPos, yPos+ 10 * cPos, menu_sound_setup[cPos], CL_BLACK, CL_LT_CYAN);   // курсор
+  
+    }
+
+    if (kb_st_ps2.u[2] & KB_U2_UP)
+
+    {
+      kb_st_ps2.u[2] = 0;
+      draw_text(xPos, yPos+ 10 * cPos, menu_sound_setup[cPos], CL_INK, CL_BLACK); // стирание курсора
+      if (cPos == 0)
+        cPos = Pos;
+      cPos--;
+      draw_text(xPos, yPos+ 10 * cPos, menu_sound_setup[cPos], CL_BLACK, CL_LT_CYAN);  // курсор
+      
+    }
+
+    if (kb_st_ps2.u[2] & KB_U2_LEFT)
+    {
+      kb_st_ps2.u[2] = 0;
+
+      switch (cPos)
+      {
       case 0:// громкость -
       if (conf.type_sound >I2S_TS) break;
       if ((conf.type_sound==SOFT_AY) |  (conf.type_sound==SOFT_TS))
@@ -1069,8 +1312,8 @@ wait_enter(); // ожидание отпускания enter
          init_vol_ay();
       }
 
-      init_menu_advanced();
-      draw_text(xPos,yPos+10*0,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+      init_menu_sound_setup();
+      draw_text(xPos,yPos+10*0,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
         break;
         
         case 1:// усилитель -
@@ -1081,46 +1324,36 @@ wait_enter(); // ожидание отпускания enter
             conf.audio_buster &=0x07;
           //  if (conf.audio_buster>7) conf.audio_buster=0;
           set_audio_buster();
-             init_menu_advanced();
-        draw_text(xPos,yPos+10*1,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+             init_menu_sound_setup();
+        draw_text(xPos,yPos+10*1,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
 
          } 
           break;      
           
           case 2:// noise fdd -
           conf.sound_fdd  ^= true;
-          init_menu_advanced();
-          draw_text(xPos,yPos+10*2,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);  
+          init_menu_sound_setup();
+          draw_text(xPos,yPos+10*2,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN);  
           break;
 
           case 3: // громкость load -
             conf.vol_load--;
             conf.vol_load &= 0x0f;
             init_vol_ay();
-           init_menu_advanced();
-           draw_text(xPos,yPos+10*3,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+           init_menu_sound_setup();
+           draw_text(xPos,yPos+10*3,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
             break;
 
-          case 4:// скорость мыши -
-          if (conf.mouse_dpi==1) conf.mouse_dpi=1;
-             else conf.mouse_dpi--;
-           init_menu_advanced();
-           draw_text(xPos,yPos+10*4,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
-           break;    
 
-         case 5:// video out -
-         if (conf.vout==VIDEO_AUTO) conf.vout=VIDEO_AUTO;
-          else conf.vout--;
-             init_menu_advanced();
-        draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
-        break;
-
-          case 8:// tape load mode
-          conf.tape_mode = conf.tape_mode ? 0 : 1;
-          TAP_SwitchMode();
-          init_menu_advanced();
-          draw_text(xPos,yPos+10*8,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+          case 4:// beep mode -
+          if (conf.beep_mode == 0) conf.beep_mode=0;
+            else conf.beep_mode--;
+          init_menu_sound_setup();
+          draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN);
           break;
+
+
+
       }
    
     }
@@ -1148,8 +1381,8 @@ wait_enter(); // ожидание отпускания enter
         vol_ay=conf.vol_i2s; 
         init_vol_ay();
       }    
-             init_menu_advanced();
-        draw_text(xPos,yPos+10*0,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+             init_menu_sound_setup();
+        draw_text(xPos,yPos+10*0,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
         break;
 
         case 1:// усилитель +
@@ -1159,45 +1392,33 @@ wait_enter(); // ожидание отпускания enter
            else conf.audio_buster++;
            conf.audio_buster &=0x07;
            set_audio_buster();
-             init_menu_advanced();
-        draw_text(xPos,yPos+10*1,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+             init_menu_sound_setup();
+        draw_text(xPos,yPos+10*1,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
         } 
          break;   
 
          case 2:// noise fdd +
          conf.sound_fdd  ^= true;
-             init_menu_advanced();
-        draw_text(xPos,yPos+10*2,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+             init_menu_sound_setup();
+        draw_text(xPos,yPos+10*2,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
          break;    
 
           case 3: // громкость load +
               conf.vol_load++;
             conf.vol_load &= 0x0f;
             init_vol_ay();
-             init_menu_advanced();
-           draw_text(xPos,yPos+10*3,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+             init_menu_sound_setup();
+           draw_text(xPos,yPos+10*3,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
             break;
 
-         case 4:// скорость мыши +
-         if (conf.mouse_dpi==9) conf.mouse_dpi=9;
-            else conf.mouse_dpi++;
-             init_menu_advanced();
-        draw_text(xPos,yPos+10*4,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
-          break;    
-
-         case 5:// video out +
-         if (conf.vout>=VIDEO_TFT) conf.vout=VIDEO_TFT;
-         else conf.vout++;
-             init_menu_advanced();
-        draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
-         break;
-
-          case 8:// tape load mode
-          conf.tape_mode = conf.tape_mode ? 0 : 1;
-          TAP_SwitchMode();
-          init_menu_advanced();
-          draw_text(xPos,yPos+10*8,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+           case 4:// beep mode
+          if (conf.beep_mode == 2) conf.beep_mode=2;
+            else conf.beep_mode++;
+          init_menu_sound_setup();
+          draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN);
           break;
+
+
 
       default:
         break;
@@ -1214,37 +1435,27 @@ wait_enter(); // ожидание отпускания enter
       uint8_t x;
      case 2:
      conf.sound_fdd  ^= true;
-             init_menu_advanced();
-        draw_text(xPos,yPos+10*2,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+             init_menu_sound_setup();
+        draw_text(xPos,yPos+10*2,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
      continue;
 
+           case 4:// beep mode
+           draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_PINK);
+           g_delay_ms(200);
+       //   if (conf.beep_mode =3) conf.beep_mode=3;
+       //     else conf.beep_mode++;
+       //   init_menu_sound_setup();
+          draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+          continue;
+         // break;
 
-      case 6:// версия TR-DOS
-         x = MenuBox(140, 100, 16, 2, "Version", menu_trdos, 2, conf.trdos_version , 1);
-         if (x!=0xff) conf.trdos_version  = x;
-         break;
 
-      case 7:// версия Z80
-         x = MenuBox(155, 100, 12, 5, "Z80 CPU", menu_cpu_version, 5, conf.cpu_version , 1);
-       if (x!=0xff)
-       {
-       conf.cpu_version  = x;
-       select_cpu_z80(z1);
-       }
-       break;
 
-       case 8:// tape load mode
-       conf.tape_mode = conf.tape_mode ? 0 : 1;
-       TAP_SwitchMode();
-       init_menu_advanced();
-       draw_text(xPos,yPos+10*8,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN);
-       continue;
-
-       case 9:// Save config
+       case 5:// Save config
        save_config();
        break;
 
-      case 10:// Return menu
+      case 6:// Return menu
       return 0xff; // ESC exit
      }
 
@@ -1264,7 +1475,7 @@ wait_enter(); // ожидание отпускания enter
 
   }
 }
-//###############
+//##############################################################
 void draw_logo (int x,int y,color_t colorInc,color_t colorPaper)
 {
 draw_symbol(x+0, y+4,0,colorInc, colorPaper);

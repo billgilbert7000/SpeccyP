@@ -1,47 +1,19 @@
 #include "config.h"  
 #include <stdio.h>
 #include "hardware/gpio.h"
+#include "hardware/vreg.h"
 
+uint8_t __in_flash() table_voltage[] = {55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,150,160,165};
 
-//-----------------
-/* #if defined(NO_PSRAM_21)  
-
-void config_defain(void)
-{
-         conf.version =CONFIG_VERSION;
-        conf.autorun =0;
-      //  conf.type_sound_filter= 1;// 0 off фильтр частот
-        conf.turbo = 0;// turbo/normal
-        conf.mashine = PENT128;
-        conf.type_sound = 3;// hard turbo sound
-        conf.joyMode = 0;
-        conf.sound_fdd = 0;
-        conf.spi_bd = 1;
-        conf.tft_bright = 70;
-       
-        conf.autorun = 0; //off   1 trdos
-        conf.DiskName[4][LENF+1]; // имя диска инфо
-        conf.vol_ay = 15; //громкость soft AY
-        conf.vol_i2s = 50; //громкость i2s
-        
-        conf.activefilename[0] = 0;
-
-              conf.turbo=0; // при включении TURBO OFF!
-      conf.tape_mode=0; // 0=fast, 1=slow
-      turbo_switch();
-}
-
-#else */
 //----------------------------------------------------------
 // Конфигурация по умолчанию
 //----------------------------------------------------------
 #ifdef DEVICE_DEFAULT
 void config_defain(void)
 {
-
-//conf.shift_img=12589;///(((16+40)*224)+48);
-
         conf.version =CONFIG_VERSION;
+        conf.voltage = VOLTAGE;// Possible voltage values that can be applied to the regulator
+
         conf.tft=TFT_9345I;// st7789
 
         conf.tft_invert=0;// TFT_INV=0 или 1
@@ -83,6 +55,7 @@ void config_defain(void)
 
       conf.turbo=0; // при включении TURBO OFF!
       conf.tape_mode=0; // 0=fast, 1=slow
+      conf.beep_mode=0; // 0 - pwm  , 1 - gpio
 }
 #endif
 
@@ -90,6 +63,7 @@ void config_defain(void)
 void config_defain(void)
 {
         conf.version =CONFIG_VERSION;
+        conf.voltage = VOLTAGE;// Possible voltage values that can be applied to the regulator
         conf.vout=VIDEO_HDMI;// Видевыход 0-AUTO 1-VGA 2-HDMI 3-TFT 
         conf.tft=0;// ili9341
         conf.tft_invert=0;// TFT_INV=0 или 1
@@ -123,6 +97,7 @@ void config_defain(void)
 
       conf.turbo=0; // при включении TURBO OFF!
       conf.tape_mode=0; // 0=fast, 1=slow
+      conf.beep_mode=0; // 0 - pwm  , 1 - gpio
 }
 #endif
 
@@ -130,6 +105,7 @@ void config_defain(void)
 void config_defain(void)
 {
         conf.version =CONFIG_VERSION;
+        conf.voltage = VOLTAGE;// Possible voltage values that can be applied to the regulator
          conf.vout=VIDEO_HDMI;// Видевыход 0-AUTO 1-VGA 2-HDMI 3-TFT  //2- только HDMI
         conf.tft=0;// ili9341
         conf.tft_invert=0;// TFT_INV=0 или 1
@@ -163,6 +139,7 @@ void config_defain(void)
 
       conf.turbo=0; // при включении TURBO OFF!
       conf.tape_mode=0; // 0=fast, 1=slow
+      conf.beep_mode=0; // 0 - pwm  , 1 - gpio
 }
 #endif
 
@@ -273,7 +250,7 @@ int  ScreenShot_Y=40; // координата Y для вывода скринш
  extern uint8_t hardAY_on_off;
  extern uint8_t beep_data_old;
  extern uint8_t beep_data;
-
+  uint8_t beep_pin;
  //=================================================================
  // Автодетект видеовыхода
 
@@ -348,161 +325,7 @@ int  ScreenShot_Y=40; // координата Y для вывода скринш
 //	return VIDEO_VGA;
 }
 //===============================================================================
-// DeepSeek
-/*
-#include "ff.h"
-#include <string.h>
-#include <stdio.h>
 
-//----------------------------------------------------------
-// Сохранение конфигурации с комментариями
-//----------------------------------------------------------
-void config_save(const char *filename) {
-    FIL fil;
-    FRESULT fr;
-    
-    fr = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS);
-    if (fr != FR_OK) return;
-
-    // Системные параметры
-    f_printf(&fil, "[System]\n");
-    f_printf(&fil, "# Версия конфигурации (1-65535)\n");
-    f_printf(&fil, "version = %u\n\n", conf.version);
-    
-    f_printf(&fil, "# Частота CPU Z80 (Гц)\n");
-    f_printf(&fil, "z80_freq_hz = %lu\n\n", conf.z80_freq_hz);
-
-    // Видео параметры
-    f_printf(&fil, "[Video]\n");
-    f_printf(&fil, "# Тип видеовыхода (0-AUTO, 1-VGA, 2-HDMI, 3-TFT)\n");
-    f_printf(&fil, "vout = %u\n\n", conf.vout);
-    
-    f_printf(&fil, "# Тип дисплея (0-ili9341, 1-st7789)\n");
-    f_printf(&fil, "tft = %u\n\n", conf.tft);
-    
-    f_printf(&fil, "# Инверсия цветов (0-OFF, 1-ON)\n");
-    f_printf(&fil, "tft_invert = %s\n\n", conf.tft_invert ? "ON" : "OFF");
-    
-    f_printf(&fil, "# Поворот дисплея (0-0°, 1-180°)\n");
-    f_printf(&fil, "tft_rotate = %s\n\n", conf.tft_rotate ? "ON" : "OFF");
-    
-    f_printf(&fil, "# Цветовой режим (0-RGB, 1-BGR)\n");
-    f_printf(&fil, "tft_rgb = %s\n\n", conf.tft_rgb ? "BGR" : "RGB");
-    
-    f_printf(&fil, "# Яркость дисплея (0-100)\n");
-    f_printf(&fil, "tft_bright = %u\n\n", conf.tft_bright);
-
-    // Аудио параметры
-    f_printf(&fil, "[Audio]\n");
-    f_printf(&fil, "# Усилитель звука (0-65535)\n");
-    f_printf(&fil, "audio_buster = %u\n\n", conf.audio_buster);
-    
-    f_printf(&fil, "# Громкость AY (0-100)\n");
-    f_printf(&fil, "vol_ay = %u\n\n", conf.vol_ay);
-    
-    f_printf(&fil, "# Громкость I2S (0-100)\n");
-    f_printf(&fil, "vol_i2s = %u\n\n", conf.vol_i2s);
-    
-    f_printf(&fil, "# Звук FDD (0-OFF, 1-ON)\n");
-    f_printf(&fil, "sound_fdd = %u\n\n", conf.sound_fdd);
-
-    // Настройки машины
-    f_printf(&fil, "[Machine]\n");
-    f_printf(&fil, "# Тип ZX Spectrum (0-255)\n");
-    f_printf(&fil, "mashine = %u\n\n", conf.mashine);
-    
-    f_printf(&fil, "# Режим AY (0-255)\n");
-    f_printf(&fil, "ay = %u\n\n", conf.type_sound);
-    
-    f_printf(&fil, "# Автозагрузка (0-OFF, 1-ON)\n");
-    f_printf(&fil, "autorun = %u\n\n", conf.autorun);
-    
-    f_printf(&fil, "# Турбо режим (0-OFF, 1-ON)\n");
-    f_printf(&fil, "turbo = %u\n\n", conf.turbo);
-    
-    // Периферия
-    f_printf(&fil, "[Periphery]\n");
-    f_printf(&fil, "# Режим джойстика (0-255)\n");
-    f_printf(&fil, "joyMode = %u\n\n", conf.joyMode);
-    
-    f_printf(&fil, "# DPI мыши (100-16000)\n");
-    f_printf(&fil, "mouse_dpi = %u\n\n", conf.mouse_dpi);
-    
-    f_printf(&fil, "# Скорость SPI (0-255)\n");
-    f_printf(&fil, "spi_bd = %u\n\n", conf.spi_bd);
-    
-    f_printf(&fil, "# Палитра (0-255)\n");
-    f_printf(&fil, "pallete = %u\n\n", conf.pallete);
-    
-    f_printf(&fil, "# Конвертация SCL (0-OFF, 1-ON)\n");
-    f_printf(&fil, "FileAutorunType = %s\n\n", conf.FileAutorunType ? "true" : "false");
-
-    // Хранилище
-    f_printf(&fil, "[Storage]\n");
-    for (int i = 0; i < 4; i++) {
-        f_printf(&fil, "# Имя диска %d\n", i+1);
-        f_printf(&fil, "DiskName%d = \"%s\"\n", i, conf.DiskName[i]);
-        
-        f_printf(&fil, "# Путь к диску %d\n", i+1);
-        f_printf(&fil, "Disks%d = \"%s\"\n\n", i, conf.Disks[i]);
-    }
-    
-    f_printf(&fil, "# Активный файл\n");
-    f_printf(&fil, "activefilename = \"%s\"\n", conf.activefilename);
-
-    f_close(&fil);
-}
-
-//----------------------------------------------------------
-// Загрузка конфигурации
-//----------------------------------------------------------
-void config_load(const char *filename) {
-    FIL fil;
-    char line[256];
-    char *key, *value;
-    int index;
-    
-    if (f_open(&fil, filename, FA_READ) != FR_OK) {
-    //    config_default();
-        return;
-    }
-
-    while (f_gets(line, sizeof(line), &fil)) {
-        // Пропуск комментариев и пустых строк
-        if (line[0] == '#' || line[0] == '\n' || line[0] == '[') continue;
-        
-        // Разделение ключ-значение
-        key = strtok(line, " =\t");
-        value = strtok(NULL, "\"\n\r\t");
-        
-        if (!key || !value) continue;
-
-        // Парсинг параметров
-        if (strcmp(key, "version") == 0) conf.version = atoi(value);
-        else if (strcmp(key, "z80_freq_hz") == 0) conf.z80_freq_hz = atol(value);
-        else if (strcmp(key, "vout") == 0) conf.vout = atoi(value);
-        else if (strcmp(key, "tft") == 0) conf.tft = atoi(value);
-        else if (strcmp(key, "tft_invert") == 0) conf.tft_invert = (strcmp(value, "ON") == 0) ? 1 : 0;
-        // ... аналогично для остальных параметров
-        
-        // Обработка строковых массивов
-        if (sscanf(key, "DiskName%d", &index) == 1 && index >= 0 && index < 4) {
-            strncpy(conf.DiskName[index], value, LENF);
-            conf.DiskName[index][LENF] = '\0';
-        }
-        else if (sscanf(key, "Disks%d", &index) == 1 && index >= 0 && index < 4) {
-            strncpy(conf.Disks[index], value, DIRS_DEPTH*(LENF+16));
-            conf.Disks[index][DIRS_DEPTH*(LENF+16)-1] = '\0';
-        }
-        else if (strcmp(key, "activefilename") == 0) {
-            strncpy(conf.activefilename, value, sizeof(conf.activefilename));
-            conf.activefilename[sizeof(conf.activefilename)-1] = '\0';
-        }
-    }
-    
-    f_close(&fil);
-}
-*/
 //---------------------------------------------------------------------
 #if defined  GENERAL_SOUND
 
@@ -533,4 +356,213 @@ void led_blink(void)
         #endif
 
     }
-     #endif
+ #endif
+
+//####################################################   конфиг
+// Вспомогательные функции для парсинга INI
+static char* trim_whitespace(char *str) {
+    char *end;
+    
+    // Удаление пробелов в начале
+    while (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') {
+        str++;
+    }
+    
+    if (*str == 0) return str;
+    
+    // Удаление пробелов в конце
+    end = str + strlen(str) - 1;
+    while (end > str && (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n')) {
+        *end = 0;
+        end--;
+    }
+    
+    return str;
+}
+
+static char* get_value(char *line) {
+    char *delim = strchr(line, '=');
+    if (delim) {
+        return trim_whitespace(delim + 1);
+    }
+    return NULL;
+}
+
+static bool parse_uint8(const char *str, uint8_t *value) {
+    if (!str) return false;
+    char *endptr;
+    long val = strtol(str, &endptr, 0);
+    if (endptr == str || val < 0 || val > 255) return false;
+    *value = (uint8_t)val;
+    return true;
+}
+
+static bool parse_uint32(const char *str, uint32_t *value) {
+    if (!str) return false;
+    char *endptr;
+    unsigned long val = strtoul(str, &endptr, 0);
+    if (endptr == str) return false;
+    *value = (uint32_t)val;
+    return true;
+}
+
+static bool parse_float(const char *str, float *value) {
+    if (!str) return false;
+    char *endptr;
+    float val = strtof(str, &endptr);
+    if (endptr == str) return false;
+    *value = val;
+    return true;
+}
+
+//#############################################################
+
+// Сохранение конфигурации в INI файл
+bool config_ini_save(const char *filename) {
+    FIL file;
+    FRESULT res;
+    UINT bytes_written;
+    int offset;
+    res = f_open(&file, filename, FA_CREATE_ALWAYS | FA_WRITE);
+    if (res != FR_OK) {
+     //   printf("Config save: cannot create file %s (error %d)\n", filename, res);
+        return false;
+    }
+    
+    //Voltage
+    uint8_t u = 130;
+    if (conf.voltage == 15) u=130;
+    else if (conf.voltage==16) u=135;
+    else if (conf.voltage==17) u=140;
+    else if (conf.voltage==18) u=150;
+    else if (conf.voltage==19) u=160;
+
+    // Заголовок файла
+    offset = snprintf(sd_buffer, sizeof(sd_buffer),
+        "; SpeccyP Configuration\n"
+        "; =====================\n"
+        "[system]\n"
+        "; Version (do not modify)\n"
+        "version = %llu\n\n"
+
+        "; Voltage 1.30V=130 ,1.35V=135, 1.40V=140, 1.50V=150, 1.60V=160 \n"
+        "voltage = %u\n\n"
+
+        "[video]\n"
+        "; 0=AUTO 1=VGA, 2=HDMI, 3=TFT\n"
+        "video_out = %u\n"
+        "; TFT type: 0=ILI9341, 1=ST7789, 2=ILI9341_IPS\n"
+        "tft_type = %u\n"
+        "; TFT inversion: 0=normal, 1=inverted\n"
+        "tft_invert = %u\n"
+        "; TFT rotation: 0=0 degrees, 192=180 degrees\n"
+        "tft_rotate = %u\n"
+        "; TFT color mode: 0=RGB, 1=BGR\n"
+        "tft_rgb = %u\n"
+        "; TFT backlight  0-100%%\n"
+        "tft_brightness = %u\n"
+        "; HDMI frequency divider (1.0=90Hz, 1.5=60Hz)\n"
+        "hdmi_divider = %.2f\n",
+
+        conf.version,
+        u,               // conf.voltage,
+        conf.vout,
+        conf.tft,
+        conf.tft_invert,
+        conf.tft_rotate,
+        conf.tft_rgb,
+        conf.tft_bright,
+        conf.hdmi_fdiv
+
+    );
+    
+    f_write(&file, sd_buffer, offset, &bytes_written);
+
+    f_close(&file);
+    
+  //  printf("Config saved to %s\n", filename);
+    return true;
+}
+
+// Загрузка конфигурации из INI файла
+bool config_ini_load(const char *filename) {
+    FIL file;
+    FRESULT res;
+   
+    //char line[512];
+    char section[32] = "";
+    
+    // Проверка существования файла
+    res = f_open(&file, filename, FA_READ);
+    if (res != FR_OK) {
+     //   printf("Config file %s not found, creating default\n", filename);
+        config_defain();
+        config_ini_save(filename);
+        return true;
+    }
+    
+    // Загружаем значения по умолчанию
+  //  config_defain();
+    
+    // Чтение файла построчно
+    while (f_gets(sd_buffer, 512, &file)) {
+        char *trimmed = trim_whitespace(sd_buffer);
+        
+        // Пропуск пустых строк и комментариев
+        if (trimmed[0] == '\0' || trimmed[0] == ';' || trimmed[0] == '#') {
+            continue;
+        }
+        
+        // Определение секции
+        if (trimmed[0] == '[') {
+            char *end = strchr(trimmed, ']');
+            if (end) {
+                *end = '\0';
+                strncpy(section, trimmed + 1, sizeof(section) - 1);
+                section[sizeof(section) - 1] = '\0';
+            }
+            continue;
+        }
+        
+        // Парсинг ключ=значение
+        char *delim = strchr(trimmed, '=');
+        if (!delim) continue;
+        
+        *delim = '\0';
+        char *key = trim_whitespace(trimmed);
+        char *value = trim_whitespace(delim + 1);
+        
+        // Обработка значений по секциям
+        if (strcmp(section, "system") == 0) {
+            if (strcmp(key, "version") == 0) NULL ;//parse_uint8(value, (uint8_t*)&conf.version);
+            else if (strcmp(key, "voltage") == 0)// parse_uint8(value, &conf.voltage);
+            //Voltage
+            {
+               uint8_t u; 
+               parse_uint8(value, &u);
+               conf.voltage=VOLTAGE;
+               if (u == 130) conf.voltage=15;
+               else if (u==135) conf.voltage=16;
+               else if (u==140) conf.voltage=17;
+               else if (u==150) conf.voltage=18;
+               else if (u==160) conf.voltage=19;
+            }
+        }
+
+        else if (strcmp(section, "video") == 0) {
+            if (strcmp(key, "video_out") == 0) parse_uint8(value, &conf.vout);
+            else if (strcmp(key, "tft_type") == 0) parse_uint8(value, &conf.tft);
+            else if (strcmp(key, "tft_invert") == 0) parse_uint8(value, &conf.tft_invert);
+            else if (strcmp(key, "tft_rotate") == 0) parse_uint8(value, &conf.tft_rotate);
+            else if (strcmp(key, "tft_rgb") == 0) parse_uint8(value, &conf.tft_rgb);
+            else if (strcmp(key, "tft_brightness") == 0) parse_uint8(value, &conf.tft_bright);
+            else if (strcmp(key, "hdmi_divider") == 0) parse_float(value, &conf.hdmi_fdiv);
+        }
+
+    }
+    
+    f_close(&file);
+ //   printf("Config loaded from %s\n", filename);
+    return true;
+}
+//##################################################################

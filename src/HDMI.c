@@ -760,7 +760,7 @@ void graphics_init(g_out g_out)
                  //   gpio_set_slew_rate(beginVideo_PIN+i,GPIO_SLEW_RATE_FAST);
                     gpio_set_slew_rate(beginVideo_PIN + i, GPIO_SLEW_RATE_SLOW); // Замедление фронтов (если поддерживается)
                     //Каждый GPIO RP2040 может выдавать до 12 mA, но суммарный ток всех пинов не должен превышать 50 mA
-                         gpio_set_drive_strength(beginVideo_PIN+i,GPIO_DRIVE_STRENGTH_4MA);// сбрасывается на murm2 если rp2040 GPIO_DRIVE_STRENGTH_12MA
+                         gpio_set_drive_strength(beginVideo_PIN+i,GPIO_DRIVE_STRENGTH_2MA);// сбрасывается на murm2 если rp2040 GPIO_DRIVE_STRENGTH_12MA
                 }
             pio_sm_set_consecutive_pindirs(PIO_VIDEO, SM_video, beginVideo_PIN, 8, true);//конфигурация пинов на выход            
             sm_config_set_out_pins(&c_c, beginVideo_PIN, 8);

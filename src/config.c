@@ -12,8 +12,13 @@ uint8_t __in_flash() table_voltage[] = {55,60,65,70,75,80,85,90,95,100,105,110,1
 void config_defain(void)
 {
         conf.version =CONFIG_VERSION;
-        conf.voltage = VOLTAGE;// Possible voltage values that can be applied to the regulator
-
+        
+               #ifdef PICO_RP2350 
+               conf.voltage = VOLTAGE_WORK;// Possible voltage values that can be applied to the regulator
+               #else
+               conf.voltage=VOLTAGE_RP2040;
+               #endif
+               
         conf.tft=TFT_9345I;// st7789
 
         conf.tft_invert=0;// TFT_INV=0 или 1
@@ -63,7 +68,7 @@ void config_defain(void)
 void config_defain(void)
 {
         conf.version =CONFIG_VERSION;
-        conf.voltage = VOLTAGE;// Possible voltage values that can be applied to the regulator
+        conf.voltage = VOLTAGE_WORK;// Possible voltage values that can be applied to the regulator
         conf.vout=VIDEO_HDMI;// Видевыход 0-AUTO 1-VGA 2-HDMI 3-TFT 
         conf.tft=0;// ili9341
         conf.tft_invert=0;// TFT_INV=0 или 1
@@ -105,7 +110,7 @@ void config_defain(void)
 void config_defain(void)
 {
         conf.version =CONFIG_VERSION;
-        conf.voltage = VOLTAGE;// Possible voltage values that can be applied to the regulator
+        conf.voltage = VOLTAGE_WORK;// Possible voltage values that can be applied to the regulator
          conf.vout=VIDEO_HDMI;// Видевыход 0-AUTO 1-VGA 2-HDMI 3-TFT  //2- только HDMI
         conf.tft=0;// ili9341
         conf.tft_invert=0;// TFT_INV=0 или 1
@@ -540,7 +545,11 @@ bool config_ini_load(const char *filename) {
             {
                uint8_t u; 
                parse_uint8(value, &u);
-               conf.voltage=VOLTAGE;
+               #ifdef PICO_RP2350 
+               conf.voltage=VOLTAGE_RUN;
+               #else
+               conf.voltage=VOLTAGE_RP2040;
+               #endif
                if (u == 130) conf.voltage=15;
                else if (u==135) conf.voltage=16;
                else if (u==140) conf.voltage=17;

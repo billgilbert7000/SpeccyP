@@ -65,12 +65,12 @@ extern uint32_t dtcpu;
 #define Z80_14000 CPU_KHZ/14000
 
 //#define VOLTAGE VREG_VOLTAGE_1_30 //VREG_VOLTAGE_1_20 //	vreg_set_voltage(VOLTAGE); // main.h
-#ifdef PICO_RP2350 
+/* #ifdef PICO_RP2350 
 #define VOLTAGE_MIN VREG_VOLTAGE_1_30
 #define VOLTAGE VREG_VOLTAGE_1_40
 #else
 #define VOLTAGE VREG_VOLTAGE_1_30
-#endif
+#endif */
 //=======================================================================================================
 
 // 126MHz SPI

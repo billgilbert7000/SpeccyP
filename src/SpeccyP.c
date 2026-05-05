@@ -692,7 +692,7 @@ void fast(init_pico)(void) // настройка и разгон для RP2350
 {  
     volatile uint32_t *qmi_m0_timing=(uint32_t *)0x400d000c;
     vreg_disable_voltage_limit();
-    vreg_set_voltage(VOLTAGE_MIN);
+    vreg_set_voltage(VOLTAGE_RUN);
 
 #if (FLASH_MAX_FREQ_MHZ==166)
     real_flash_freq = CPU_MHZ/3;
@@ -746,12 +746,6 @@ void init_and_info()
   // определение RP2350 A или B  
      rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
       psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
-
-
-
-
-
-
 
     // для корректного запуска с бутербродом PSRAM  
     gpio_init(psram_pin_cs);
@@ -819,7 +813,7 @@ void init_and_info()
     config_init();
 
 #ifdef PICO_RP2350 
-vreg_set_voltage(conf.voltage);
+vreg_set_voltage(conf.voltage);// установка напряжения из ini
 #endif
     gpio_put(LED_BOARD, 0);
 //------------------------------------------------------------------
@@ -861,7 +855,16 @@ vreg_set_voltage(conf.voltage);
 #ifdef  SOUND_PWM_ONLY
         conf.type_sound=1; // только pwm
 #endif 
-
+//####################################################################
+ // Инициализация USB
+   init_usb_hid(); // USB HID
+    for(int i = 0; i < 500; i++)// время на определение USB устройств
+{
+     tuh_task(); // tinyusb host task
+    //  tuh_task_ext(0, false);
+     g_delay_ms(1);
+  } 
+// tuh_task(); // tinyusb host task
 //#####################################################################
     	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
@@ -1301,17 +1304,9 @@ void Message_Print()
 int fast(main)(void){  
 
     init_pico();
-    sleep_ms(100);
+  //  sleep_ms(100);
 
- // Инициализация USB
-   init_usb_hid(); // USB HID
-    for(int i = 0; i < 500; i++)// время на определение USB устройств
-{
-     tuh_task(); // tinyusb host task
-    //  tuh_task_ext(0, false);
-     g_delay_ms(1);
-  } 
-// tuh_task(); // tinyusb host task
+
 // Инициализация последовательного порта
   //  stdio_init_all(); // для автоматической загрузки прошивки RP2350
 
@@ -1641,18 +1636,24 @@ is_new_screen = true;
 //================================================================
 void  config_init(void)
 {
-	FIL f;
-	//int fr =-1;
-
     enable_tape = false; // tap файл не подключен при запуске
 
-    sprintf(temp_msg, "0:/speccy_p.cnf");
+	FIL f;
+    // Создаём каталог .config (если его нет)
+    FRESULT fr = f_mkdir("0:/.config");
+    if (fr != FR_OK && fr != FR_EXIST) {
+    //    MessageBox("      Error creating .config dir      ", "", CL_LT_YELLOW, CL_RED, 1);
+    config_defain();
+        return;
+    }
+
+    sprintf(temp_msg, "0:/.config/speccy_p.cnf");
     int fd = f_open(&f, temp_msg, FA_READ);
     if (fd != FR_OK)
     {
         f_close(&f);
         config_defain();// если нет файла конфигурации       
-        config_ini_load("0:/speccy_p.ini");//текстовый файл конфига
+        config_ini_load("0:/.config/speccy_p.ini");//текстовый файл конфига
         // если его нет то загружается дефолтная конфигурация и файл записывается
         return;
     }
@@ -1669,7 +1670,7 @@ void  config_init(void)
     {
         f_close(&f);
         config_defain();// если файл конфигурации неправильной версии
-        config_ini_load("0:/speccy_p.ini");//текстовый файл конфига
+        config_ini_load("0:/.config/speccy_p.ini");//текстовый файл конфига
         // если его нет то загружается дефолтная конфигурация и файл записывается
         return;
     }
@@ -1677,7 +1678,7 @@ void  config_init(void)
 
     f_close(&f);
 
-    config_ini_load("0:/speccy_p.ini");//текстовый файл конфига
+    config_ini_load("0:/.config/speccy_p.ini");//текстовый файл конфига
     conf.turbo=0; // при включении TURBO OFF!
     return ;
 }
@@ -1706,7 +1707,7 @@ bool save_config(void)
 
     MessageBox("       Saving config      ", "", CL_WHITE, CL_BLUE, 2);
 
-    sprintf(temp_msg, "0:/speccy_p.cnf");//
+    sprintf(temp_msg, "0:/.config/speccy_p.cnf");//
 
    int fd = f_open(&f, temp_msg, FA_CREATE_ALWAYS | FA_WRITE);
     if (fd != FR_OK)
@@ -1724,7 +1725,7 @@ bool save_config(void)
     }
     f_close(&f);
 
-    config_ini_save("0:/speccy_p.ini");//текстовый файл конфига
+    config_ini_save("0:/.config/speccy_p.ini");//текстовый файл конфига
 
 
     return true;

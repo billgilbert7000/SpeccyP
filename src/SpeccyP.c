@@ -66,7 +66,9 @@
 #include "zx_emu/Z80.h"
 
 //////////////////////////////////////////
+#ifndef USB_SERIAL
 #include "tusb.h"
+#endif
 
 //#include "I2C_rp2040.h"// это добавить
 #include "usb_key.h"// это добавить
@@ -81,7 +83,7 @@ int real_flash_freq;
 uint8_t vout_select;
 /////////////////////////////////////////
 // headers
-void file_manager (void);   
+void file_manager (void);
 void file_info (void);   
 void file_select_trdos(void);
 void setup_zx(void);
@@ -850,21 +852,40 @@ vreg_set_voltage(conf.voltage);// установка напряжения из i
  
 #ifdef  SOUND_I2S_ONLY
         conf.type_sound=3; // только i2s
-#endif 
+#endif
 
 #ifdef  SOUND_PWM_ONLY
         conf.type_sound=1; // только pwm
-#endif 
+#endif
+
+#if defined(HDMI_HSTX) && !defined(HDMI_HSTX_DVI)
+        // В HDMI HSTX-сборке (с HDMI audio через Data Islands) звук
+        // обязан идти через i2s_out — иначе в HDMI поедет тишина, а
+        // sample'ы AY уйдут на PWM-пины мимо приёмника. Любые другие
+        // режимы (Soft AY, Hard AY, TSFM…) подменяем на I2S_TS, чтобы
+        // user'ская настройка звука не глушила HDMI audio.
+        if (conf.type_sound != I2S_AY && conf.type_sound != I2S_TS) {
+            conf.type_sound = I2S_TS;
+        }
+#endif
 //####################################################################
  // Инициализация USB
+#ifdef USB_SERIAL
+   // Режим USB CDC консоли: USB HID хост отключаем, вместо него
+   // используем CDC-ACM для отладочного вывода. Даём 5 секунд на
+   // подключение терминала со стороны хоста до запуска эмулятора.
+   stdio_init_all();
+   for (int i = 0; i < 50; i++) { g_delay_ms(100); }
+#else
    init_usb_hid(); // USB HID
     for(int i = 0; i < 500; i++)// время на определение USB устройств
 {
      tuh_task(); // tinyusb host task
     //  tuh_task_ext(0, false);
      g_delay_ms(1);
-  } 
+  }
 // tuh_task(); // tinyusb host task
+#endif
 //#####################################################################
     	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
@@ -1369,10 +1390,10 @@ int fast(main)(void){
                 else  zx_input.kempston = 0;
             };
         }
-        
-  // ОПРОС КЛАВИАТУРЫ И ДЖОЙСТИКА 
+
+  // ОПРОС КЛАВИАТУРЫ И ДЖОЙСТИКА
  if ((decode_PS2()) | (decode_key(is_menu_mode)) | (decode_joy()) )
-    {   
+    {
             //------------------------------------------------------
             // кнопка перехода в меню файлов
              key_menu_state =( (MENU) | (joy_key_ext  == 0x84)  );
@@ -1397,7 +1418,7 @@ int fast(main)(void){
             }
                old_key_menu_state = key_menu_state;
 
-//########################################################################################           
+//########################################################################################
                 // меню если is_menu_mode =true файловое меню
                 if ((is_menu_mode) && (!trdos))   { file_manager(); TAP_RestorePage(); }// файловое меню
 //########################################################################################
@@ -2933,14 +2954,13 @@ if (size_psram==0)
 //###########################################
 //   Файловое меню
 //###########################################         
-void file_manager (void)     
+void file_manager (void)
          //    if ((is_menu_mode) && (!trdos))// файловое меню
             {
-              
                 //	tap_loader_active=false;// рудимент от аудио загрузки
                  hardAY_on_off=0;
                 hardAY_off();// off hard AY файловое меню
-                
+
                if (init_fs!=FR_OK)
                 {
                     g_delay_ms(10);
@@ -2950,22 +2970,19 @@ void file_manager (void)
                 }
                 //++++++++++++++++++++++++++++++++++++++++++
               if (is_new_screen)
-               { 
-
+               {
                      if (init_fs != FR_OK)
                  {
                     memset(g_gbuf, COLOR_BACKGOUND, sizeof(g_gbuf));
                     MessageBox("SD Card not found!!!", "    Please REBOOT   ", CL_LT_YELLOW, CL_RED, 0);
                     return; //continue;
-                 } 
+                 }
                       draw_main_window();// рисование рамок
                       draw_file_window();// рисование каталога файлов
 
- 
                      if (init_fs==FR_OK)
                     {
                        N_files = read_select_dir(cur_dir_index);
-
                         if (N_files == 0)
                         {
                             init_fs = FR_NO_FILE;// нет файлов
@@ -2974,10 +2991,10 @@ void file_manager (void)
                         {
                             cur_file_index_old = -1;
                         }
-                      
-                    }  
-  
-                }  
+
+                    }
+
+                }
                   //+++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
                 if (init_fs==FR_OK)

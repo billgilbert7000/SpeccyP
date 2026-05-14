@@ -455,11 +455,17 @@ void start_PS2_capture(){
         false                              // Don't start yet
     );
     
-    // Настройка прерываний DMA
+    // Настройка прерываний DMA. Когда включён HSTX-драйвер, DMA_IRQ_0
+    // (HSTX scanline) сидит на priority=0 и преемптит всё. Этот ISR
+    // (PS/2 capture) короткий, но если по нему вложится HSTX ISR,
+    // суммарный стэк превышает scratch-резерв; на первом нажатии
+    // клавиши срывается видео. Ставим равный priority — Cortex-M33
+    // тогда не преемптит, обе ISR доходят до конца последовательно.
     dma_channel_set_irq1_enabled(dma_chan, true);
     irq_set_exclusive_handler(DMA_IRQ_1, dma_handler_capture);
+    irq_set_priority(DMA_IRQ_1, 0);
     irq_set_enabled(DMA_IRQ_1, true);
-    
+
     // Запуск DMA
     dma_start_channel_mask((1u << dma_chan0) | (1u << dma_chan));
 

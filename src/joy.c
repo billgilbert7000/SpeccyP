@@ -1,7 +1,9 @@
-#include "config.h"  
+#include "config.h"
 #include "zx_emu/zx_machine.h"
 #include "joy.h"
+#ifndef USB_SERIAL
 #include "tusb.h"
+#endif
 
 volatile int us_val=0;
 
@@ -120,7 +122,9 @@ START 0x80   1000 0000
 //================================================================================
 bool decode_joy_to_keyboard(void)
 { 
+#ifndef USB_SERIAL
  tuh_task(); // tinyusb host task
+#endif
    static int16_t delay_key;
 
    data_joy = d_joy_get_data();// если есть денди джой

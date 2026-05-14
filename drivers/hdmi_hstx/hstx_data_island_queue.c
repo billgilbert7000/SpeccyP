@@ -107,16 +107,26 @@ uint32_t hstx_di_queue_get_underrun_count(void) { return audio_underrun_count; }
 const uint32_t *__scratch_x("") hstx_di_queue_get_audio_packet(void)
 {
     uint32_t threshold = 4 * cached_v_total_lines;
-    if (audio_sample_accum >= threshold) {
+    if (audio_sample_accum < threshold) return NULL;
+
+    /* Если в очереди есть пакет — отдаём его и съедаем threshold. */
+    if (di_ring_tail != di_ring_head) {
         audio_sample_accum -= threshold;
-        if (di_ring_tail != di_ring_head) {
-            const uint32_t *words = di_ring_buffer[di_ring_tail].words;
-            di_ring_tail = (di_ring_tail + 1) % DI_RING_BUFFER_SIZE;
-            return words;
-        }
-        audio_underrun_count++;
-        return silence_packet.words;
+        const uint32_t *words = di_ring_buffer[di_ring_tail].words;
+        di_ring_tail = (di_ring_tail + 1) % DI_RING_BUFFER_SIZE;
+        return words;
     }
+
+    /* Очередь пуста, а пора. threshold всё равно съедаем — иначе
+     * на следующем тике мы попадём сюда же и зациклимся. Возвращаем
+     * NULL: scanout поставит vactive_di_null / vblank_di_null
+     * (валидные null-пакеты без аудио). Раньше мы тут возвращали
+     * silence_packet с нулями — при возврате звука уровень
+     * прыгал с 0 на ненулевой сэмпл, приёмник щёлкал. Теперь
+     * между real-пакетами получается дырка без аудио, level
+     * держится на последнем известном — щелчка нет. */
+    audio_sample_accum -= threshold;
+    audio_underrun_count++;
     return NULL;
 }
 

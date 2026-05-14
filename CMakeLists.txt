@@ -32,6 +32,21 @@ set(M_BOARD "MURM1" CACHE STRING "Тип платы: MURM1, MURM2, PI_CARD, WS_Z
 set_property(CACHE M_BOARD PROPERTY STRINGS MURM1 MURM2 PI_CARD WS_ZERO2 PICO_DV PICO_PC)
 
 option(PCM5122 "PCM5122 DAC для WS_ZERO2 (I2S 21/18/19 + I2C 2/3, PS/2 на 14/15)" OFF)
+
+# HDMI-драйвер на родной HSTX-периферии RP2350 (плюс HDMI-audio через
+# Data Islands, если соберётесь его включать). Полностью заменяет
+# легаси-драйвер на PIO и путь I2S-аудио.
+# Аппаратные ограничения: HSTX занимает GPIO 12-19, поэтому работает
+# только на плате M2. clk_sys должен быть целым кратным 126 МГц
+# (домен пиксельклока).
+option(HDMI_HSTX "Драйвер HDMI на HSTX RP2350 (только M2)" OFF)
+
+# USB CDC-консоль вместо USB HID Host. С ней нельзя пользоваться
+# USB-клавиатурой/джойстиком, зато появляется CDC-ACM stdio: можно
+# писать printf и читать его через terminal на хосте. На старте
+# даётся 5 секунд, чтобы хост успел поднять /dev/cu.usbmodem* и
+# терминал подцепился до того, как эмулятор тронется с места.
+option(USB_SERIAL "USB CDC console (USB HID Host отключается)" OFF)
 #---------------------
 ###
 
@@ -168,6 +183,42 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 
+if(HDMI_HSTX AND NOT M_BOARD STREQUAL "MURM2")
+    message(FATAL_ERROR
+        "HDMI_HSTX требует M_BOARD=MURM2 (HSTX выводится на GPIO 12-19). "
+        "У M_BOARD=${M_BOARD} HDMI разведён на других пинах.")
+endif()
+
+if(HDMI_HSTX)
+    # HSTX хочет целочисленный делитель clk_sys в свой 126 МГц домен
+    # пиксельклока. CPU_MHZ выставляется выше через SPECCY_CONFIG_DEFINITIONS;
+    # пересчитываем его в MODE_HSTX_CLK_DIV (504/4=126, 252/2=126 и т.д.).
+    string(REGEX MATCH "CPU_MHZ=([0-9]+)" _cpu_mhz_match "${SPECCY_CONFIG_DEFINITIONS}")
+    set(_cpu_mhz_value "${CMAKE_MATCH_1}")
+    if(_cpu_mhz_value EQUAL 504)
+        set(HSTX_CLK_DIV 4)
+    elseif(_cpu_mhz_value EQUAL 378)
+        set(HSTX_CLK_DIV 3)
+    elseif(_cpu_mhz_value EQUAL 252)
+        set(HSTX_CLK_DIV 2)
+    elseif(_cpu_mhz_value EQUAL 126)
+        set(HSTX_CLK_DIV 1)
+    else()
+        message(FATAL_ERROR
+            "Для HDMI_HSTX нужен CPU_MHZ, делящийся на 126 нацело "
+            "(126/252/378/504); получено ${_cpu_mhz_value}.")
+    endif()
+    message(STATUS "HDMI_HSTX: clk_sys=${_cpu_mhz_value} MHz, "
+            "MODE_HSTX_CLK_DIV=${HSTX_CLK_DIV}")
+endif()
+
+# Звук: по умолчанию идёт через драйвер audio_i2s (PIO). При
+# HDMI_HSTX мы подменяем i2s_init/i2s_out/i2s_deinit на свои из
+# drivers/hdmi_hstx/HDMI_hstx_audio.c — они кладут сэмплы в очередь
+# HDMI Data Islands вместо PIO. Сам сабдиректорий audio_i2s
+# подключаем всегда: внутри его CMakeLists проверяет HDMI_HSTX и
+# при включённом HSTX исключает audio_i2s.c из сборки, чтобы не
+# было multiple-definition.
 add_subdirectory(drivers/audio_i2s)
 add_subdirectory(drivers/pico_fatfs)
 
@@ -183,14 +234,42 @@ endif()
 
 
 
-file(GLOB_RECURSE SRC 
+file(GLOB_RECURSE SRC
  "src/*.c"
  "src/*.h"
- "src/zx_emu/*.c" "src/zx_emu/*.h" 
- "src/zx_emu/rom/*.h" 
- "src/zx_emu/z80/*.h" 
+ "src/zx_emu/*.c" "src/zx_emu/*.h"
+ "src/zx_emu/rom/*.h"
+ "src/zx_emu/z80/*.h"
 "src/picobus/*.c"
 )
+
+# usb_serial_stubs.c пускаем в сборку только в режиме USB_SERIAL —
+# в обычном режиме он бы дал multiple-definition с usb_key.c.
+list(FILTER SRC EXCLUDE REGEX "/src/usb_serial_stubs\\.c$")
+
+# При HDMI_HSTX вместо src/HDMI.c подключаем драйвер из
+# drivers/hdmi_hstx. src/HDMI.h оставляем как есть — там
+# tab_color[], которая нужна обоим путям.
+if(HDMI_HSTX)
+    list(FILTER SRC EXCLUDE REGEX "/src/HDMI\\.c$")
+    list(APPEND SRC
+        ${CMAKE_CURRENT_SOURCE_DIR}/drivers/hdmi_hstx/HDMI_hstx.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/drivers/hdmi_hstx/HDMI_hstx_audio.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/drivers/hdmi_hstx/video_output.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/drivers/hdmi_hstx/hstx_packet.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/drivers/hdmi_hstx/hstx_data_island_queue.c
+    )
+endif()
+
+# В режиме USB_SERIAL отключаем USB HID-хост: убираем usb_key.c,
+# xinput_host.c (требуют tinyusb_host) и подсовываем заглушки,
+# реализующие минимальный API (init_usb_hid, tuh_task, decode_key).
+if(USB_SERIAL)
+    list(FILTER SRC EXCLUDE REGEX "/src/usb_key\\.c$")
+    list(FILTER SRC EXCLUDE REGEX "/src/xinput_host\\.c$")
+    list(APPEND SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/usb_serial_stubs.c)
+endif()
+
 message(STATUS "Add source files:")
 foreach (SRC_FILE IN LISTS SRC)
     message(STATUS "${SRC_FILE}")
@@ -198,6 +277,26 @@ endforeach ()
 message(STATUS "")
 
 add_executable(${PROJECT_NAME} ${SRC})
+
+if(HDMI_HSTX)
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/drivers/hdmi_hstx
+        ${CMAKE_CURRENT_SOURCE_DIR}/drivers/audio_i2s
+    )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        HDMI_HSTX=1
+        MODE_HSTX_CLK_DIV=${HSTX_CLK_DIV}
+        # Полярность дифпар приёмника. PCB M2 разводит CLK- на GPIO12
+        # (чётный), CLK+ на GPIO13 (нечётный). Ветка драйвера по
+        # умолчанию (без HSTX_INVERT_DIFFPAIRS) укладывает полярность
+        # ровно так — оставляем как есть; включение этого флага
+        # инвертирует все линии и сломает HDMI.
+    )
+endif()
+
+if(USB_SERIAL)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USB_SERIAL=1)
+endif()
 
 
 
@@ -1074,7 +1173,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${BUILD_NAME}")
 
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
- 
         pico_runtime
         pico_stdlib
         pico_multicore
@@ -1087,11 +1185,37 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_clocks
         hardware_pwm
         hardware_flash
-       tinyusb_host 
-       tinyusb_board
-       audio_i2s
-       pico_fatfs
+        hardware_irq
+        hardware_gpio
+        hardware_sync
+        audio_i2s
+        pico_fatfs
 )
+
+# USB-стек: по умолчанию TinyUSB Host (для USB-клавиатуры/джойстика);
+# при USB_SERIAL=ON — CDC-консоль из pico_stdio_usb. В CDC-режиме
+# TinyUSB Host не линкуется вообще, чтобы он не конфликтовал с CDC
+# device-стеком Pico SDK на том же root-порту.
+if(USB_SERIAL)
+    pico_enable_stdio_usb(${PROJECT_NAME} 1)
+    pico_enable_stdio_uart(${PROJECT_NAME} 0)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        # Не блокируемся в ожидании коннекта терминала — иначе при
+        # отсутствии хоста мы вообще не выходим из stdio_init_all().
+        PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=0
+        # Отключаем vendor reset interface (USB_RESET_INTERFACE),
+        # чтобы устройство было pure CDC (bDeviceClass=02), иначе
+        # macOS Sonoma+ не подцепляет AppleUSBCDCACMData driver
+        # и /dev/cu.usbmodem* не появляется.
+        PICO_STDIO_USB_ENABLE_RESET_VIA_VENDOR_INTERFACE=0
+        PICO_STDIO_USB_RESET_BOOTSEL_INTERFACE_DISABLE_MASK=0
+    )
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        tinyusb_host
+        tinyusb_board
+    )
+endif()
 
 # Условная линковка библиотек
 if(${M_BOARD} MATCHES "MURM1")

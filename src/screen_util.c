@@ -11,7 +11,9 @@
 #include "SpeccyP.h"
 #include "usb_key.h"// это добавить
 #include "hardware/pwm.h"
+#ifndef USB_SERIAL
 #include "tusb.h"
+#endif
 #include "aySoft.h"
 //#include <string.h> /* memset */
 //#include <unistd.h> /* close */

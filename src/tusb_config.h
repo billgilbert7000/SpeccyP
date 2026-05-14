@@ -36,7 +36,13 @@
 //#define CFG_TUSB_DEBUG 0
 
 #define CFG_TUSB_MCU          OPT_MCU_RP2040
+
+#ifdef USB_SERIAL
+// Режим USB CDC консоли: tinyusb device-стек, HID-хост отключён.
+#define CFG_TUSB_RHPORT0_MODE OPT_MODE_DEVICE
+#else
 #define CFG_TUSB_RHPORT0_MODE OPT_MODE_HOST
+#endif
 
 #ifndef CFG_TUSB_OS
 #define CFG_TUSB_OS           OPT_OS_NONE
@@ -53,6 +59,15 @@
 //--------------------------------------------------------------------
 // CONFIGURATION
 //--------------------------------------------------------------------
+#ifdef USB_SERIAL
+// Режим CDC: включаем device-стек tinyusb и CDC класс,
+// чтобы pico_stdio_usb сгенерировал свои дескрипторы.
+#define CFG_TUD_ENABLED       1
+#define CFG_TUD_ENDPOINT0_SIZE 64
+#define CFG_TUD_CDC           1
+#define CFG_TUD_CDC_RX_BUFSIZE 256
+#define CFG_TUD_CDC_TX_BUFSIZE 256
+#else
 //#define CFG_TUH_XINPUT 1
 #define CFG_TUH_XINPUT              1
 
@@ -69,6 +84,7 @@
 #define CFG_TUH_HID                 4
 #define CFG_TUH_HID_EPIN_BUFSIZE    64
 #define CFG_TUH_HID_EPOUT_BUFSIZE   64
+#endif // USB_SERIAL
 
 #ifdef __cplusplus
  }

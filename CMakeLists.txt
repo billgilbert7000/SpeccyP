@@ -14,21 +14,20 @@ if (EXISTS ${picoVscode})
 endif()
 # ====================================================================================
 # Устанавливаем параметры платы и чипа и так далее
-set(PICO_BOARD pico CACHE STRING "Board type")
+set(PICO_BOARD pico2 CACHE STRING "Board type")
 
 set(DEBUG ON)
 
 # == Конфигурация  SpeccyP ==
-set (BASE_VERSION "1.6.1")
+set (BASE_VERSION "1.6.3")
 set(MOS2 OFF) # компиляция под MOS2 ON
 
 # Конфигурация сборки (можно задать через -DSPECCY_CONFIG=... и -DM_BOARD=...)
-# SPECCY_CONFIG: SPECCY | SPECCY_WSZERO2 | GSP_FULL | GSP_LITE
+# SPECCY_CONFIG: SPECCY | SPECCY_WSZERO1  | SPECCY_WSZERO2  | GSP_FULL | GSP_M2  |GSP_LITE
 # M_BOARD:       MURM1 | MURM2 | PI_CARD | WS_ZERO2 | PICO_DV | PICO_PC
-set(SPECCY_CONFIG "SPECCY" CACHE STRING "Конфигурация сборки: SPECCY, SPECCY_WSZERO2, GSP_FULL, GSP_LITE")
+set(SPECCY_CONFIG "SPECCY" CACHE STRING "Конфигурация сборки: SPECCY, SPECCY_WSZERO1, SPECCY_WSZERO2, GSP_FULL, GSP_M2, GSP_LITE")
 set_property(CACHE SPECCY_CONFIG PROPERTY STRINGS SPECCY SPECCY_WSZERO2 GSP_FULL GSP_LITE)
-
-set(M_BOARD "MURM1" CACHE STRING "Тип платы: MURM1, MURM2, PI_CARD, WS_ZERO2, PICO_DV, PICO_PC")
+set(M_BOARD "MURM2" CACHE STRING "Тип платы: MURM1, MURM2, PI_CARD, WS_ZERO1, WS_ZERO2, PICO_DV, PICO_PC, GSP_M2")
 set_property(CACHE M_BOARD PROPERTY STRINGS MURM1 MURM2 PI_CARD WS_ZERO2 PICO_DV PICO_PC)
 
 option(PCM5122 "PCM5122 DAC для WS_ZERO2 (I2S 21/18/19 + I2C 2/3, PS/2 на 14/15)" OFF)
@@ -69,7 +68,24 @@ if(SPECCY_CONFIG STREQUAL "GSP_FULL")
         MIDI
     )
       set(GENERAL_SOUND ON)
-    
+#
+elseif(SPECCY_CONFIG STREQUAL "GSP_M2")
+    set(SPECCY_CONFIG_DEFINITIONS 
+        
+        CPU_MHZ=378 # 378 MHz
+        FLASH_MAX_FREQ_MHZ=166
+        PSRAM_MAX_FREQ_MHZ=166
+        HDMI_DIV=1.5 # hdmi 60Hz
+
+        TEST_DEBUG #
+
+        GENERAL_SOUND 
+        TURBOSOUND
+        Z_CONTROLER
+        MIDI
+    )
+        set(GENERAL_SOUND ON)
+#        
 elseif(SPECCY_CONFIG STREQUAL "GSP_LITE")
     set(SPECCY_CONFIG_DEFINITIONS  
 
@@ -83,7 +99,20 @@ elseif(SPECCY_CONFIG STREQUAL "GSP_LITE")
 
     )
       set(GENERAL_SOUND ON)
+###
+elseif(SPECCY_CONFIG STREQUAL "SPECCY_WSZERO1")
+    set(SPECCY_CONFIG_DEFINITIONS  
 
+        CPU_MHZ=378 MHz
+        FLASH_MAX_FREQ_MHZ=66
+        PSRAM_MAX_FREQ_MHZ=100
+       # HDMI_DIV=1.5 # hdmi 60Hz
+        HDMI_DIV=1.5 # hdmi 75Hz 378  60Hz 252
+        TEST_DEBUG #
+
+    )
+      set(GENERAL_SOUND OFF)
+###
 elseif(SPECCY_CONFIG STREQUAL "SPECCY_WSZERO2")
     set(SPECCY_CONFIG_DEFINITIONS  
 
@@ -320,7 +349,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/s
 ###################################################
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=290433
+CONFIG_VERSION=160526
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1
@@ -383,8 +412,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 MURM1
 LED_BOARD=25
-VOLTAGE_RUN=VREG_VOLTAGE_1_40
-VOLTAGE_WORK=VREG_VOLTAGE_1_40
+VOLTAGE_RUN=VREG_VOLTAGE_1_30
+VOLTAGE_WORK=VREG_VOLTAGE_1_30
 #########################################################################
 ##PicoBus ONLY GENERAL SOUND
 PBUS_OUT_PIN=26
@@ -490,12 +519,12 @@ set (M_VERSION m2)# версия платы
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 MURM2
 LED_BOARD=25
-VOLTAGE_RUN=VREG_VOLTAGE_1_40
-VOLTAGE_WORK=VREG_VOLTAGE_1_40
+VOLTAGE_RUN=VREG_VOLTAGE_1_30
+VOLTAGE_WORK=VREG_VOLTAGE_1_30
 
 ##PicoBus ONLY GENERAL SOUND
-PBUS_OUT_PIN=10
-PBUS_IN_PIN=11
+PBUS_OUT_PIN=11
+PBUS_IN_PIN=10
 PBUS_PIO=pio0   #only pio 0
 ## Beep
 BEEP_PIN=9  # на IN
@@ -677,7 +706,115 @@ DELAY_JOY=200 #задержка NES JOY
 )
 endif()
 ###############################################
+#######################################################
+#    WS_ZERO1 Wave Share Zero1  2026.05.02 
+#    PIO 0 I2S or HARD_AY_595 SM 0 SM FREE 1,2,3
+#    PIO 1 PS/2 (2) and VIDEO  TFT (0 1) PSRAM_BOARD(SM=3)
+#######################################################
+if( ${M_BOARD} MATCHES "WS_ZERO1")
+set (M_VERSION z0)# версия платы
+target_compile_definitions(${PROJECT_NAME} PRIVATE
 
+WS_ZERO1
+HDMI_ONLY # только HDMI
+LED_BOARD=255  # 255 светодиод не подключен
+VOLTAGE_RUN=VREG_VOLTAGE_1_30
+VOLTAGE_WORK=VREG_VOLTAGE_1_30
+#########################################################################
+##PicoBus ONLY GENERAL SOUND
+PBUS_OUT_PIN=26
+PBUS_IN_PIN=27
+PBUS_PIO=pio0   #only pio 0
+## Beep
+BEEP_PIN=28  # на IN
+#######################################################################
+
+#PS/2 клавиатура
+beginPS2_PIN=0
+PIO_PS2=pio0
+SM_PS2=3 #  
+
+#VIDEO
+HDMI_PIN_ORDER_REVERSE
+beginVideo_PIN=22
+beginHDMI_PIN_data=22
+beginHDMI_PIN_clk=28
+# video pio1 и sm 2шт 
+PIO_VIDEO=pio1
+PIO_VIDEO_ADDR=pio1
+SM_VIDEO=0
+SM_CONV=1
+#
+#TFT
+PIO_SPI_TFT=pio1
+SM_SPI_TFT=0
+PIO_SPI_TFT_CONV=pio1
+SM_SPI_TFT_CONV=1
+
+TFT_CLK_PIN=22
+TFT_DATA_PIN=23
+TFT_RST_PIN=24
+TFT_DC_PIN=25
+TFT_CS_PIN=26
+TFT_LED_PIN=27
+
+##SDCARD
+SDCARD_SPI_BUS=spi0
+SDCARD_PIN_CS=21
+SDCARD_PIN_SCK=18
+SDCARD_PIN_MOSI=19
+SDCARD_PIN_MISO=20
+
+##PSRAM
+PSRAM_DIV=2.0 #  1.4 // делитель частоты psram если 315 то 1.4 если меньше то 1.0
+PIO_PSRAM=pio1 
+SM_PSRAM=3  # критично при отключении pio  программы
+# PSRAM_MUTEX=1
+PSRAM_SPINLOCK=1
+PSRAM_ASYNC
+PSRAM_PIN_CS=18
+PSRAM_PIN_SCK=19
+PSRAM_PIN_MOSI=20
+PSRAM_PIN_MISO=21
+PSRAM_BUTTER_PIN_CS=19 #это PSRAM_PIN_CS для платы murm1 psram бутерброд
+##AUDIO PWM
+ZX_AY_PWM_R=10 
+ZX_AY_PWM_L=11 
+ZX_BEEP_PIN=12 
+BEEP_PWM_WRAP=1000 # ШИМ 
+AY_PWM_WRAP=4000 # ШИМ 
+MAX_VOL_PWM=100
+DEFAULT_VOLUME_PWM=50
+BEEP=12 # бипер микшируется в PWM R/L  или на gpio
+
+#BEEP=1 #вывод звук бипера на отдельный шим
+##AUDIO 595  hard AY 
+PIO_AY595=pio0 
+SM_AY595=0 
+CLK_AY_PIN=29 # CLK_AY_PIN=21
+CLK_LATCH_595_BASE_PIN=26 # и 27 
+DATA_595_PIN=28
+##AUDIO i2s
+I2S_DATA_PIN=10
+I2S_CLK_BASE_PIN=11
+I2S_FREQ=111111 ##111111 Hz
+PIO_I2S=pio0 # Only  pio0 !
+SM_I2S=0
+DEFAULT_VOLUME_I2S=50
+AUDIO_BUSTER_DEFAULT=1
+
+PIN_ZX_LOAD=17
+
+# NES JOY
+D_JOY_DATA_PIN=7
+D_JOY_CLK_PIN=8
+D_JOY_LATCH_PIN=9
+
+DELAY_JOY=200 #задержка NES JOY
+DELAY_KEY=127 #задержка USB keyboard
+
+)
+endif()
 #######################################################
 #    WS_ZERO2 Wave Share Zero2  2025.09.16 
 #    PIO 1    I2S  PS/2
@@ -1010,6 +1147,110 @@ DELAY_KEY=127 #задержка USB keyboard
 
 )
 endif()
+#######################################################
+#    GENERAL SOUND M2
+#    PIO 0 I2S or HARD_AY_595 SM 0 SM FREE 1,2,3
+#    PIO 1 PS/2 (2) and VIDEO  TFT (0 1) PSRAM_BOARD(SM=3) - нет
+#######################################################
+if( ${M_BOARD} MATCHES "GSP_M2")
+set (M_VERSION m2)# версия платы
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+MURM2
+LED_BOARD=25
+VOLTAGE_RUN=VREG_VOLTAGE_1_30
+VOLTAGE_WORK=VREG_VOLTAGE_1_30
+#########################################################################
+##PicoBus ONLY GENERAL SOUND
+PBUS_OUT_PIN=10
+PBUS_IN_PIN=11
+PBUS_PIO=pio0   #only pio 0
+## Beep
+BEEP_PIN=9  #  # на IN
+#######################################################################
+
+#PS/2 клавиатура
+beginPS2_PIN=2
+PIO_PS2=pio1 
+SM_PS2=3 # 
+
+#VIDEO
+beginVideo_PIN=12
+
+beginHDMI_PIN_data=beginVideo_PIN+2
+beginHDMI_PIN_clk=beginVideo_PIN
+
+PIO_VIDEO=pio1
+PIO_VIDEO_ADDR=pio1
+SM_VIDEO=0
+SM_CONV=1
+
+
+#
+#TFT
+PIO_SPI_TFT=pio1
+SM_SPI_TFT=0
+PIO_SPI_TFT_CONV=pio1
+SM_SPI_TFT_CONV=1
+
+TFT_CLK_PIN=19
+TFT_DATA_PIN=18
+TFT_RST_PIN=14
+TFT_DC_PIN=16
+TFT_CS_PIN=12
+TFT_LED_PIN=15
+
+##SDCARD
+SDCARD_SPI_BUS=spi0
+SDCARD_PIN_CS=5
+SDCARD_PIN_SCK=6
+SDCARD_PIN_MOSI=7
+SDCARD_PIN_MISO=4
+
+##PSRAM
+PSRAM_DIV=2.0 #  1.4 // делитель частоты psram если 315 то 1.4 если меньше то 1.0
+PSRAM_BUTTER_PIN_CS=8
+
+##AUDIO PWM
+##ZX_AY_PWM_R=10
+##ZX_AY_PWM_L=11
+ZX_BEEP_PIN=9 ## не используется
+##BEEP_PWM_WRAP=1000 # ШИМ 
+##AY_PWM_WRAP=4000 # ШИМ 
+MAX_VOL_PWM=100 ## не используется
+ DEFAULT_VOLUME_PWM=50 ## не используется
+##BEEP=12 # бипер микшируется в PWM R/L 
+#BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
+#BEEP=1 #вывод звук бипера на отдельный шим
+##AUDIO 595  hard AY 
+##PIO_AY595=pio0 
+##SM_AY595=0  
+##CLK_AY_PIN=29 # CLK_AY_PIN=21
+##CLK_LATCH_595_BASE_PIN=10 # и 11
+##DATA_595_PIN=9
+
+##AUDIO i2s
+##I2S_DATA_PIN=9
+##I2S_CLK_BASE_PIN=10
+##I2S_FREQ=111111 ##111111 #48000
+##PIO_I2S=pio0
+##SM_I2S=0
+DEFAULT_VOLUME_I2S=50
+AUDIO_BUSTER_DEFAULT=0
+
+PIN_ZX_LOAD=22
+
+
+# NES JOY
+D_JOY_DATA_PIN=26
+D_JOY_CLK_PIN=20
+D_JOY_LATCH_PIN=21
+
+DELAY_KEY=127 #задержка USB keyboard
+DELAY_JOY=200 #задержка NES JOY
+
+)
+endif()
+
 ###############################################
 if( ${PICO_PLATFORM} MATCHES "rp2040")
 set (P_VERSION p1)# версия чипа 
@@ -1076,6 +1317,24 @@ endif()
             message("Конфигурация: MURM2 + PICO_RP2350 (PSRAM_BUTTER)")
         endif()
     endif()
+
+###################### PSRAM для SPECCY GSP M2 #################################
+        if( ${M_BOARD} MATCHES "GSP_M2")
+            if( ${PICO_PLATFORM} MATCHES "rp2040")
+            target_compile_definitions(${PROJECT_NAME} PRIVATE 
+            PSRAM_NOSUPORT
+            )
+            message("Конфигурация: SPECCY GSP M2 + PICO_RP2040 (NO_PSRAM)")
+        
+        elseif( ${PICO_PLATFORM} MATCHES "rp2350")
+            target_compile_definitions(${PROJECT_NAME} PRIVATE 
+           PSRAM_BUTTER
+           ## NO_PSRAM
+            )
+            message("Конфигурация: SPECCY GSP M2 + PICO_RP2350 (PSRAM_BUTTER)")
+        endif()
+    endif()
+
 ########### PSRAM для PI CARD ###########################################
    if( ${M_BOARD} MATCHES "PI_CARD")
             target_compile_definitions(${PROJECT_NAME} PRIVATE 
@@ -1083,8 +1342,16 @@ endif()
             )
             message("Конфигурация: PI CARD + PICO_RP2350 (PSRAM_BUTTER)")
         endif()
-#########################################################################      
-########### PSRAM для WS ZERO ###########################################
+######################################################################### 
+########### PSRAM для WS ZERO 1 #########################################
+   if( ${M_BOARD} MATCHES "WS_ZERO1")
+            target_compile_definitions(${PROJECT_NAME} PRIVATE 
+            PSRAM_NOSUPORT
+            )
+            message("Конфигурация: WS_ZERO1 + PICO_RP2040 (NO_PSRAM)")
+        endif()
+######################################################################### 
+########### PSRAM для WS ZERO 2 #########################################
    if( ${M_BOARD} MATCHES "WS_ZERO2")
             target_compile_definitions(${PROJECT_NAME} PRIVATE 
             PSRAM_BUTTER
@@ -1118,6 +1385,11 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 endif()
 
+if( ${M_BOARD} MATCHES "WS_ZERO1")
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    FW_VERSION="${PORT_VERSION} [z0p1]"
+)
+endif()
 
 if( ${M_BOARD} MATCHES "WS_ZERO2")
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -1149,6 +1421,12 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 endif()
 
+if( ${M_BOARD} MATCHES "GSP_M2")
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    FW_VERSION="${PORT_VERSION} [gs m2]"
+)
+endif()
+
 #SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}_${VOUT}")
 # Модифицируем BUILD_NAME:
  
@@ -1161,36 +1439,54 @@ endif()
 if(DEBUG)
     SET(BUILD_NAME "${PROJECT_NAME}")
     
-    # 
-#pico_enable_stdio_usb(${PROJECT_NAME} 0)
-#pico_enable_stdio_uart(${PROJECT_NAME} 1)
-
 
 endif()
 
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${BUILD_NAME}")
 
-
+# Условная линковка библиотек
 target_link_libraries(${PROJECT_NAME} PRIVATE
         pico_runtime
         pico_stdlib
         pico_multicore
         hardware_dma
         hardware_pio
-        hardware_i2c
+     #   hardware_i2c
         hardware_spi
         hardware_interp
         hardware_timer
         hardware_clocks
         hardware_pwm
         hardware_flash
-        hardware_irq
-        hardware_gpio
-        hardware_sync
-        audio_i2s
-        pico_fatfs
+       tinyusb_host 
+       tinyusb_board
+      # audio_i2s
+       pico_fatfs
 )
+
+# Условная линковка библиотек
+if(GENERAL_SOUND)
+else()
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        audio_i2s
+)
+endif()
+
+# Условная линковка библиотек
+if(${M_BOARD} MATCHES "MURM1")
+    # Для MURM1 добавляем psram
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        psram
+    )
+endif()
+
+# PCM5122 DAC для WS_ZERO2
+if(${M_BOARD} MATCHES "WS_ZERO2" AND PCM5122)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        pcm5122
+    )
+endif()
 
 # USB-стек: по умолчанию TinyUSB Host (для USB-клавиатуры/джойстика);
 # при USB_SERIAL=ON — CDC-консоль из pico_stdio_usb. В CDC-режиме
@@ -1217,20 +1513,7 @@ else()
     )
 endif()
 
-# Условная линковка библиотек
-if(${M_BOARD} MATCHES "MURM1")
-    # Для MURM1 добавляем psram
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        psram
-    )
-endif()
 
-# PCM5122 DAC для WS_ZERO2
-if(${M_BOARD} MATCHES "WS_ZERO2" AND PCM5122)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        pcm5122
-    )
-endif()
 
 
 

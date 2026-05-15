@@ -364,8 +364,8 @@ void start_PS2_capture(){
     gpio_disable_pulls(beginPS2_PIN+1);
     // Установка повышенной выходной мощности (12 мА) для обеспечения 
     // стабильного сигнала (актуально для режима OUTPUT)
-    gpio_set_drive_strength(beginPS2_PIN, GPIO_DRIVE_STRENGTH_8MA); 
-    gpio_set_drive_strength(beginPS2_PIN+1, GPIO_DRIVE_STRENGTH_8MA); 
+    gpio_set_drive_strength(beginPS2_PIN, GPIO_DRIVE_STRENGTH_4MA); 
+    gpio_set_drive_strength(beginPS2_PIN+1, GPIO_DRIVE_STRENGTH_4MA); 
     // Настройка направления пинов на ВХОД (PS/2 - bidirectional протокол, 
     // но на начальном этапе контроллер работает как устройство)
     gpio_set_dir(beginPS2_PIN, GPIO_IN); 
@@ -455,17 +455,11 @@ void start_PS2_capture(){
         false                              // Don't start yet
     );
     
-    // Настройка прерываний DMA. Когда включён HSTX-драйвер, DMA_IRQ_0
-    // (HSTX scanline) сидит на priority=0 и преемптит всё. Этот ISR
-    // (PS/2 capture) короткий, но если по нему вложится HSTX ISR,
-    // суммарный стэк превышает scratch-резерв; на первом нажатии
-    // клавиши срывается видео. Ставим равный priority — Cortex-M33
-    // тогда не преемптит, обе ISR доходят до конца последовательно.
+    // Настройка прерываний DMA
     dma_channel_set_irq1_enabled(dma_chan, true);
     irq_set_exclusive_handler(DMA_IRQ_1, dma_handler_capture);
-    irq_set_priority(DMA_IRQ_1, 0);
     irq_set_enabled(DMA_IRQ_1, true);
-
+    
     // Запуск DMA
     dma_start_channel_mask((1u << dma_chan0) | (1u << dma_chan));
 
@@ -474,141 +468,3 @@ void start_PS2_capture(){
   
 
 };
-
-/* void start_PS2_capture1(){   
-
-// Инициализация GPIO для работы с интерфейсом PS/2 
-gpio_init(beginPS2_PIN); //CLOCK  линия PS/2
-gpio_init(beginPS2_PIN+1); //DATA линия PS/2
-
-// Отключение внутренних подтягивающих резисторов для обоих пинов
-// (в PS/2 подтяжка обычно реализуется на стороне устройства)
-gpio_disable_pulls(beginPS2_PIN); 
-gpio_init(beginPS2_PIN+1); 
-
-// Установка повышенной выходной мощности (12 мА) для обеспечения 
-// стабильного сигнала (актуально для режима OUTPUT)
-gpio_set_drive_strength(beginPS2_PIN, GPIO_DRIVE_STRENGTH_12MA); 
-gpio_set_drive_strength(beginPS2_PIN+1, GPIO_DRIVE_STRENGTH_12MA); 
-
-// Настройка направления пинов на ВХОД (PS/2 - bidirectional протокол, 
-// но на начальном этапе контроллер работает как устройство)
-gpio_set_dir(beginPS2_PIN, GPIO_IN); 
-gpio_set_dir(beginPS2_PIN+1, GPIO_IN); 
-
-
-// Определяем PIO на основе конфигурации
-PIO pio = PIO_PS2;
-bool is_pio1 = (pio == pio1);
-
-// назначение номера стейт машины
-	int sm=SM_PS2;
-	int pin=beginPS2_PIN;
-	if (sm == -1) {
-       sm = pio_claim_unused_sm(PIO_PS2, true);
-    } else {
-       sm = sm;
-    }
-	
-// rp2350
-// int pio_set_gpio_base(PIO pio, uint gpio_base);
-//pio_set_gpio_base(PIO_PS2, 16);
-//
-
-
-//uint offset = pio_claim_free_sm_and_add_program_for_gpio_range();
-uint offset = pio_add_program(pio, &pio_program1);
-//static bool is_program_gpio_compatible(PIO pio, const pio_program_t *program)
-//is_program_gpio_compatible(PIO_PS2,  &pio_program1);
-
-	// Настройка SM
-	pio_sm_config c = pio_get_default_sm_config();
-	sm_config_set_wrap(&c, offset + pio_program1_wrap_target, offset + pio_program1_wrap);
-	sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-	sm_config_set_in_shift(&c, false, true, 32);
-	sm_config_set_in_pins(&c, pin);
-	pio_sm_init(pio, sm, offset+3, &c);
-	pio_sm_set_enabled(pio, sm, true);
-	
-	// Настройка частоты
-	float fdiv=clock_get_hz(clk_sys)/200000;//частота опроса ps/2 X4 
-	//PIO_PS2->sm[sm].clkdiv=(uint32_t) (fdiv * (1 << 16)); //делитель для конкретной sm
-	 pio_sm_set_clkdiv(pio, sm, fdiv);
-	 pio_sm_put(pio, sm, sm);//выбор подпрограммы захвата по номеру SM
-	//PIO_PS2->txf[sm]=sm;//выбор подпрограммы захвата по номеру SM
-	
-	// Инициализация DMA буферов
-	DMA_BUF_ADDR_CAP[0]=&DMA_BUF_CAP[0][0];
-	DMA_BUF_ADDR_CAP[1]=&DMA_BUF_CAP[1][0];
-	DMA_BUF_ADDR_CAP[2]=&DMA_BUF_CAP[2][0];
-	DMA_BUF_ADDR_CAP[3]=&DMA_BUF_CAP[3][0];
-	
-    // Настройка DMA каналов
-	int dma_chan0 = dma_claim_unused_channel(true);
-	dma_chan  = dma_claim_unused_channel(true);
-
-	// Конфигурация первого DMA канала (чтение из PIO)
-	dma_channel_config c0 = dma_channel_get_default_config(dma_chan0);
-	channel_config_set_transfer_data_size(&c0, DMA_SIZE_8);
-	channel_config_set_read_increment(&c0, false);
-	channel_config_set_write_increment(&c0, true);
-	
-    // Определяем DREQ в зависимости от используемого PIO
-    uint dreq;
-    if (is_pio1) {
-        dreq = DREQ_PIO1_RX0 + sm;
-    } else {
-        dreq = DREQ_PIO0_RX0 + sm;
-    }
-    //--------------------------------------------------
-	
-	channel_config_set_dreq(&c0, dreq);
-	channel_config_set_chain_to(&c0, dma_chan);
-	
-    // Адрес RX FIFO зависит от PIO
-    io_rw_32 *rx_fifo = is_pio1 ? 
-                        &pio1->rxf[sm] : 
-                        &pio0->rxf[sm];
-    //----------------------------------
-
-	dma_channel_configure(
-		dma_chan0,
-		&c0,
-		&DMA_BUF_CAP[0][0], // Write address 
-		rx_fifo,            // Read address RX FIFO зависит от PIO
-		SIZE_DMA_BUF_CAPTURE, // 
-		false			 // Don't start yet
-	);
-	
-	// Конфигурация второго DMA канала (управление)
-
-	dma_channel_config c1 = dma_channel_get_default_config(dma_chan);
-	channel_config_set_transfer_data_size(&c1, DMA_SIZE_32);
-	
-	channel_config_set_read_increment(&c1, false);
-	channel_config_set_write_increment(&c1, false);
-
-	channel_config_set_chain_to(&c1, dma_chan0);						 // chain to other channel
-	
-	
-	dma_channel_configure(
-		dma_chan,
-		&c1,
-		&dma_hw->ch[dma_chan0].write_addr, // Write address 
-		&DMA_BUF_ADDR_CAP[0],			 // read address 
-		1, // 
-		false			 // Don't start yet
-	);
-	
-	
-	// Настройка прерываний DMA
-	dma_channel_set_irq1_enabled(dma_chan, true);
-	
-	// Configure the processor to run dma_handler() when DMA IRQ 0 is asserted
-	irq_set_exclusive_handler(DMA_IRQ_1, dma_handler_capture);
-	irq_set_enabled(DMA_IRQ_1, true);
-	
-	// Запуск DMA
-	dma_start_channel_mask((1u << dma_chan)) ;	
-};
- */

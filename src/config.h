@@ -241,7 +241,13 @@ color:
 // дефайны файлов
 #define ZX_RAM_PAGE_SIZE 0x4000
 #define DIRS_DEPTH (8)// глубина директорий 8
-#define MAX_FILES  (500)// максимум 500 файлов в каталоге
+
+#ifdef PICO_RP2350 
+#define MAX_FILES  (1000)// максимум 500 файлов в каталоге
+#else
+#define MAX_FILES  (300)// максимум 500 файлов в каталоге было 500 rp2040
+#endif
+
 #define SD_BUFFER_SIZE  0x4000  //Размер буфера для работы с файлами
 #define LENF 22  // 22
 #define LENF1 LENF-1
@@ -376,7 +382,7 @@ extern struct data_config
 
    uint8_t pullup_pin_video;// определение видеовыхода для tft
 
-   
+   uint8_t gpio_strength;//GPIO_DRIVE_STRENGTH_12MA
    uint8_t vout;// Видевыход 0-VGA 1-HDMI 2-TFT 
    uint8_t tft;// 0-ili9341 1-st7789 2-ili9341 ips
    uint8_t tft_invert;// инверсия tft дисплея

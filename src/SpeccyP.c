@@ -1016,15 +1016,15 @@ case BOARD_PSRAM_NOSUPORT:
 
 #ifdef GENERAL_SOUND
 snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq); 
-        draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
+/*         draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
         snprintf(temp_msg, sizeof temp_msg, "PSRAM   N/A",real_psram_freq);
         if (type_psram==BUTTER_PSRAM) snprintf(temp_msg, sizeof temp_msg, "PSRAM   %dMHz",real_psram_freq); 
         else snprintf(temp_msg, sizeof temp_msg, "PSRAM   SPI");
       
-        draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK); 
+        draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK);  */
 
-          snprintf(temp_msg, sizeof temp_msg, "  Ucpu   %.2f V ",table_voltage[conf.voltage]/ 100.0 ); 
-        draw_text(210+XPOS,YPOS+30,temp_msg,CL_GRAY ,CL_BLACK); 
+          snprintf(temp_msg, sizeof temp_msg, " Ucpu    %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
+        draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
      //   snprintf(temp_msg, sizeof temp_msg, "PicoBus %dMbps",PICOBUS_SPEED); 
      //   draw_text(210+XPOS,YPOS+40,temp_msg,CL_GRAY ,CL_BLACK); 
 
@@ -1049,7 +1049,7 @@ snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq);
 
         #endif
         #endif
-
+        
 // информация из setup
 draw_text(6+FONT_W,75+YPOS,menu_ram[conf.mashine],CL_GRAY,CL_BLACK);
 

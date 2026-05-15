@@ -24,10 +24,6 @@
 #include "picobus.h"
 #include "picobus.pio.h"
 
-/* #define PBUS_OUT_PIN 26
-#define PBUS_IN_PIN 27
-#define PBUS_PIO pio0 */
-
 // Глобальный контекст (static для инкапсуляции)
 static picobus_t picobus;
 
@@ -102,6 +98,33 @@ link_received_t __not_in_flash_func(receive_acked_byte)(uint8_t *received_value)
     return LINK_BYTE_DATA;
 }
 
+#define MAX_ATTEMPTS 10000
+/*
+ * Receive a byte and ACK it back to the sender with timeout based on attempt count
+ */
+link_received_t __not_in_flash_func(receive_acked_byte_timeout)(uint8_t *received_value)
+{
+    uint32_t attempts = 0;
+    
+    // Ждем байт с ограничением по количеству попыток
+    link_received_t status;
+    do {
+        status = receive_byte(received_value);
+        if (status != LINK_BYTE_NONE) break;
+        
+        attempts++;
+        if (attempts >= MAX_ATTEMPTS) {
+            return LINK_BYTE_TIMEOUT;
+        }
+    } while (true);
+    
+    // Если получили данные - отправляем ACK
+    if (status == LINK_BYTE_DATA) {
+        send_ack_to_link();
+    }
+    
+    return status;
+}
 /*
  * Receive a number of bytes into the given buffer. Bytes are acknowledged.
  */

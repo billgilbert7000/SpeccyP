@@ -25,8 +25,10 @@ void config_defain(void)
 
         conf.tft_rotate  = 0;//переворот TFT 
         conf.tft_rgb = 1; // Добавлен бит BGR (0x08)  00001000
+        
         conf.vout=VIDEO_AUTO; // AUTO по умолчанию
-   
+        conf.gpio_strength=GPIO_DRIVE_STRENGTH_4MA;
+
         conf.hdmi_fdiv = 1.0; // 1.0->60Hz (cpu=252MHz)
         if (CPU_MHZ==378)
         conf.hdmi_fdiv = 1.5; // 1.5->60Hz (cpu=378MHz)
@@ -69,6 +71,7 @@ void config_defain(void)
 {
         conf.version =CONFIG_VERSION;
         conf.voltage = VOLTAGE_WORK;// Possible voltage values that can be applied to the regulator
+        conf.gpio_strength=GPIO_DRIVE_STRENGTH_4MA;
         conf.vout=VIDEO_HDMI;// Видевыход 0-AUTO 1-VGA 2-HDMI 3-TFT 
         conf.tft=0;// ili9341
         conf.tft_invert=0;// TFT_INV=0 или 1
@@ -111,6 +114,7 @@ void config_defain(void)
 {
         conf.version =CONFIG_VERSION;
         conf.voltage = VOLTAGE_WORK;// Possible voltage values that can be applied to the regulator
+        conf.gpio_strength=GPIO_DRIVE_STRENGTH_4MA;
          conf.vout=VIDEO_HDMI;// Видевыход 0-AUTO 1-VGA 2-HDMI 3-TFT  //2- только HDMI
         conf.tft=0;// ili9341
         conf.tft_invert=0;// TFT_INV=0 или 1
@@ -446,16 +450,17 @@ bool config_ini_save(const char *filename) {
     offset = snprintf(sd_buffer, sizeof(sd_buffer),
         "; SpeccyP Configuration\n"
         "; =====================\n"
-        "[system]\n"
         "; Version (do not modify)\n"
         "version = %llu\n\n"
 
         "; Voltage 1.30V=130 ,1.35V=135, 1.40V=140, 1.50V=150, 1.60V=160 \n"
-        "voltage = %u\n\n"
-
-        "[video]\n"
-        "; 0=AUTO 1=VGA, 2=HDMI, 3=TFT\n"
+        "voltage = %u\n"
+        ";Video  0=AUTO 1=VGA, 2=HDMI, 3=TFT\n"
         "video_out = %u\n"
+        ";Video GPIO drive strength: 2mA=0, 4mA=1, 8mA=2, 12mA=3 \n" 
+        "gpio_strength = %u\n"
+        "; HDMI frequency divider (1.0=90Hz, 1.5=60Hz)\n"
+        "hdmi_divider = %.2f\n"
         "; TFT type: 0=ILI9341, 1=ST7789, 2=ILI9341_IPS\n"
         "tft_type = %u\n"
         "; TFT inversion: 0=normal, 1=inverted\n"
@@ -465,19 +470,18 @@ bool config_ini_save(const char *filename) {
         "; TFT color mode: 0=RGB, 1=BGR\n"
         "tft_rgb = %u\n"
         "; TFT backlight  0-100%%\n"
-        "tft_brightness = %u\n"
-        "; HDMI frequency divider (1.0=90Hz, 1.5=60Hz)\n"
-        "hdmi_divider = %.2f\n",
-
+        "tft_brightness = %u\n",
         conf.version,
         u,               // conf.voltage,
         conf.vout,
+        conf.gpio_strength,
+        conf.hdmi_fdiv,
         conf.tft,
         conf.tft_invert,
         conf.tft_rotate,
         conf.tft_rgb,
-        conf.tft_bright,
-        conf.hdmi_fdiv
+        conf.tft_bright
+        
 
     );
     
@@ -537,8 +541,8 @@ bool config_ini_load(const char *filename) {
         char *key = trim_whitespace(trimmed);
         char *value = trim_whitespace(delim + 1);
         
-        // Обработка значений по секциям
-        if (strcmp(section, "system") == 0) {
+        // Обработка значений 
+       
             if (strcmp(key, "version") == 0) NULL ;//parse_uint8(value, (uint8_t*)&conf.version);
             else if (strcmp(key, "voltage") == 0)// parse_uint8(value, &conf.voltage);
             //Voltage
@@ -556,18 +560,14 @@ bool config_ini_load(const char *filename) {
                else if (u==150) conf.voltage=18;
                else if (u==160) conf.voltage=19;
             }
-        }
-
-        else if (strcmp(section, "video") == 0) {
-            if (strcmp(key, "video_out") == 0) parse_uint8(value, &conf.vout);
+            else if (strcmp(key, "video_out") == 0) parse_uint8(value, &conf.vout);
+            else if (strcmp(key, "gpio_strength") == 0) parse_uint8(value, &conf.gpio_strength);
+            else if (strcmp(key, "hdmi_divider") == 0) parse_float(value, &conf.hdmi_fdiv);
             else if (strcmp(key, "tft_type") == 0) parse_uint8(value, &conf.tft);
             else if (strcmp(key, "tft_invert") == 0) parse_uint8(value, &conf.tft_invert);
             else if (strcmp(key, "tft_rotate") == 0) parse_uint8(value, &conf.tft_rotate);
             else if (strcmp(key, "tft_rgb") == 0) parse_uint8(value, &conf.tft_rgb);
             else if (strcmp(key, "tft_brightness") == 0) parse_uint8(value, &conf.tft_bright);
-            else if (strcmp(key, "hdmi_divider") == 0) parse_float(value, &conf.hdmi_fdiv);
-        }
-
     }
     
     f_close(&file);

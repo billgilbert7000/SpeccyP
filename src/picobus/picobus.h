@@ -24,7 +24,8 @@ typedef enum
 {
   LINK_BYTE_NONE,
   LINK_BYTE_ACK,
-  LINK_BYTE_DATA
+  LINK_BYTE_DATA,
+  LINK_BYTE_TIMEOUT
 }
 link_received_t;
 
@@ -40,6 +41,7 @@ void picobus_link_init(void);
 
 // Функции используют глобальный контекст
 link_received_t receive_acked_byte(uint8_t *received_value);
+link_received_t receive_acked_byte_timeout(uint8_t *received_value);
 void receive_buffer(uint8_t *data, uint32_t count);
 void send_ack_to_link(void);
 void send_byte(uint8_t data);

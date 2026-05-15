@@ -63,7 +63,7 @@ static inline void picoputerlinkout_program_init(PIO pio, uint sm, uint offset, 
     sm_config_set_sideset_pins(&c, pin_linkout);
     // SM transmits 1 bit per 8 execution cycles. We therefore use a
     // clock of 80MHz
-    float div = (float)clock_get_hz(clk_sys) / 160000000;
+    float div = (float)clock_get_hz(clk_sys) / (PICOBUS_SPEED*8000000);//160000000;
     sm_config_set_clkdiv(&c, div);
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_set_enabled(pio, sm, true);
@@ -116,7 +116,7 @@ static inline void picoputerlinkin_program_init(PIO pio, uint sm, uint offset, u
     // Shift to right, autopush disabled
     sm_config_set_in_shift(&c, true, false, 32);
     // SM transmits 1 bit per 8 execution cycles.
-    float div = (float)clock_get_hz(clk_sys) / 160000000;
+    float div = (float)clock_get_hz(clk_sys) / (PICOBUS_SPEED*8000000);//160000000;
     sm_config_set_clkdiv(&c, div);
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_set_enabled(pio, sm, true);

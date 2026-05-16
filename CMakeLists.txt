@@ -38,7 +38,7 @@ option(PCM5122 "PCM5122 DAC для WS_ZERO2 (I2S 21/18/19 + I2C 2/3, PS/2 на 1
 # Аппаратные ограничения: HSTX занимает GPIO 12-19, поэтому работает
 # только на плате M2. clk_sys должен быть целым кратным 126 МГц
 # (домен пиксельклока).
-option(HDMI_HSTX "Драйвер HDMI на HSTX RP2350 (только M2)" OFF)
+option(HDMI_HSTX "Драйвер HDMI на HSTX RP2350 (только M2)" ON)
 
 # USB CDC-консоль вместо USB HID Host. С ней нельзя пользоваться
 # USB-клавиатурой/джойстиком, зато появляется CDC-ACM stdio: можно
@@ -133,7 +133,7 @@ else()
     set(SPECCY_CONFIG "SPECCY")
     set(SPECCY_CONFIG_DEFINITIONS 
 
-        CPU_MHZ=378# 378 MHz
+        CPU_MHZ=378 MHz
         FLASH_MAX_FREQ_MHZ=166
         PSRAM_MAX_FREQ_MHZ=166
 
@@ -349,7 +349,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/s
 ###################################################
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=160526
+CONFIG_VERSION=170527
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1
@@ -520,7 +520,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 MURM2
 LED_BOARD=25
 VOLTAGE_RUN=VREG_VOLTAGE_1_30
-VOLTAGE_WORK=VREG_VOLTAGE_1_30
+VOLTAGE_WORK=VREG_VOLTAGE_1_40
 
 ##PicoBus ONLY GENERAL SOUND
 PBUS_OUT_PIN=11

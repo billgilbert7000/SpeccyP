@@ -317,7 +317,8 @@ void __not_in_flash_func(scancode_usb_s)(uint8_t code){
     case 0x2a:  kb_st_ps2.u[1]|=KB_U1_BACK_SPACE; break;
     case 0x28:  kb_st_ps2.u[1]|=KB_U1_ENTER; break;
     case 0x38:  kb_st_ps2.u[1]|=KB_U1_SLASH; break;
-    case 0x32:  kb_st_ps2.u[1]|=KB_U1_TILDE; break;
+    case 0x32:  kb_st_ps2.u[1]|=KB_U1_TILDE; break;     //HASHTILDE #~
+    case 0x35:  kb_st_ps2.u[1]|=KB_U1_TILDE; break;     //GRAVE `~
     case 0x2b:  kb_st_ps2.u[1]|=KB_U1_TAB; break;
     case 0x39:  kb_st_ps2.u[1]|=KB_U1_CAPS_LOCK; break;
     case 0x29:  kb_st_ps2.u[1]|=KB_U1_ESC;break;

@@ -435,7 +435,6 @@ uint8_t MenuBox_help(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, cha
    // if (mode_kbms)  sleep_ms(DELAY_KEY); // задержка если это не ps/2
     if (!decode_key_joy()) continue;
 
-#ifndef MOS2
 #ifdef KEY_UPDATE_MODE
            if (KEY_BOOT)
            {
@@ -444,9 +443,6 @@ uint8_t MenuBox_help(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, cha
                reset_usb_boot(0, 0);
            }
 #endif               
-#endif
-
-
 
     if (kb_st_ps2.u[1] & KB_U1_ENTER) // enter
     {  

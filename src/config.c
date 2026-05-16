@@ -452,15 +452,14 @@ bool config_ini_save(const char *filename) {
         "; =====================\n"
         "; Version (do not modify)\n"
         "version = %llu\n\n"
-
         "; Voltage 1.30V=130 ,1.35V=135, 1.40V=140, 1.50V=150, 1.60V=160 \n"
-        "voltage = %u\n"
+        "voltage = %u\n\n"
         ";Video  0=AUTO 1=VGA, 2=HDMI, 3=TFT\n"
         "video_out = %u\n"
         ";Video GPIO drive strength: 2mA=0, 4mA=1, 8mA=2, 12mA=3 \n" 
         "gpio_strength = %u\n"
-        "; HDMI frequency divider (1.0=90Hz, 1.5=60Hz)\n"
-        "hdmi_divider = %.2f\n"
+        "; HDMI frequency divider (1.0, 1.5, 2.0)\n"
+        "hdmi_divider = %.2f\n\n"
         "; TFT type: 0=ILI9341, 1=ST7789, 2=ILI9341_IPS\n"
         "tft_type = %u\n"
         "; TFT inversion: 0=normal, 1=inverted\n"
@@ -562,7 +561,7 @@ bool config_ini_load(const char *filename) {
             }
             else if (strcmp(key, "video_out") == 0) parse_uint8(value, &conf.vout);
             else if (strcmp(key, "gpio_strength") == 0) parse_uint8(value, &conf.gpio_strength);
-            else if (strcmp(key, "hdmi_divider") == 0) parse_float(value, &conf.hdmi_fdiv);
+         //   else if (strcmp(key, "hdmi_divider") == 0) parse_float(value, &conf.hdmi_fdiv);
             else if (strcmp(key, "tft_type") == 0) parse_uint8(value, &conf.tft);
             else if (strcmp(key, "tft_invert") == 0) parse_uint8(value, &conf.tft_invert);
             else if (strcmp(key, "tft_rotate") == 0) parse_uint8(value, &conf.tft_rotate);

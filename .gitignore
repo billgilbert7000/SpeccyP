@@ -1,0 +1,9 @@
+build
+!.vscode/*
+.vscode/c_cpp_properties.json
+.vscode/cmake-kits.json
+.vscode/extensions.json
+.vscode/launch.json
+.vscode/settings.json
+.vscode/tasks.json
+build*

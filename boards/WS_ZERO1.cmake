@@ -13,14 +13,6 @@ HDMI_ONLY # только HDMI
 LED_BOARD=255  # 255 светодиод не подключен
 VOLTAGE_RUN=VREG_VOLTAGE_1_30
 VOLTAGE_WORK=VREG_VOLTAGE_1_30
-#########################################################################
-##PicoBus ONLY GENERAL SOUND
-PBUS_OUT_PIN=26
-PBUS_IN_PIN=27
-PBUS_PIO=pio0   #only pio 0
-## Beep
-BEEP_PIN=28  # на IN
-#######################################################################
 
 #PS/2 клавиатура
 beginPS2_PIN=0

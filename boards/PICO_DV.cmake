@@ -12,13 +12,6 @@ SOUND_I2S_ONLY # только i2s звук
 LED_BOARD=25
 VOLTAGE_RUN=VREG_VOLTAGE_1_40
 VOLTAGE_WORK=VREG_VOLTAGE_1_40
-#########################################################################
-##PicoBus ONLY GENERAL SOUND
-PBUS_OUT_PIN=26
-PBUS_IN_PIN=27
-PBUS_PIO=pio0   #only pio 0
-## Beep
-BEEP_PIN=28
 
 #PS/2 клавиатура
 beginPS2_PIN=0 # 0 и 1 

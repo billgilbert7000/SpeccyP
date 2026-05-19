@@ -12,14 +12,14 @@ MURM2
 LED_BOARD=25
 VOLTAGE_RUN=VREG_VOLTAGE_1_40
 VOLTAGE_WORK=VREG_VOLTAGE_1_40
-
+##############################################
 ##PicoBus ONLY GENERAL SOUND
 PBUS_OUT_PIN=11
 PBUS_IN_PIN=10
 PBUS_PIO=pio0   #only pio 0
 ## Beep
 BEEP_PIN=9  # на IN
-
+##############################################
 #PS/2 клавиатура
 beginPS2_PIN=2
 PIO_PS2=pio1 

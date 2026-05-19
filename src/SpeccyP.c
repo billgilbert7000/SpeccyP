@@ -890,8 +890,8 @@ vreg_set_voltage(conf.voltage);// установка напряжения из i
 
         draw_logo (156,160,CL_CYAN,CL_BLACK);
 
-        draw_text(7+XPOS,0+YPOS,"ZX SpeccyP",CL_GRAY ,CL_BLACK);	
-        draw_text_len(7+11*FONT_W+XPOS,YPOS,FW_VERSION,CL_GRAY ,CL_BLACK,16);
+        draw_text(7+XPOS,0+YPOS,"ZX SpeccyP",CL_LT_CYAN ,CL_BLACK);	
+        draw_text_len(7+11*FONT_W+XPOS,YPOS,FW_VERSION,CL_LT_CYAN ,CL_BLACK,16);
 
         #ifndef PICO_RP2040
         if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A %dMHz",CPU_MHZ);
@@ -1058,7 +1058,8 @@ draw_text(11+FONT_W,85+YPOS,"HDMI Audio",CL_GRAY,CL_BLACK);
 
 // дата и время компиляции
 //printf("%s ", BUILD_DATE);
-draw_text(12+FONT_W,110+YPOS,BUILD_DATE,CL_BLUE,CL_BLACK); 
+snprintf(temp_msg, sizeof temp_msg, "%s %s",BUILD_DATE, BUILD_TIME); 
+draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK); 
 
 
 
@@ -1066,7 +1067,7 @@ if (vout_select==VIDEO_VGA)
         {
         snprintf(temp_msg, sizeof temp_msg, "VGA %dHz",60);   
        // snprintf(temp_msg, sizeof temp_msg, "VGA %dHz",(int) (CPU_MHZ*10/63)); 
-       draw_text(246+XPOS,YPOS+110,temp_msg,CL_BLUE ,CL_BLACK);  	
+       draw_text(246+XPOS,YPOS+110,temp_msg,CL_LT_CYAN ,CL_BLACK);  	
         }
 
         if (vout_select==VIDEO_HDMI)
@@ -1076,7 +1077,7 @@ if (vout_select==VIDEO_VGA)
         draw_text(210+XPOS,YPOS+110,temp_msg,CL_BLUE ,CL_BLACK);
         #else
         snprintf(temp_msg, sizeof temp_msg, "HDMI %dHz",(int) (CPU_MHZ*10/(42*conf.hdmi_fdiv)));  
-        draw_text(240+XPOS,YPOS+110,temp_msg,CL_BLUE ,CL_BLACK);
+        draw_text(240+XPOS,YPOS+110,temp_msg,CL_LT_CYAN,CL_BLACK);
         #endif
         }
 
@@ -1085,11 +1086,11 @@ if (vout_select==VIDEO_VGA)
         if (conf.tft== TFT_9345) snprintf(temp_msg, sizeof temp_msg,  "ILI9345 TFT");
         if (conf.tft== TFT_9345I) snprintf(temp_msg, sizeof temp_msg, "ILI9345 IPS");
         if (conf.tft== TFT_7789) snprintf(temp_msg, sizeof temp_msg,  "ST7789");
-		draw_text(228+XPOS,YPOS+110,temp_msg,CL_BLUE ,CL_BLACK);	
+		draw_text(228+XPOS,YPOS+110,temp_msg,CL_LT_BLUE ,CL_BLACK);	
         }   
            
 //------------------------------------------------------------------
-// есле подключается плата с GS PicoBUS
+// если подключается плата с GS PicoBUS
 	#if defined  GENERAL_SOUND
     // Первичная инициализация picobus
      draw_text(12+FONT_W,100+YPOS, "Connect PicoBus ....",CL_LT_BLUE,CL_BLACK);

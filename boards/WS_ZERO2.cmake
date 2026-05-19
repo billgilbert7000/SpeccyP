@@ -7,7 +7,7 @@
 #    pio 0 используется для управления GPIO 16...48
 #######################################################
 
-set (M_VERSION ws)# версия платы
+set (M_VERSION z0)# версия платы
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 WS_ZERO2
@@ -25,17 +25,6 @@ PICO_PIO_USE_GPIO_BASE # для использования GPIO >31 раском
 
 LED_BOARD=255  # 255 светодиод не подключен
 
-#########################################################################
-##PicoBus ONLY GENERAL SOUND
-PBUS_OUT_PIN=10
-PBUS_IN_PIN=11
-PBUS_PIO=pio0   #only pio 0
-#define PICOBUS_BAUDRATE (1000*1000)     // Скорость шины picobus 
-
-## Beep
-BEEP_PIN=12  # на IN
-
-#######################################################################
 #PS/2 клавиатура
 $<IF:$<BOOL:${PCM5122}>,beginPS2_PIN=14,beginPS2_PIN=2>
 PIO_PS2=pio1

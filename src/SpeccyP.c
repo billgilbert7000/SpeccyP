@@ -823,7 +823,11 @@ vreg_set_voltage(conf.voltage);// установка напряжения из i
          startVIDEO(VIDEO_HDMI);// только HDMI
 #else 
          conf.hdmi_fdiv = HDMI_DIV;
+    #if defined(HDMI_HSTX)  // Only HDMI
+         vout_select= VIDEO_HDMI;
+    #else 
          vout_select= video_select();// автоопределение
+         #endif
          startVIDEO(vout_select);     
 #endif 
 //
@@ -836,9 +840,8 @@ vreg_set_voltage(conf.voltage);// установка напряжения из i
          startVIDEO(VIDEO_HDMI);// только HDMI
 #endif 
 
- 
 #ifdef  SOUND_I2S_ONLY
-        conf.type_sound=3; // только i2s
+        conf.type_sound=I2S_TS; // только i2s
 #endif
 
 #ifdef  SOUND_PWM_ONLY
@@ -873,8 +876,7 @@ vreg_set_voltage(conf.voltage);// установка напряжения из i
   }
 // tuh_task(); // tinyusb host task
 #endif
-//#####################################################################
-    	
+//#####################################################################	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
 //#####################################################################        
 // инициализация с выводом результата на дисплей
@@ -1051,7 +1053,7 @@ draw_text(11+FONT_W,85+YPOS,"GeneralSound + TurboSound",CL_GRAY,CL_BLACK);
 #endif 
 #endif
 #else
-draw_text(11+FONT_W,85+YPOS,"HDMI Audio",CL_GRAY,CL_BLACK); 
+draw_text(11+FONT_W,85+YPOS,"HDMI Audio TurboSound",CL_GRAY,CL_BLACK); 
 #endif
 
 
@@ -1989,7 +1991,7 @@ void setup_zx(void)
       #ifdef GENERAL_SOUND
         draw_text(x1 + 126, y1 + 20+ M_SOUND*10, "GeneralSound + TS", CL_GRAY, CL_BLACK);
       #elifdef HDMI_HSTX
-        draw_text(x1 + 126, y1 + 20+ M_SOUND*10, "HDMI Audio", CL_GRAY, CL_BLACK);
+        draw_text(x1 + 126, y1 + 20+ M_SOUND*10, "HDMI Audio TS", CL_GRAY, CL_BLACK);
       #else  
         draw_text(x1 + 120, y1 + 20+ M_SOUND*10, menu_sound[conf.type_sound], CL_GRAY, CL_BLACK);
       #endif

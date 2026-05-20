@@ -53,7 +53,7 @@ option(PCM5122 "PCM5122 DAC для WS_ZERO2 (I2S 21/18/19 + I2C 2/3, PS/2 на 1
 # Аппаратные ограничения: HSTX занимает GPIO 12-19, поэтому работает
 # только на плате M2. clk_sys должен быть целым кратным 126 МГц
 # (домен пиксельклока).
-option(HDMI_HSTX "Драйвер HDMI на HSTX RP2350 (только M2)" OFF)
+option(HDMI_HSTX "Драйвер HDMI на HSTX RP2350 (только M2)" ON)
 
 # USB CDC-консоль вместо USB HID Host. С ней нельзя пользоваться
 # USB-клавиатурой/джойстиком, зато появляется CDC-ACM stdio: можно
@@ -239,8 +239,6 @@ file(GLOB_RECURSE SRC_BASE
  "src/zx_emu/*.c" "src/zx_emu/*.h"
  "src/zx_emu/rom/*.h"
  "src/zx_emu/z80/*.h"
- #"src/picobus/*.h"
- #"src/picobus/*.c"
 )
 # Файлы picobus только при GENERAL_SOUND
 if(GENERAL_SOUND)
@@ -255,8 +253,6 @@ else()
     message(STATUS "GENERAL_SOUND: OFF, файлы picobus исключены")
 endif()
 ###
-
-
 
 # usb_serial_stubs.c пускаем в сборку только в режиме USB_SERIAL —
 # в обычном режиме он бы дал multiple-definition с usb_key.c.
@@ -333,7 +329,7 @@ set (FATFS_SPI spi0)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=170527
+CONFIG_VERSION=210527
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1
@@ -347,15 +343,12 @@ VOLTAGE_RP2040=VREG_VOLTAGE_1_30
 
 #NO_GMX 
 KEY_UPDATE_MODE
-
-
 DEVICE_DEFAULT # стандартная конфигурация
 #DEVICE_HDMI90_I2S # Монитор HDMI 90Hz i2s
 # DEVICE_PI_CARD # Монитор HDMI 60Hz i2s
 
 # Конфигурация в зависимости от GSP_CONFIG
 ${SPECCY_CONFIG_DEFINITIONS}
-
 
 # частота cloc'a 595  (в герцах)
 FREQ_595=50000000  #//750000000  // Например: 75 МГц 
@@ -371,7 +364,6 @@ Z80_WITH_PRECOMPUTED_DAA
 #Z80_HALT_CANCEL
 #Z80_MODEL_ZILOG_NMOS
 ##Z80_MODEL_ZILOG_CMOS
-
 ##################################
 )
 
@@ -435,11 +427,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 endif()
 
 if( ${M_BOARD} MATCHES "MURM2")
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    FW_VERSION="${PORT_VERSION} [${M_VERSION}${P_VERSION}]"
-)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        FW_VERSION="${PORT_VERSION} [${M_VERSION}${P_VERSION}]"
+        )
 endif()
-
 
 if( ${M_BOARD} MATCHES "GSP_M2")
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -450,6 +441,8 @@ endif()
 # Формирование BUILD_NAME
 if(DEBUG)
     SET(BUILD_NAME "${PROJECT_NAME}")
+elseif(HDMI_HSTX)    
+    SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}_hdmi_audio")  
 elseif(PCM5122)
     SET(BUILD_NAME "${PROJECT_NAME}_${PORT_VERSION}_${M_VERSION}${P_VERSION}_pcm5122")
 else()
@@ -525,7 +518,6 @@ else()
         tinyusb_board
     )
 endif()
-
 
 
 target_link_options(${PROJECT_NAME} PRIVATE -Xlinker --print-memory-usage --data-sections)

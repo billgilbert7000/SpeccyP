@@ -2257,8 +2257,8 @@ break;
 		break;
 
 		default:
-		    rom=0;
-		    zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF 48 BASIC 0  с какой банки стартовать	
+		    rom=1;
+		    zx_cpu_ram[0]=zx_rom_bank[1]; // 0x0000 - 0x3FFF 48 BASIC 0  с какой банки стартовать	
 			break;
 		}
 		}
@@ -2271,8 +2271,8 @@ break;
 
 		if (rom_x ==3) // просто reset в  48 BASIC
 		{
-		 rom=0;
-		 zx_cpu_ram[0]=zx_rom_bank[0]; //  48 BASIC
+		 rom=1;
+		 zx_cpu_ram[0]=zx_rom_bank[1]; //  48 BASIC
 		}
 
 

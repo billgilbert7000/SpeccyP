@@ -136,6 +136,13 @@ void __not_in_flash_func(i2s_out)(uint16_t left, uint16_t right)
 {
     if (!g_inited) return;
 
+#if I2S_FREQ == 48000
+    /* В legacy I2S-пути SpeccyP сэмпл уже знаковый (int16_t), просто
+     * прототип uint16_t — делаем битовый reinterpret без расширения
+     * знака. */
+    int16_t sample_left = (int16_t)left;
+    int16_t sample_right = (int16_t)right;
+#else
     /* В legacy I2S-пути SpeccyP сэмпл уже знаковый (int16_t), просто
      * прототип uint16_t — делаем битовый reinterpret без расширения
      * знака. Накапливаем входной сэмпл в усреднитель. */
@@ -159,6 +166,10 @@ void __not_in_flash_func(i2s_out)(uint16_t left, uint16_t right)
     g_avg_right = 0;
     g_avg_count = 0;
 
+    int16_t sample_left = (int16_t)out_left;
+    int16_t sample_right = (int16_t)out_right;
+#endif
+
     /* Зажимаем индекс в [0..3]. Раньше при гонке i2s_out и
      * flush_pending count успевал стать 4 до сброса, и запись в
      * g_pending[4] уходила в соседний BSS-символ — graphics_buffer
@@ -166,8 +177,8 @@ void __not_in_flash_func(i2s_out)(uint16_t left, uint16_t right)
     uint8_t idx = g_pending_count;
     if (idx >= 4) idx = 3;
 
-    g_pending[idx].left  = (int16_t)out_left;
-    g_pending[idx].right = (int16_t)out_right;
+    g_pending[idx].left  = sample_left;
+    g_pending[idx].right = sample_right;
     g_pending_count = idx + 1;
 
     if (g_pending_count >= 4) {

@@ -8,17 +8,6 @@ extern "C" {
 #include "stdio.h"
 #include "stdint.h"
 
-/*
- #define VGA
-#ifdef TFT
-#include "st7789.h"
-#endif
-#ifdef HDMI
-#include "hdmi.h"
-#endif
-#ifdef VGA
-#include "vga.h"
-#endif */
 
 enum graphics_mode_t {
     TEXTMODE_DEFAULT,

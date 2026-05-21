@@ -12,7 +12,7 @@ set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
-# ====================================================================================
+# ======================================================================================
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
@@ -377,7 +377,9 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         PICO_RP2040
         ## AY-3-8910 
         AY_DELTA=2
-        AY_SAMPLE_RATE=-9 #-9
+        # -9  111111 Гц  ## -21 μs = 47619 Гц	-0,79% ??? 
+        AY_SAMPLE_RATE=-9 ##Чем чаше вызывать тем качество эмуляции AY лучше
+        I2S_FREQ=48000 ##111111 #48000 
         TRANSFER_COUNT=1<<31
 )
 endif()
@@ -389,7 +391,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         RP2350_256K   ##для памяти RAM 256kB на RP2350 не используя PSRAM
         ## AY-3-8910 
         AY_DELTA=2
-        AY_SAMPLE_RATE=-9#(-1000000 / (4* 48000) ) ##//-9// 
+        # -9  111111 Гц  ## -21 μs = 47619 Гц	-0,79% ??? 
+        # для RP2350 можно и -5 выставить
+        AY_SAMPLE_RATE=-9 ##Чем чаше вызывать тем качество эмуляции AY лучше 
+        I2S_FREQ=48000 ##111111 #48000 
         TRANSFER_COUNT=1<<24
 )
 endif()

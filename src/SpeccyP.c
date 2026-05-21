@@ -1309,6 +1309,8 @@ int fast(main)(void){
  	int hz = 96000;	//44000 //44100 //96000 //22050
 	repeating_timer_t timer_audio;
 	// negative timeout means exact delay (rather than delay between callbacks)
+    // f = 1 / T = 1 / 9 μs = 111111 Гц
+    // f = 1 / T = 1 / -21 μs = 47619Гц	-0,79% Гц
  	if (!add_repeating_timer_us(AY_SAMPLE_RATE, AY_timer_callback, NULL, &timer_audio)) return 1;// -10  частота ноты До 237Гц  нужно 240,0058 Гц
     #endif
 

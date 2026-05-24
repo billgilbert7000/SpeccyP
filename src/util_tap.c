@@ -90,12 +90,12 @@ uint32_t tapeTotByteCount;
 
 uint8_t __not_in_flash_func(TAP_Read)(){
 //uint8_t TAP_Read(){
-    uint64_t tapeCurrent = Z80_C(z1->cpu)yc - tapeStart;
+    uint64_t tapeCurrent = Z80_C(cpu_zx)yc - tapeStart;
     ////printf("Tape PHASE:%X\n",tapePhase);
     switch (tapePhase) {
     case TAPE_PHASE_SYNC:
         if (tapeCurrent > TAPE_SYNC_LEN) {
-            tapeStart=Z80_C(z1->cpu)yc;
+            tapeStart=Z80_C(cpu_zx)yc;
             tapeEarBit ^= 1;
             tapePulseCount++;
             if (tapePulseCount>tapeHdrPulses) {
@@ -106,14 +106,14 @@ uint8_t __not_in_flash_func(TAP_Read)(){
         break;
     case TAPE_PHASE_SYNC1:
         if (tapeCurrent > TAPE_SYNC1_LEN) {
-            tapeStart=Z80_C(z1->cpu)yc;
+            tapeStart=Z80_C(cpu_zx)yc;
             tapeEarBit ^= 1;
             tapePhase=TAPE_PHASE_SYNC2;
         }
         break;
     case TAPE_PHASE_SYNC2:
         if (tapeCurrent > TAPE_SYNC2_LEN) {
-            tapeStart=Z80_C(z1->cpu)yc;
+            tapeStart=Z80_C(cpu_zx)yc;
             tapeEarBit ^= 1;
             if (tape[tapebufByteCount] & tapeBitMask) tapeBitPulseLen=TAPE_BIT1_PULSELEN; else tapeBitPulseLen=TAPE_BIT0_PULSELEN;
             tapePhase=TAPE_PHASE_DATA;
@@ -121,7 +121,7 @@ uint8_t __not_in_flash_func(TAP_Read)(){
         break;
     case TAPE_PHASE_DATA:
         if (tapeCurrent > tapeBitPulseLen) {
-            tapeStart=Z80_C(z1->cpu)yc;
+            tapeStart=Z80_C(cpu_zx)yc;
             tapeEarBit ^= 1;
             tapeBitPulseCount++;
             if (tapeBitPulseCount==2) {
@@ -185,7 +185,7 @@ uint8_t __not_in_flash_func(TAP_Read)(){
 					return false;
 				}
 				//printf("Block:%d Seek:%d Length:%d Read:%d\n",tapeCurrentBlock,tap_blocks[tapeCurrentBlock].FPos,tapeBlockLen,bytesRead);
-                tapeStart=Z80_C(z1->cpu)yc;
+                tapeStart=Z80_C(cpu_zx)yc;
                 tapePulseCount=0;
                 tapePhase=TAPE_PHASE_SYNC;
                 tapebufByteCount=2;
@@ -228,14 +228,14 @@ void __not_in_flash_func(TAP_Play)(){
 		//printf("Block:%d Seek:%d Length:%d Read:%d\n",tapeCurrentBlock,tap_blocks[tapeCurrentBlock].FPos,tapeBlockLen,bytesRead);
        	tapebufByteCount=2;
 		tapeBlockByteCount=0;
-       	tapeStart=Z80_C(z1->cpu)yc;
+       	tapeStart=Z80_C(cpu_zx)yc;
        	TapeStatus=TAPE_LOADING;
        	break;
     case TAPE_LOADING:
        	TapeStatus=TAPE_PAUSED;
        	break;
     case TAPE_PAUSED:
-        tapeStart=Z80_C(z1->cpu)yc;
+        tapeStart=Z80_C(cpu_zx)yc;
         TapeStatus=TAPE_LOADING;
 		break;
     }
@@ -497,7 +497,7 @@ void load_to_zx(uint16_t adr, uint16_t len)
 		f_read(&f, sd_buffer, 512, &bytesRead);
 		for (uint16_t i = 0; i < 512; i++)
 		{
-			z1->cpu.write  (z1, adr, sd_buffer[i]);
+			cpu_zx.write  (&cpu_zx, adr, sd_buffer[i]);
 			adr++;
 			len--;
 			if (len == 0)
@@ -511,8 +511,8 @@ void load_to_zx(uint16_t adr, uint16_t len)
 	{
 		f_open(&f, tape_file_name, FA_READ);
 		uint16_t x;
-		uint16_t adr_s = Z80_IX(z1->cpu); // адрес загрузки в spectrum
-		uint16_t len_s = Z80_DE(z1->cpu); // длина в DE
+		uint16_t adr_s = Z80_IX(cpu_zx); // адрес загрузки в spectrum
+		uint16_t len_s = Z80_DE(cpu_zx); // длина в DE
 
 		x = sd_buffer[1];
 		uint16_t lenBlk = (x << 8) | sd_buffer[0]; // длина блока +0 +1
@@ -527,10 +527,10 @@ void load_to_zx(uint16_t adr, uint16_t len)
 
 		seekbuf = seekbuf + lenBlk + 2;
 
-		Z80_F(z1->cpu)= 1;		 //	cpu.zf = 1;	 // ошибка
+		Z80_F(cpu_zx)= 1;		 //	cpu.zf = 1;	 // ошибка
 
-		Z80_PC(z1->cpu) = 0x0555; // ret c9 там
-		Z80_IX(z1->cpu) = Z80_IX(z1->cpu) + len_s;
+		Z80_PC(cpu_zx) = 0x0555; // ret c9 там
+		Z80_IX(cpu_zx) = Z80_IX(cpu_zx) + len_s;
 
 		return;
 	}
@@ -547,10 +547,10 @@ void load_to_zx(uint16_t adr, uint16_t len)
 		//	tfd = f_open(&f, "0:/TEST_TAP.TAP ", FA_READ);
 
 		uint16_t x;
-		uint16_t adr_s = Z80_IX(z1->cpu); // адрес загрузки в spectrum
-		uint16_t len_s = Z80_DE(z1->cpu); // длина в DE
-		/* x = Z80_D(z1->cpu) ;
-		uint16_t len_s = (x << 8) | Z80_E(z1->cpu); // длина */
+		uint16_t adr_s = Z80_IX(cpu_zx); // адрес загрузки в spectrum
+		uint16_t len_s = Z80_DE(cpu_zx); // длина в DE
+		/* x = Z80_D(cpu_zx) ;
+		uint16_t len_s = (x << 8) | Z80_E(cpu_zx); // длина */
 
 		//x = sd_buffer[1];
 		uint16_t lenBlk = (sd_buffer[1] << 8) | sd_buffer[0]; // длина блока
@@ -569,9 +569,9 @@ void load_to_zx(uint16_t adr, uint16_t len)
 
 		seekbuf = seekbuf + lenBlk + 2;
 
-		Z80_F(z1->cpu) = 1;		 // ошибка
-		Z80_PC(z1->cpu) = 0x0555; // ret c9 там
-		Z80_IX(z1->cpu) = Z80_IX(z1->cpu) + len_s;
+		Z80_F(cpu_zx) = 1;		 // ошибка
+		Z80_PC(cpu_zx) = 0x0555; // ret c9 там
+		Z80_IX(cpu_zx) = Z80_IX(cpu_zx) + len_s;
 		return;
 	}
 
@@ -584,12 +584,12 @@ void load_to_zx(uint16_t adr, uint16_t len)
 		//tfd =
 		 f_open(&f, tape_file_name, FA_READ);
 
-		if (Z80_A(z1->cpu) == 0) // то заголовок
+		if (Z80_A(cpu_zx) == 0) // то заголовок
 		{
 			// чтение заголовка
 			uint16_t x;
-			uint16_t adr_s = Z80_IX(z1->cpu); // адрес загрузки в spectrum
-			uint16_t len_s = Z80_DE(z1->cpu); // длина в DE
+			uint16_t adr_s = Z80_IX(cpu_zx); // адрес загрузки в spectrum
+			uint16_t len_s = Z80_DE(cpu_zx); // длина в DE
 
 												   // изначально  seekbuf = 0;
 			f_lseek(&f, seekbuf);		   // смещаемся в файле на seekbuf байт
@@ -607,24 +607,24 @@ void load_to_zx(uint16_t adr, uint16_t len)
 
 			for (uint8_t i = 0; i < 17; i++)
 			{
-				z1->cpu.write   (z1, adr_s + i, sd_buffer[i + 3]);
+				cpu_zx.write   (&cpu_zx, adr_s + i, sd_buffer[i + 3]);
 
 			}
 
-			Z80_F(z1->cpu) = 1;		 // ошибка
-			Z80_PC(z1->cpu) = 0x0555; // ret c9 там
-			Z80_IX(z1->cpu) = Z80_IX(z1->cpu) + len_s;
+			Z80_F(cpu_zx) = 1;		 // ошибка
+			Z80_PC(cpu_zx) = 0x0555; // ret c9 там
+			Z80_IX(cpu_zx) = Z80_IX(cpu_zx) + len_s;
 
 			return;
 		}
-		// uint8_t s = (Z80_A(z1->cpu) & 0x01);
+		// uint8_t s = (Z80_A(cpu_zx) & 0x01);
 		// if (s == 0x01) // то данные
 
 		else
 		{
 			uint16_t x;
-			uint16_t adr_s = Z80_IX(z1->cpu); // адрес загрузки в spectrum
-			uint16_t len_s = Z80_DE(z1->cpu); // длина в DE
+			uint16_t adr_s = Z80_IX(cpu_zx); // адрес загрузки в spectrum
+			uint16_t len_s = Z80_DE(cpu_zx); // длина в DE
 
 			//x = sd_buffer[1];
 			uint16_t lenBlk = (sd_buffer[1] << 8) | sd_buffer[0]; // длина блока
@@ -640,9 +640,9 @@ void load_to_zx(uint16_t adr, uint16_t len)
 
 			seekbuf = seekbuf + lenBlk + 2;
 
-			Z80_F(z1->cpu) = 1;		 // ошибка
-			Z80_PC(z1->cpu) = 0x0555; // ret c9 там
-			Z80_IX(z1->cpu) = Z80_IX(z1->cpu) + len_s;
+			Z80_F(cpu_zx) = 1;		 // ошибка
+			Z80_PC(cpu_zx) = 0x0555; // ret c9 там
+			Z80_IX(cpu_zx) = Z80_IX(cpu_zx) + len_s;
 			return;
 		}
 	}

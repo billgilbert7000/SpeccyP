@@ -19,7 +19,7 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 set(DEBUG ON)
 
 # == Конфигурация SpeccyP ==
-set (BASE_VERSION "1.6.4")
+set (BASE_VERSION "1.6.5")
 
 # Список допустимых конфигураций (единое место для изменений)
 set(SPECCY_CONFIG_VALUES SPECCY SPECCY_WSZERO GSP_FULL GSP_LITE)
@@ -53,7 +53,7 @@ option(PCM5122 "PCM5122 DAC для WS_ZERO2 (I2S 21/18/19 + I2C 2/3, PS/2 на 1
 # Аппаратные ограничения: HSTX занимает GPIO 12-19, поэтому работает
 # только на плате M2. clk_sys должен быть целым кратным 126 МГц
 # (домен пиксельклока).
-option(HDMI_HSTX "Драйвер HDMI на HSTX RP2350 (только M2)" ON)
+option(HDMI_HSTX "Драйвер HDMI на HSTX RP2350 (только M2)" OFF)
 
 # USB CDC-консоль вместо USB HID Host. С ней нельзя пользоваться
 # USB-клавиатурой/джойстиком, зато появляется CDC-ACM stdio: можно
@@ -329,7 +329,7 @@ set (FATFS_SPI spi0)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=210527
+CONFIG_VERSION=240527
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1

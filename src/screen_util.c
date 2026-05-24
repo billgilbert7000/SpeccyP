@@ -1113,7 +1113,7 @@ wait_enter(); // ожидание отпускания enter
        if (x!=0xff)
        {
        conf.cpu_version  = x;
-       select_cpu_z80(z1);
+       select_cpu_z80(&cpu_zx);
        }
        break;
 

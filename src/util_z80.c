@@ -112,51 +112,51 @@ void readCPUstate(FileHeader* header,uint8_t im_ver,uint8_t im_hw){
 	}
 	//printf("readCPUstate begin\n");
 	
-	Z80_A(z1->cpu) = header->A;
-	Z80_F(z1->cpu) = header->F;
+	Z80_A(cpu_zx) = header->A;
+	Z80_F(cpu_zx) = header->F;
 /* 	cpu.sf = (header->F & 0b10000000);
 	cpu.zf = (header->F & 0b01000000);
 	cpu.yf = (header->F & 0b00100000);
-	Z80_H(z1->cpu)f = (header->F & 0b00010000);
+	Z80_H(cpu_zx)f = (header->F & 0b00010000);
 	cpu.xf = (header->F & 0b00001000);
 	cpu.pf = (header->F & 0b00000100);
 	cpu.nf = (header->F & 0b00000010);
-	Z80_F(z1->cpu) = (header->F & 0b00000001); */
+	Z80_F(cpu_zx) = (header->F & 0b00000001); */
 	
-	Z80_B(z1->cpu) = header->B; Z80_C(z1->cpu)= header->C;
-	Z80_H(z1->cpu)= header->H; Z80_L(z1->cpu)  = header->L;
+	Z80_B(cpu_zx) = header->B; Z80_C(cpu_zx)= header->C;
+	Z80_H(cpu_zx)= header->H; Z80_L(cpu_zx)  = header->L;
 	
-	Z80_SP(z1->cpu) = header->SP;
-	z1->cpu.i = header->IR;
+	Z80_SP(cpu_zx) = header->SP;
+	cpu_zx.i = header->IR;
 	//cpu.R = header->RR;
 	//cpu.R = cpu.R|(((header->Flags1&1)<<7)&0b10000000);
-	z1->cpu.r = header->RR;
+	cpu_zx.r = header->RR;
 
 	zx_Border_color=(((header->Flags1>>1)&0x7)<<4)|((header->Flags1>>1)&0x7);//дублируем для 4 битного видеобуфера
 	//printf("Border color: %02x -> %02x\n",header->Flags1,zx_Border_color);
 	
-	Z80_D(z1->cpu)   = header->D; Z80_E(z1->cpu)  = header->E;    
+	Z80_D(cpu_zx)   = header->D; Z80_E(cpu_zx)  = header->E;    
 	
-	Z80_B_(z1->cpu)  = header->B_Dash; Z80_C_(z1->cpu) = header->C_Dash;	
-	Z80_D_(z1->cpu) = header->D_Dash; Z80_E_(z1->cpu) = header->E_Dash;	
-	Z80_H_(z1->cpu)  = header->H_Dash; Z80_L_(z1->cpu)= header->L_Dash;
+	Z80_B_(cpu_zx)  = header->B_Dash; Z80_C_(cpu_zx) = header->C_Dash;	
+	Z80_D_(cpu_zx) = header->D_Dash; Z80_E_(cpu_zx) = header->E_Dash;	
+	Z80_H_(cpu_zx)  = header->H_Dash; Z80_L_(cpu_zx)= header->L_Dash;
 	
-	Z80_A_(z1->cpu) = header->A_Dash;
-	Z80_F_(z1->cpu) = header->F_Dash;
+	Z80_A_(cpu_zx) = header->A_Dash;
+	Z80_F_(cpu_zx) = header->F_Dash;
 	
 	
-	Z80_IX(z1->cpu)  = header->IX;
-	Z80_IY(z1->cpu) = header->IY;
+	Z80_IX(cpu_zx)  = header->IX;
+	Z80_IY(cpu_zx) = header->IY;
 	
-    z1->cpu.iff1  = header->InterruptFlipFlop;
-    z1->cpu.iff2  = header->IFF2;
+    cpu_zx.iff1  = header->InterruptFlipFlop;
+    cpu_zx.iff2  = header->IFF2;
 	
-	Z80_PC(z1->cpu) = header->PC == 0 ? header->PCVersion2 : header->PC; //Z80_PC(z1->cpu)  = (header[7]<<8)|(header[6]);
+	Z80_PC(cpu_zx) = header->PC == 0 ? header->PCVersion2 : header->PC; //Z80_PC(cpu_zx)  = (header[7]<<8)|(header[6]);
 	
-	z1->cpu.im  = (header->Flags2 & 0b00000011); //Биты 0-1: режим прерываний (0-2)
+	cpu_zx.im  = (header->Flags2 & 0b00000011); //Биты 0-1: режим прерываний (0-2)
 
 //	cpu.Int_pending = 0;
-z1->cpu.request = 0; //cpu.Int_pending = 0;
+cpu_zx.request = 0; //cpu.Int_pending = 0;
 	
 	if (im_ver == 1) 
 		last_out_7ffd = 0b00110000;
@@ -194,39 +194,39 @@ void saveCPUstate(FileHeader* header){
 
 	header->PC = 0;
 
-	header->A = Z80_A(z1->cpu);
-	header->F = Z80_F(z1->cpu);
+	header->A = Z80_A(cpu_zx);
+	header->F = Z80_F(cpu_zx);
 	
-	header->B = Z80_B(z1->cpu); header->C = Z80_C(z1->cpu);
-	header->H = Z80_H(z1->cpu); header->L = Z80_L(z1->cpu) ;
-	header->SP = Z80_SP(z1->cpu);
-	header->IR = z1->cpu.i;
-	header->RR = z80_r(&z1->cpu);
-	header->Flags1 = ( z80_r(&z1->cpu) )>>7;
+	header->B = Z80_B(cpu_zx); header->C = Z80_C(cpu_zx);
+	header->H = Z80_H(cpu_zx); header->L = Z80_L(cpu_zx) ;
+	header->SP = Z80_SP(cpu_zx);
+	header->IR = cpu_zx.i;
+	header->RR = z80_r(&cpu_zx);
+	header->Flags1 = ( z80_r(&cpu_zx) )>>7;
 	header->Flags1 = header->Flags1 | ((zx_Border_color & 7)<<1);
-	header->D = Z80_D(z1->cpu) ;
-	header->E = Z80_E(z1->cpu);
+	header->D = Z80_D(cpu_zx) ;
+	header->E = Z80_E(cpu_zx);
 	
 
-	header->B_Dash = Z80_B_(z1->cpu); header->C_Dash = Z80_C_(z1->cpu);
-	header->D_Dash = Z80_D_(z1->cpu); header->E_Dash = Z80_E_(z1->cpu);	
-	header->H_Dash = Z80_H_(z1->cpu); header->L_Dash = Z80_L_(z1->cpu);
+	header->B_Dash = Z80_B_(cpu_zx); header->C_Dash = Z80_C_(cpu_zx);
+	header->D_Dash = Z80_D_(cpu_zx); header->E_Dash = Z80_E_(cpu_zx);	
+	header->H_Dash = Z80_H_(cpu_zx); header->L_Dash = Z80_L_(cpu_zx);
 	
-	header->A_Dash = Z80_A_(z1->cpu);
-	header->F_Dash = Z80_F_(z1->cpu);
+	header->A_Dash = Z80_A_(cpu_zx);
+	header->F_Dash = Z80_F_(cpu_zx);
 	
 	
-	header->IX = Z80_IX(z1->cpu);
-	header->IY = Z80_IY(z1->cpu);
+	header->IX = Z80_IX(cpu_zx);
+	header->IY = Z80_IY(cpu_zx);
 	
-	header->InterruptFlipFlop = z1->cpu.iff1;
-	header->IFF2 = z1->cpu.iff2;
-	header->Flags2 = z1->cpu.im; //Биты 0-1: режим прерываний (0-2)
+	header->InterruptFlipFlop = cpu_zx.iff1;
+	header->IFF2 = cpu_zx.iff2;
+	header->Flags2 = cpu_zx.im; //Биты 0-1: режим прерываний (0-2)
 	
 	
 	header->AdditionalBlockLength = 23; // Длина доп. блока для V2
 
-	header->PCVersion2 = Z80_PC(z1->cpu);
+	header->PCVersion2 = Z80_PC(cpu_zx);
 	
 	
 	header->PagingState = zx_RAM_bank_active; // zx_machine_last_out_7ffd;

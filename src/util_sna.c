@@ -157,44 +157,44 @@ static inline uint16_t read_word_48k(uint16_t addr) {
 
 void readCPUstateSNA(FileHeader* header,uint8_t im_hw){
 
-	Z80_A(z1->cpu) = header->A;      
-	Z80_F(z1->cpu) = header->F;
-	Z80_B(z1->cpu) = header->B;     
-    Z80_C(z1->cpu) = header->C;    
-	Z80_H(z1->cpu) = header->H; 
-	Z80_L(z1->cpu) = header->L; 
-	Z80_D(z1->cpu) = header->D;  
-	Z80_E(z1->cpu) = header->E;	
+	Z80_A(cpu_zx) = header->A;      
+	Z80_F(cpu_zx) = header->F;
+	Z80_B(cpu_zx) = header->B;     
+    Z80_C(cpu_zx) = header->C;    
+	Z80_H(cpu_zx) = header->H; 
+	Z80_L(cpu_zx) = header->L; 
+	Z80_D(cpu_zx) = header->D;  
+	Z80_E(cpu_zx) = header->E;	
 
 
-	Z80_SP(z1->cpu) = header->SP; //Z80_SP(z1->cpu).W;         // SP
-	z1->cpu.i = header->IR;
-    z1->cpu.r = header->RR;
+	Z80_SP(cpu_zx) = header->SP; //Z80_SP(cpu_zx).W;         // SP
+	cpu_zx.i = header->IR;
+    cpu_zx.r = header->RR;
 	
 	zx_Border_color = ((header->Border & 0x07) << 4) | (header->Border & 0x07); // дублируем для 4 битного видеобуфера
 		
-	Z80_B_(z1->cpu) = header->B_Dash; 
-	Z80_C_(z1->cpu) = header->C_Dash;
+	Z80_B_(cpu_zx) = header->B_Dash; 
+	Z80_C_(cpu_zx) = header->C_Dash;
 
-	Z80_D_(z1->cpu) = header->D_Dash; 
-	Z80_E_(z1->cpu) = header->E_Dash;
+	Z80_D_(cpu_zx) = header->D_Dash; 
+	Z80_E_(cpu_zx) = header->E_Dash;
 
-	Z80_H_(z1->cpu) = header->H_Dash; 
-	Z80_L_(z1->cpu) = header->L_Dash;
+	Z80_H_(cpu_zx) = header->H_Dash; 
+	Z80_L_(cpu_zx) = header->L_Dash;
 	
-	Z80_A_(z1->cpu) = header->A_Dash;
-	Z80_F_(z1->cpu) = header->F_Dash;
+	Z80_A_(cpu_zx) = header->A_Dash;
+	Z80_F_(cpu_zx) = header->F_Dash;
 	
 	
-	Z80_IX(z1->cpu)  = header->IX;
-	Z80_IY(z1->cpu) = header->IY;
+	Z80_IX(cpu_zx)  = header->IX;
+	Z80_IY(cpu_zx) = header->IY;
 	
-	z1->cpu.iff1 = (header->IFF & 0b00000001);
-	z1->cpu.iff2 = (header->IFF & 0b00000010);
+	cpu_zx.iff1 = (header->IFF & 0b00000001);
+	cpu_zx.iff2 = (header->IFF & 0b00000010);
 	
-	z1->cpu.im = header->IMode; //Биты 0-1: режим прерываний (0-2)
+	cpu_zx.im = header->IMode; //Биты 0-1: режим прерываний (0-2)
 
-    z1->cpu.request = 0; //cpu.Int_pending = 0;
+    cpu_zx.request = 0; //cpu.Int_pending = 0;
 
 
 
@@ -309,11 +309,11 @@ bool load_image_sna(char *file_name){
 	if (im_hw==48){
 		//printf("48K\n");
 		readCPUstateSNA(header,im_hw);
-	    uint16_t SP = Z80_SP(z1->cpu);
+	    uint16_t SP = Z80_SP(cpu_zx);
 		//printf("SP_1:%04x\n",SP);
-		Z80_PC(z1->cpu)=read_word_48k(SP);
-        Z80_SP(z1->cpu) = SP + 2;
-		//printf("PC:%04x,SP:%04x\n",Z80_PC(z1->cpu),Z80_SP(z1->cpu));
+		Z80_PC(cpu_zx)=read_word_48k(SP);
+        Z80_SP(cpu_zx) = SP + 2;
+		//printf("PC:%04x,SP:%04x\n",Z80_PC(cpu_zx),Z80_SP(cpu_zx));
 	} else if (im_hw==128) {
 		//printf("128K\n");
 		bytesToRead=4;
@@ -352,8 +352,8 @@ bool load_image_sna(char *file_name){
 			pageSize-=bytesRead;
 		}while (pageSize>0);
 		readCPUstateSNA(header,im_hw);
-		Z80_PC(z1->cpu)=(buf[1] << 8) |buf[0]; // in 128K mode, recover stored PC
-		//printf("PC:%06d,SP:%06d\n",Z80_PC(z1->cpu),Z80_SP(z1->cpu));
+		Z80_PC(cpu_zx)=(buf[1] << 8) |buf[0]; // in 128K mode, recover stored PC
+		//printf("PC:%06d,SP:%06d\n",Z80_PC(cpu_zx),Z80_SP(cpu_zx));
 		/*
 		49179	2		Содержимое регистра PC.
 		49181	1		Содержимое порта 7FFDh.

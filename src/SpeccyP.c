@@ -117,7 +117,7 @@ char afilename[LENF];
 void nmi_zx()
 {
    if (main_nmi_key)  
-   z80_nmi(&z1->cpu);
+   z80_nmi(&cpu_zx);
 }
 //--------------------------------------------------
 
@@ -1782,8 +1782,8 @@ void disasm(void) // [END] KEY
     hardAY_on_off=0;
     hardAY_off();// off hard AY help keyboard
     disassembler();
-  //  address_pc =Z80_PC(z1->cpu);
-     dis_adres = Z80_PC(z1->cpu);       // PC 16-битное значение
+  //  address_pc =Z80_PC(cpu_zx);
+     dis_adres = Z80_PC(cpu_zx);       // PC 16-битное значение
     bool dis_dump= true;
       if(dis_dump) list_disassm( );
         else  list_dump();

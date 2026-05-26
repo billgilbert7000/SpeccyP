@@ -73,12 +73,16 @@ DEFAULT_VOLUME_PWM=50
 BEEP=12 # бипер микшируется в PWM R/L 
 #BEEP=0# вывод звук бипера на пин классика ШИМ на плате MURM2 портит звук Soft AY
 #BEEP=1 #вывод звук бипера на отдельный шим
-##AUDIO 595  hard AY 
+##AUDIO 74HC595   hard AY 
 PIO_AY595=pio0 
 SM_AY595=0  
 CLK_AY_PIN=29 # CLK_AY_PIN=21
-CLK_LATCH_595_BASE_PIN=10 # и 11
-DATA_595_PIN=9
+CLK_LATCH_595_BASE_PIN=9 # и 10
+DATA_595_PIN=11
+# 74HC595       Pico
+#RCLK (LATCH) - GPIO9
+#SRCLK (CLK)  - GPIO10
+#SER (DATA)   - GPIO11
 
 ##AUDIO i2s
 I2S_DATA_PIN=9

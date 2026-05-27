@@ -23,6 +23,19 @@ mouse[3] мышь Y
 // usb устройства
 //uint8_t usb_device;// 1 клавиатура 2 мышь 3 клавиатура+мышь
 
+static uint8_t mouse_buttons = 0xFF;   /* Все кнопки отпущены (активный низкий уровень) */
+static int16_t mouse_x = 420;           /* Накопление координаты X */  
+static int16_t mouse_y = 1070;          /* Накопление координаты Y */
+static int8_t mouse_wheel = 0;         /* Значение колеса прокрутки */
+
+
+void convert_kempstonMouse() {
+    /* Запись в выходной буфер (обрезание до 8 бит) */
+    mouse[1] = mouse_buttons;          /* Состояние кнопок */
+    mouse[2] = (uint8_t)(mouse_x / 10);     /* Младший байт X */
+    mouse[3] = (uint8_t)(mouse_y / 10);     /* Младший байт Y */
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 /* ============================================================================================= */
 /* ============                        XBOX controllers                          =============== */
@@ -483,7 +496,7 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
         keyboard_addr = dev_addr;
         keyboard_instance = instance;
        // keyboard_mounted = true;
-        usb_device = usb_device | 1;
+        usb_device = usb_device | USB_DEVICE_KEYBOARD;
 
     }
   }
@@ -501,7 +514,8 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
 /*         keyboard_addr = dev_addr;
         keyboard_instance = instance;
         keyboard_mounted = true; */
-        usb_device = usb_device | 2;
+        usb_device = usb_device | USB_DEVICE_MOUSE;
+        convert_kempstonMouse();    //do cold load kempston mouse ports
 
     }
   }
@@ -530,10 +544,6 @@ tuh_vid_pid_get(dev_addr, &vid, &pid);
 //-----------------------------------------------------------------
 /* Отправка отчета мыши через USB CDC */
 static void __not_in_flash_func(mouse_report)(uint8_t const *report, uint16_t len) {
-  static uint8_t mouse_buttons = 0xFF;   /* Все кнопки отпущены (активный низкий уровень) */
-  static int16_t mouse_x = 420;           /* Накопление координаты X */  
-  static int16_t mouse_y = 1070;          /* Накопление координаты Y */
-  static int8_t mouse_wheel = 0;         /* Значение колеса прокрутки */
   
   /* Настройки DPI (точек на дюйм) */
   const uint8_t max_dpi = 4;             /* Максимальный коэффициент масштабирования */
@@ -592,10 +602,7 @@ static void __not_in_flash_func(mouse_report)(uint8_t const *report, uint16_t le
       mouse_wheel += wheel_delta;
   }
 
-  /* Запись в выходной буфер (обрезание до 8 бит) */
-  mouse[1] = mouse_buttons;          /* Состояние кнопок */
-  mouse[2] = (uint8_t)(mouse_x / 10);     /* Младший байт X */
-  mouse[3] = (uint8_t)(mouse_y / 10);     /* Младший байт Y */
+  convert_kempstonMouse();
 }
 
 /* Функция изменения DPI (может вызываться извне) */

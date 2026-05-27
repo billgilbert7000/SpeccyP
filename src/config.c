@@ -240,7 +240,7 @@ bool trdos=0;
  uint8_t joy_k ;//#1F - кемпстон джойстик 0001 1111
 //uint8_t joy_ext ;//дополнительные кнопки геймпадов
 
-uint8_t mouse[8] ;
+uint8_t mouse[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 bool flag_usb_kb;
 //--------------------------------------------
 // изображение видеодрайвер

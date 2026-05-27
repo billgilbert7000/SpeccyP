@@ -531,8 +531,8 @@ tuh_vid_pid_get(dev_addr, &vid, &pid);
 /* Отправка отчета мыши через USB CDC */
 static void __not_in_flash_func(mouse_report)(uint8_t const *report, uint16_t len) {
   static uint8_t mouse_buttons = 0xFF;   /* Все кнопки отпущены (активный низкий уровень) */
-  static int16_t mouse_x = 0;            /* Накопление координаты X */
-  static int16_t mouse_y = 0;            /* Накопление координаты Y */
+  static int16_t mouse_x = 420;           /* Накопление координаты X */  
+  static int16_t mouse_y = 1070;          /* Накопление координаты Y */
   static int8_t mouse_wheel = 0;         /* Значение колеса прокрутки */
   
   /* Настройки DPI (точек на дюйм) */
@@ -578,12 +578,12 @@ static void __not_in_flash_func(mouse_report)(uint8_t const *report, uint16_t le
 
   /* Обработка перемещения по X с учетом DPI */
   const int8_t x_delta_raw = (int8_t)report[proto.x_offset]; /* Сырое значение */
-  const int16_t x_delta = (x_delta_raw * conf.mouse_dpi)/10; /* Применение DPI */
+  const int16_t x_delta = x_delta_raw * conf.mouse_dpi; /* Применение DPI */
   mouse_x += x_delta;
 
   /* Обработка перемещения по Y с учетом DPI и инверсии */
   const int8_t y_delta_raw = (int8_t)report[proto.y_offset]; /* Сырое значение */
-  const int16_t y_delta = (y_delta_raw * conf.mouse_dpi)/10; /* Применение DPI */
+  const int16_t y_delta = y_delta_raw * conf.mouse_dpi; /* Применение DPI */
   mouse_y -= y_delta; /* Инверсия для экранных координат */
 
   /* Обработка колеса прокрутки (если есть в отчете) */
@@ -594,8 +594,8 @@ static void __not_in_flash_func(mouse_report)(uint8_t const *report, uint16_t le
 
   /* Запись в выходной буфер (обрезание до 8 бит) */
   mouse[1] = mouse_buttons;          /* Состояние кнопок */
-  mouse[2] = (uint8_t)(mouse_x);     /* Младший байт X */
-  mouse[3] = (uint8_t)(mouse_y);     /* Младший байт Y */
+  mouse[2] = (uint8_t)(mouse_x / 10);     /* Младший байт X */
+  mouse[3] = (uint8_t)(mouse_y / 10);     /* Младший байт Y */
 }
 
 /* Функция изменения DPI (может вызываться извне) */

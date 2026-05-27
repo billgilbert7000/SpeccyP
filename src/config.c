@@ -44,7 +44,7 @@ void config_defain(void)
         conf.vol_i2s = DEFAULT_VOLUME_I2S; //громкость i2s
         conf.vol_load = 16; //громкость аудио загрузки
         conf.joyMode = 0;
-		conf.mouse_dpi = 1;
+		conf.mouse_dpi = 10;
         conf.sound_fdd = 1;
 		conf.audio_buster = AUDIO_BUSTER_DEFAULT;
        
@@ -86,7 +86,7 @@ void config_defain(void)
 
         conf.type_sound = 3;// i2s turbo sound
         conf.joyMode = 0;
-		conf.mouse_dpi = 1;
+		conf.mouse_dpi = 10;
         conf.sound_fdd = 1;
 		conf.audio_buster = AUDIO_BUSTER_DEFAULT;
         conf.hdmi_fdiv = 1.0;// 1.0-> 90Hz  (cpu=378MHz)
@@ -129,7 +129,7 @@ void config_defain(void)
         
         conf.type_sound = 3;// i2s turbo sound
         conf.joyMode = 0;
-		conf.mouse_dpi = 1;
+		conf.mouse_dpi = 10;
         conf.sound_fdd = 1;
 		conf.audio_buster = AUDIO_BUSTER_DEFAULT;
         conf.hdmi_fdiv = 1.5;// 1.0-> 90Hz  (cpu=378MHz)

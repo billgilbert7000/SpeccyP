@@ -578,12 +578,12 @@ static void __not_in_flash_func(mouse_report)(uint8_t const *report, uint16_t le
 
   /* Обработка перемещения по X с учетом DPI */
   const int8_t x_delta_raw = (int8_t)report[proto.x_offset]; /* Сырое значение */
-  const int16_t x_delta = x_delta_raw * conf.mouse_dpi;         /* Применение DPI */
+  const int16_t x_delta = (x_delta_raw * conf.mouse_dpi)/10; /* Применение DPI */
   mouse_x += x_delta;
 
   /* Обработка перемещения по Y с учетом DPI и инверсии */
   const int8_t y_delta_raw = (int8_t)report[proto.y_offset]; /* Сырое значение */
-  const int16_t y_delta = y_delta_raw * conf.mouse_dpi;         /* Применение DPI */
+  const int16_t y_delta = (y_delta_raw * conf.mouse_dpi)/10; /* Применение DPI */
   mouse_y -= y_delta; /* Инверсия для экранных координат */
 
   /* Обработка колеса прокрутки (если есть в отчете) */

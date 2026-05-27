@@ -934,7 +934,7 @@ char *menu_advanced[12] = {
 void init_menu_advanced() {
  
  
-     sprintf(menu_advanced_strings[0], " Mouse Speed  *%2d ", conf.mouse_dpi);
+     sprintf(menu_advanced_strings[0], " Mouse Speed *%d.%d ", conf.mouse_dpi / 10, conf.mouse_dpi % 10);
 
          if (conf.vout==VIDEO_AUTO) strcpy(menu_advanced_strings[1], " Video OUT   AUTO ");
          if (conf.vout==VIDEO_VGA)  strcpy(menu_advanced_strings[1], " Video OUT    VGA ");
@@ -1022,7 +1022,7 @@ wait_enter(); // ожидание отпускания enter
 
 
           case 0:// скорость мыши -
-          if (conf.mouse_dpi==1) conf.mouse_dpi=1;
+          if (conf.mouse_dpi<=1) conf.mouse_dpi=1;
              else conf.mouse_dpi--;
            init_menu_advanced();
            draw_text(xPos,yPos+10*0,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
@@ -1062,7 +1062,7 @@ wait_enter(); // ожидание отпускания enter
       {
 
          case 0:// скорость мыши +
-         if (conf.mouse_dpi==9) conf.mouse_dpi=9;
+         if (conf.mouse_dpi>=90) conf.mouse_dpi=90;
             else conf.mouse_dpi++;
              init_menu_advanced();
         draw_text(xPos,yPos+10*0,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 

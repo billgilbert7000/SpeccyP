@@ -20,5 +20,6 @@ bool decode_key_joy();
 void wait_enter(void);
 void wait_esc(void);
 
-
+#define USB_DEVICE_KEYBOARD (1)
+#define USB_DEVICE_MOUSE (2)
 

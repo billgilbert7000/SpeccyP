@@ -18,8 +18,13 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 
 set(DEBUG ON)
 
+set(VERSION_MAJOR 1)
+set(VERSION_MINOR 6)
+set(VERSION_PATCH 6)
+# Базовая версия (оставлено для совместимости)
+set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+
 # == Конфигурация SpeccyP ==
-set (BASE_VERSION "1.6.6")
 
 # Список допустимых конфигураций (единое место для изменений)
 set(SPECCY_CONFIG_VALUES SPECCY SPECCY_WSZERO GSP_FULL GSP_LITE)

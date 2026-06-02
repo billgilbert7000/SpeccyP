@@ -1289,68 +1289,10 @@ void Message_Print()
             break;
         }
         }
-//=========================================================================
-// MAIN
-int fast(main)(void){  
-
-    init_pico();
-  //  sleep_ms(100);
-
-
-// Инициализация последовательного порта
-  //  stdio_init_all(); // для автоматической загрузки прошивки RP2350
-
-    init_and_info();
-
-//-----------------------------------------------------------------    
-// если одна плата без GS 
-    #ifndef  GENERAL_SOUND     
-    select_audio(); // переключение режимов вывода звука 
- 	int hz = 96000;	//44000 //44100 //96000 //22050
-	repeating_timer_t timer_audio;
-	// negative timeout means exact delay (rather than delay between callbacks)
-    // f = 1 / T = 1 / 9 μs = 111111 Гц
-    // f = 1 / T = 1 / -21 μs = 47619Гц	-0,79% Гц
- 	if (!add_repeating_timer_us(AY_SAMPLE_RATE, AY_timer_callback, NULL, &timer_audio)) return 1;// -10  частота ноты До 237Гц  нужно 240,0058 Гц
-    #endif
-
-	repeating_timer_t zx_flash_timer;
-	//hz=2;
-	if (!add_repeating_timer_us(-1000000 / 2/*Hz*/, zx_flash_callback, NULL, &zx_flash_timer)) {
-	//	G_PRINTF_ERROR("Failed to add zx flash timer\n");
- //   gpio_put(25,1);//error
-		return 1;
-	}
-//---------------------------------------------------------
-// INT generator 50Hz
-/*  	repeating_timer_t int_timer; 
-     // hz=50;
-	if (!add_repeating_timer_us(-1000000 / 50, zx_int, NULL, &int_timer))
-     {
-		//G_PRINTF_ERROR("Failed to add INT timer\n");
-    //    gpio_put(25,1);//error
-		return 1;
-	}   
-    */
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
- // is_new_screen = true;
-
-    
-	multicore_launch_core1(ZXThread);
-
-    disk_autorun ();
- //   wait_msg = 5000;// сообщения внизу и громкость время вывода
- //   msg_bar = 0;
-//######################
-//   основной цикл
-//######################
-
-
-    while (1)
-    {
-        if (wait_msg !=0) Message_Print();
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+void keyboard_and_other(void)
+{
+       if (wait_msg !=0) Message_Print();
 //---------------------------------------------
 // опрос джоя
        if (conf.joyMode == 0)
@@ -1560,10 +1502,10 @@ int fast(main)(void){
             //   is_new_screen = false;
            }
             }
-//######################################################
-// Работа эмулятора
-//######################################################
-          if (!is_menu_mode)
+            // ######################################################
+            //  Работа эмулятора
+            // ######################################################
+            if (!is_menu_mode)
             { // Emulation mode
                 zx_machine_enable_vbuf(true);
                 if (im_z80_stop)
@@ -1578,13 +1520,65 @@ int fast(main)(void){
 
                 convert_kb_u_to_kb_zx(&kb_st_ps2, zx_input.kb_data);
 
-                joy_scan();// переопределление kempston joy на клавиши 
+                joy_scan(); // переопределление kempston joy на клавиши
 
             } // Emulation mode end
+    }
+}
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+//=========================================================================
+// MAIN
+int fast(main)(void){  
+
+    init_pico();
+
+    init_and_info();
+
+//-----------------------------------------------------------------    
+// если одна плата без GS 
+    #ifndef  GENERAL_SOUND     
+    select_audio(); // переключение режимов вывода звука 
+ 	int hz = 96000;	//44000 //44100 //96000 //22050
+	repeating_timer_t timer_audio;
+	// negative timeout means exact delay (rather than delay between callbacks)
+    // f = 1 / T = 1 / 9 μs = 111111 Гц
+    // f = 1 / T = 1 / -21 μs = 47619Гц	-0,79% Гц
+ 	if (!add_repeating_timer_us(AY_SAMPLE_RATE, AY_timer_callback, NULL, &timer_audio)) return 1;// -10  частота ноты До 237Гц  нужно 240,0058 Гц
+    #endif
+
+	repeating_timer_t zx_flash_timer;
+	//hz=2;
+	if (!add_repeating_timer_us(-1000000 / 2/*Hz*/, zx_flash_callback, NULL, &zx_flash_timer)) {
+	//	G_PRINTF_ERROR("Failed to add zx flash timer\n");
+ //   gpio_put(25,1);//error
+		return 1;
+	}
+//---------------------------------------------------------
+// INT generator 50Hz
+/*  	repeating_timer_t int_timer; 
+     // hz=50;
+	if (!add_repeating_timer_us(-1000000 / 50, zx_int, NULL, &int_timer))
+     {
+		//G_PRINTF_ERROR("Failed to add INT timer\n");
+    //    gpio_put(25,1);//error
+		return 1;
+	}   
+    */
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+	multicore_launch_core1(ZXThread);
+
+    disk_autorun ();
+
+//######################
+//   основной цикл
+//######################
 
 
-        } 
-
+    while (1)
+    {
+           keyboard_and_other();
+           
            zx_machine_input_set(&zx_input);
       
            led_trdos();// мигаие led 

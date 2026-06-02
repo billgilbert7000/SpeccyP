@@ -2809,7 +2809,7 @@ if (   (inx_tick_screen<32) &&  (int_enable))
 #ifdef TEST
 if (wait_msg !=0)
 {
-		if (((y >= 240-12) && (y <= 240)))
+		if (((y >= 240-20) && (y <= 240)))
 			{
 				int i_c;
 				if (x < dx)

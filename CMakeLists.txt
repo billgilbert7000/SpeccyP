@@ -19,7 +19,7 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 set(DEBUG ON)
 
 # == Конфигурация SpeccyP ==
-set (BASE_VERSION "1.6.5")
+set (BASE_VERSION "1.6.6")
 
 # Список допустимых конфигураций (единое место для изменений)
 set(SPECCY_CONFIG_VALUES SPECCY SPECCY_WSZERO GSP_FULL GSP_LITE)
@@ -329,7 +329,7 @@ set (FATFS_SPI spi0)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=270527
+CONFIG_VERSION=20626
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1

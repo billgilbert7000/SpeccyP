@@ -158,9 +158,24 @@ uint8_t atr1;
 	uint8_t* p_zx_video_ramATTR7=NULL;
     uint64_t inx_tick_screen_ff;// счетчик тактов экрана для порта FF
 //###############################################
+//######################################################################
+bool is_SD_active=false;
+uint8_t z_controler_cs;
+//--------------------------------------------------
+static inline uint8_t READ_SD_BYTE()
+{
+    uint8_t dataSPI=spi_get_hw(SDCARD_SPI_BUS)->dr;
+    spi_get_hw(SDCARD_SPI_BUS)->dr=0xff;  
+    return   dataSPI;
+}
 
+static inline void  WRITE_SD_BYTE(uint8_t data) 
+{
+    volatile uint8_t dataSPI=spi_get_hw(SDCARD_SPI_BUS)->dr;
+    spi_get_hw(SDCARD_SPI_BUS)->dr=data; 
 
-//#########################################################################
+}
+//============================================================
 //######################################################################
 
 
@@ -744,10 +759,19 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
     if (portL == 0xB3) return in_GSP(GS_READ_IN_B3); 
     if (portL == 0xBB) return in_GSP(GS_STATUS_IN_BB); 
     #endif 
+
     #if defined(Z_CONTROLER)
     if (portL == 0x57) return in_GSP(ZC_READ_IN_57); 
     if (portL == 0x77) return in_GSP(ZC_READ_IN_77); 
+    #else
+    if (portL == 0x57) return READ_SD_BYTE();
+    if (portL == 0x77) 
+    {
+        if (is_SD_active)   return 0xfc;
+                            return 0xff;
+    }
     #endif
+
     #if defined(RTC_NOVA)
     if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
     #endif
@@ -824,10 +848,19 @@ inline static uint8_t fast(in_z80_cash)(Z80 *cpu,uint16_t port16) {
     if (portL == 0xB3) return in_GSP(GS_READ_IN_B3); 
     if (portL == 0xBB) return in_GSP(GS_STATUS_IN_BB); 
     #endif 
+
     #if defined(Z_CONTROLER)
     if (portL == 0x57) return in_GSP(ZC_READ_IN_57); 
     if (portL == 0x77) return in_GSP(ZC_READ_IN_77); 
+    #else
+    if (portL == 0x57) return READ_SD_BYTE();
+    if (portL == 0x77) 
+    {
+        if (is_SD_active)   return 0xfc;
+                            return 0xff;
+    }
     #endif
+
     #if defined(RTC_NOVA)
     if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
     #endif
@@ -899,10 +932,19 @@ inline static uint8_t fast(in_z80_p8)(Z80 *cpu, uint16_t port16) {
     if (portL == 0xB3) return in_GSP(GS_READ_IN_B3); 
     if (portL == 0xBB) return in_GSP(GS_STATUS_IN_BB); 
     #endif 
+
     #if defined(Z_CONTROLER)
     if (portL == 0x57) return in_GSP(ZC_READ_IN_57); 
     if (portL == 0x77) return in_GSP(ZC_READ_IN_77); 
+    #else
+    if (portL == 0x57) return READ_SD_BYTE();
+    if (portL == 0x77) 
+    {
+        if (is_SD_active)   return 0xfc;
+                            return 0xff;
+    }
     #endif
+    
     #if defined(RTC_NOVA)
     if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
     #endif
@@ -1160,10 +1202,26 @@ inline static void fast(spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
     #endif
+
     #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
         if (portL == 0x77) {out_GSP(ZC_WRITE_OUT_77,val);z_controler_cs = val; return;}//управление SD   SD_SPI_CS0_PIN val&0x02
+    #else    
+        if (portL == 0x57) // передача данных в SD карту
+        {
+            if (is_SD_active)  WRITE_SD_BYTE(val);
+             return;
+            }
+
+        if (portL == 0x77) 
+        {
+         is_SD_active=((val & 0x01)==1);
+         gpio_put(SDCARD_PIN_CS,val & 0x02);
+         z_controler_cs = val; 
+         return;
+        }
     #endif
+
     #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
@@ -1248,10 +1306,26 @@ inline static void fast(extram128)(Z80 *cpu,uint16_t port16, uint8_t val)
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
     #endif
+
     #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
         if (portL == 0x77) {out_GSP(ZC_WRITE_OUT_77,val);z_controler_cs = val; return;}//управление SD   SD_SPI_CS0_PIN val&0x02
+    #else    
+        if (portL == 0x57) // передача данных в SD карту
+        {
+            if (is_SD_active)  WRITE_SD_BYTE(val);
+             return;
+            }
+
+        if (portL == 0x77) 
+        {
+         is_SD_active=((val & 0x01)==1);
+         gpio_put(SDCARD_PIN_CS,val & 0x02);
+         z_controler_cs = val; 
+         return;
+        }
     #endif
+
     #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
@@ -1327,10 +1401,26 @@ inline static void fast(extram_1ffd)(Z80 *cpu,uint16_t port16, uint8_t val)
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
         #endif
-        #ifdef Z_CONTROLER 
+
+    #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
         if (portL == 0x77) {out_GSP(ZC_WRITE_OUT_77,val);z_controler_cs = val; return;}//управление SD   SD_SPI_CS0_PIN val&0x02
-        #endif
+    #else    
+        if (portL == 0x57) // передача данных в SD карту
+        {
+            if (is_SD_active)  WRITE_SD_BYTE(val);
+             return;
+            }
+
+        if (portL == 0x77) 
+        {
+         is_SD_active=((val & 0x01)==1);
+         gpio_put(SDCARD_PIN_CS,val & 0x02);
+         z_controler_cs = val; 
+         return;
+        }
+    #endif
+
         #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
@@ -1411,10 +1501,26 @@ inline static void fast(extram_gmx)(Z80 *cpu,uint16_t port16, uint8_t val)
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
         #endif
-        #ifdef Z_CONTROLER 
+
+    #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
         if (portL == 0x77) {out_GSP(ZC_WRITE_OUT_77,val);z_controler_cs = val; return;}//управление SD   SD_SPI_CS0_PIN val&0x02
-        #endif
+    #else    
+        if (portL == 0x57) // передача данных в SD карту
+        {
+            if (is_SD_active)  WRITE_SD_BYTE(val);
+             return;
+            }
+
+        if (portL == 0x77) 
+        {
+         is_SD_active=((val & 0x01)==1);
+         gpio_put(SDCARD_PIN_CS,val & 0x02);
+         z_controler_cs = val; 
+         return;
+        }
+    #endif
+
         #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
@@ -1504,10 +1610,26 @@ inline static void fast(extram_p8)(Z80 *cpu, uint16_t port16, uint8_t val)
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
         #endif
-        #ifdef Z_CONTROLER 
+
+    #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
         if (portL == 0x77) {out_GSP(ZC_WRITE_OUT_77,val);z_controler_cs = val; return;}//управление SD   SD_SPI_CS0_PIN val&0x02
-        #endif
+    #else    
+        if (portL == 0x57) // передача данных в SD карту
+        {
+            if (is_SD_active)  WRITE_SD_BYTE(val);
+             return;
+            }
+
+        if (portL == 0x77) 
+        {
+         is_SD_active=((val & 0x01)==1);
+         gpio_put(SDCARD_PIN_CS,val & 0x02);
+         z_controler_cs = val; 
+         return;
+        }
+    #endif
+
         #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
@@ -1613,10 +1735,26 @@ inline static void fast(nova_256)(Z80 *cpu, uint16_t port16, uint8_t val)
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
         #endif
-        #ifdef Z_CONTROLER 
+
+    #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
         if (portL == 0x77) {out_GSP(ZC_WRITE_OUT_77,val);z_controler_cs = val; return;}//управление SD   SD_SPI_CS0_PIN val&0x02
-        #endif
+    #else    
+        if (portL == 0x57) // передача данных в SD карту
+        {
+            if (is_SD_active)  WRITE_SD_BYTE(val);
+             return;
+            }
+
+        if (portL == 0x77) 
+        {
+         is_SD_active=((val & 0x01)==1);
+         gpio_put(SDCARD_PIN_CS,val & 0x02);
+         z_controler_cs = val; 
+         return;
+        }
+    #endif
+
         #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов

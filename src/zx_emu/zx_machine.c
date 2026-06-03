@@ -27,15 +27,18 @@
 
 #include "rom/navigator_sm508.h"// сервис монитор навигатора
 
-#include "rom/trdos604q.h" // rom navigator
-#include "rom/rom48Q.h"// 48 kb   quorum
-#include "rom/rom128Q.h"// 128 kb quorum
+#include "rom/trdos604q_nova.h" // rom navigator
+#include "rom/rom48Q_nova.h"// 48 kb   quorum
+#include "rom/rom128Q_nova.h"// 128 kb quorum
+
 
 
 //#include "rom/service.h"// сервис монитор пентагон 
 
 #include "rom/romScorpion295.h"// Scorpion ZS256
 //#include "rom/romScorpion.h"// Scorpion ZS256 Old
+
+#include "quorum.h" 
 
 //###
 #include <stddef.h>
@@ -290,6 +293,13 @@ if ((zx_0000_lastOut&0b00100000) == 0)
 	return;
 	break;
 
+case QUORUM1024:
+    rom_select_Quorum1024();
+	return;
+	break;
+
+
+    
 case SCORP256:
 
 if ((zx_1ffd_lastOut & 0x02) == 0x02)
@@ -1061,7 +1071,15 @@ inline void fast (zx_machine_set_7ffd_out)(uint8_t val)// переключени
 	   if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
        rom_select(); // переключение ПЗУ по портам и по сигналу DOS
 	return; // выход нафиг
-#endif    	    
+#endif    	 
+
+	return; // выход нафиг	
+	case QUORUM1024:
+        pager7ffd_Quorum1024(val);
+    	return; // выход нафиг	
+
+
+
 //--------------------------------------------------------------------------------
 #ifdef RP2350_256K
      case SCORP256 /* Scorpion 256 */:
@@ -2316,8 +2334,30 @@ void init_rom_ram(uint8_t rom_x)
 	zx_vbuf_active = &zx_vbuf[0];
 
  return; // выход нафиг больше тут делать нечего
+break;
+
+
+case QUORUM1024:
+        init_rom_ram_Q1024();
+   	zx_RAM_bank_active =0x00;
+	zx_RAM_bank_7ffd =0x00;
+    zx_RAM_bank_1ffd =0x00;
+    zx_RAM_bank_dffd =0x00;
+    zx_RAM_bank_ext8 =0x00;
+
+	zx_vbuf[0].is_displayed = true;
+	zx_vbuf[0].data = g_gbuf;
+	zx_vbuf_active = &zx_vbuf[0];
+
+ return; // выход нафиг больше тут делать нечего
 
 break;
+
+
+
+
+
+
 #ifndef NO_GMX
     case GMX2048 :
     zx_rom_bank[0]=&ROM_128K[0*16384];//128k 
@@ -2340,11 +2380,11 @@ break;
 	break;
 //--------------------------
  case SPEC48:
-        zx_rom_bank[0]=&ROM_128K[0*16384];//128k 
+        zx_rom_bank[0]=&ROM_128K[0*16384];//128k заглушка не используется
 	    zx_rom_bank[1]=&ROM_48K_ORIGINAL[0*16384];//48k 
         if (conf.trdos_version==0) zx_rom_bank[2]=&ROM_TRDOS_504T[0*16384];//TRDOS 5.04T
         else zx_rom_bank[2]=&ROM_TRDOS_505D[0*16384];//TRDOS 5.05D
-        zx_rom_bank[3]=&ROM_Qsm[0*16384];//SERVICE PENTAGON
+        zx_rom_bank[3]=&ROM_Qsm[0*16384];//SERVICE PENTAGON  /// TODO     заглушка не используется
 		rom=1;
 	
 		if (rom_x ==0) // первый запуск при включении или hard reset
@@ -2626,27 +2666,10 @@ void init_zx_2_pix_buffer()
 	
 }
 
-
 //------------------------------------------
 extern uint16_t beepPWM;
-//------------------------------------------
-// реальный INT 50 HZ через таймер пико
-/* void zx_generator_int(void)
-{
-  // beepPWM = 0 ;// обнуление звука бипера на всякий случай
-	if (int_enable) return;
-    if (conf.turbo == 1) 
-    {
-   int_enable=true;// Генерация прерывания INT Z80  50Гц при TURBO
-   z80_int(&cpu_zx, Z_TRUE);
-} 
-   #ifdef LEDBLINK
- //   led_blink();
-    #endif
-} */
-//----------------------------------------
 uint8_t* active_screen_buf=NULL;
-
+//------------------------------------------
 // главный цикл выполнения команд Z80
 void fast(zx_machine_main_loop_start)()
 {
@@ -2704,6 +2727,37 @@ if (tap_loader_active && TapeStatus==TAPE_STOPPED)
 {
 if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+///!!!!!!!!!!!!  с этим не работает автозагрузка дисков при старте и по SPACE в Пентагонах и так далее !!!!!!!!!!!!!!!!!
+		// tr-dos
+/* 
+		if ((zx_1ffd_lastOut & 0x02)== 0x00) // 0000 00x0  0x02 если не теневик Scorpion ZS 256
+        {
+	
+		if (!trdos) // если еще не в trdos то вход
+		{
+			if ((Z80_PCH(cpu_zx) == 0x3D) && (rom == 1 ))// trdos работает с BASIC48 D4 = 1     
+			//if ((Z80_PCH(z1->cpu) == 0x3D) && (rom != 3 ))// trdos работает с BASIC48 D4 = 1     
+			                                                                     
+			{
+			trdos = true;
+
+           rom=2;
+			zx_cpu_ram[0]=zx_rom_bank[2];// tr-dos
+			
+            }
+			
+		}
+	  
+     }
+	  
+		if (trdos) if ((Z80_PCH(cpu_zx) & 0xc0))// выход из trdos если в RAM
+		{
+		 trdos = false;
+         rom_select(); // переключение ПЗУ по портам  
+		} */
+///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 		// tr-dos
 
@@ -2731,8 +2785,6 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 		 trdos = false;
          rom_select(); // переключение ПЗУ по портам  
 		}
-///////////////////////////////////////////////////////////////////////////////
-
 		//=======================================================================================
 			// Если нажали клавишу NMI // QUORUM // SCORPION
 		//	if (main_nmi_key)
@@ -2779,7 +2831,8 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 */
 		//=======================================================================================	
 
-if (trdos) WD1793_Execute();
+/*if (trdos)*/ WD1793_Execute();
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 		
@@ -2855,13 +2908,8 @@ if (   (inx_tick_screen<32) &&  (int_enable))
 	
 		inx_tick_screen+=dt_cpu;//Увеличиваем на количество тактов Z80 на текущую выполненную команду.
 
-   //   if (trdos) WD1793_Execute();
-
-
-	 	// начало 
+ 	 	// начало 
 		 inx_tick_screen_ff=inx_tick_screen;
-
-
 
 		 if (inx_tick_screen>=  ticks_per_frame)      // Если прошла 1/50 сек, 71680 тактов процессора Z80
 			{
@@ -3040,6 +3088,8 @@ void init_mashine_and_extram(uint8_t config_mashine) // инициализаци
 
     select_cpu_z80(&cpu_zx);
 
+    setZxExtKeysDefault();
+
 	switch (config_mashine)
 	{
 	case PENT128 :
@@ -3058,7 +3108,7 @@ void init_mashine_and_extram(uint8_t config_mashine) // инициализаци
     machine_Pentagon_1024(&cpu_zx);
 		break; //
 	case SCORP256:
-        main_nmi_key = true;
+      //  main_nmi_key = true;
         machine_Scorpion_256(&cpu_zx);   
 		break; //
  
@@ -3069,9 +3119,14 @@ void init_mashine_and_extram(uint8_t config_mashine) // инициализаци
     //  #endif    
 
 	case NOVA256:
-          main_nmi_key = true;
+      //    main_nmi_key = true;
           machine_NOVA_256(&cpu_zx);
 		break; //
+
+    case QUORUM1024:
+        machine_Quorum1024(&cpu_zx);
+        break;
+
 
 	case PENT8M:
           machine_MurmoZavr(&cpu_zx);

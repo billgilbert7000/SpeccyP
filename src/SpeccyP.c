@@ -1,6 +1,7 @@
 #include "config.h" 
 
 #include <stdio.h>
+#include "SpeccyP.h"
 
 #include "hardware/gpio.h"
 //#include "hardware/adc.h"
@@ -39,6 +40,7 @@
 #include "string.h"
 #include "util_sd.h"
 #include "util_trd.h"
+#include "util_cpm.h"
 
 #include "kbd_img.h"
 
@@ -86,6 +88,7 @@ uint8_t vout_select;
 void file_manager (void);
 void file_info (void);   
 void file_select_trdos(void);
+void file_select_cpm(void);
 void setup_zx(void);
 //bool save_config(void);
 void  config_init(void);
@@ -116,7 +119,9 @@ char afilename[LENF];
 //===============================================================
 void nmi_zx()
 {
-   if (main_nmi_key)  
+ //  if (main_nmi_key)  ???
+       if (cpu_zx.nmia != Z_NULL) 
+    // invoke NMI request if machine-specific NMI rom switcher is defined
    z80_nmi(&cpu_zx);
 }
 //--------------------------------------------------
@@ -257,28 +262,71 @@ extern ZX_Input_t zx_input;
 	"https://t.me/const_bill",
 	
 };
-	// меню ram
-	char __in_flash() *menu_ram[9]={
-	//char*  menu_ram[7]={	
-	" Pentagon 128     ",
-    " ZX Spectrum 48   ",
-	" Pentagon 512     ",
-	" Pentagon 1024    ",
-	" Scorpion ZS 256  ",
-	//" Profi       1024 ",
- #ifdef NO_GMX
-     " No  ScorpionGMX ", 
- #else         
-	" ScorpionGMX 2048 ",
- #endif
-	//" Unreal      4096 ",
-    " Navigator 256    ",
-    " MurmoZavr 8000K  ",
-    " Pentagon 512CASH ",
-};
+
+// меню ram
+ZxMachineVariant __in_flash() variants[] = 
+{
+    { " Pentagon 128     ", 0 , PENT128 },
+    { " ZX Spectrum 48   ", 0 , SPEC48 },
+    { " Pentagon 512     ", 2 , PENT512 },
+    { " Pentagon 1024    ", 2 , PENT1024 },
+    { " Scorpion ZS 256  ", 1 , SCORP256 },
+    { " ScorpionGMX 2048 ", 2 , GMX2048 },
+    { " Navigator 256    ", 1 , NOVA256 },
+    { " MurmoZavr 8000K  ", 2 , PENT8M },
+    { " Pentagon 512CASH ", 2 , PENT_512CASH },
+    { " Quorum 1024      ", 2 , QUORUM1024 },
+}; 
+
+#define ZX_VARIANTS_TOTAL (sizeof(variants) / sizeof(ZxMachineVariant))
 
 
-#ifdef RP2350_256K
+static int variantsCount = 0;
+//static char *menu_machineNames[16]; //TODO fix hardcode
+static const char *menu_machineNames[16];
+
+static int menu_id[16]; //TODO fix hardcode
+
+int getZxMachineVariantCount() {
+    return variantsCount;
+}
+
+void filterZxMachines(bool psram) {
+    for (int i = 0; i < ZX_VARIANTS_TOTAL; i++) {
+        //skip ram-hungry machine if no PSRAM 
+        #ifdef RP2350_256K
+        if ((!psram) && (variants[i].NeedPSRAM>=2)) continue;
+        #else
+        if ((!psram) && (variants[i].NeedPSRAM>=1)) continue;
+        #endif
+        menu_machineNames[variantsCount] = variants[i].name;
+        menu_id[variantsCount] = variants[i].id;
+        variantsCount++;
+    }
+} 
+
+
+
+
+const char ** getZxMachineNames() {  
+    return menu_machineNames;   
+}
+
+int * getZxMachineIds() {
+    return menu_id;
+}
+
+const ZxMachineVariant  *getZxMachineVariant(int machineIndex) {
+    for (int i = 0; i < ZX_VARIANTS_TOTAL; i++) {
+        ZxMachineVariant *variant = & (variants[i]);
+        if (variant->id == machineIndex)
+            return variant;
+    }
+    return NULL;
+}
+
+
+/* #ifdef RP2350_256K
 	// меню menu_ram_48_128_256
 	char __in_flash() *menu_ram_128_48[4]={
         //char*  menu_ram[7]={	
@@ -287,6 +335,7 @@ extern ZX_Input_t zx_input;
         " Scorpion ZS 256  ",
         " Navigator 256    ",
        };
+
 #else
 	// меню menu_ram_128_48
 	char __in_flash() *menu_ram_128_48[2]={
@@ -294,7 +343,7 @@ extern ZX_Input_t zx_input;
         " Pentagon 128     ",
         " ZX Spectrum 48   ",
        };
-#endif
+#endif */
 
 
 	// меню sound
@@ -1001,6 +1050,13 @@ case BOARD_PSRAM_NOSUPORT:
     break;
 }
 
+
+    filterZxMachines(psram_avaiable);
+    if (getZxMachineVariant(conf.mashine)->NeedPSRAM && !psram_avaiable) conf.mashine = PENT128;
+
+
+
+
         #ifdef TEST_DEBUG
 
 #ifdef GENERAL_SOUND
@@ -1040,7 +1096,8 @@ snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq);
         #endif
         
 // информация из setup
-draw_text(6+FONT_W,75+YPOS,menu_ram[conf.mashine],CL_GRAY,CL_BLACK);
+
+draw_text(6+FONT_W,75+YPOS, getZxMachineVariant(conf.mashine)->name, CL_GRAY, CL_BLACK);
 
 #ifndef HDMI_HSTX
 #ifndef  GENERAL_SOUND     
@@ -1618,6 +1675,37 @@ is_new_screen = true;
 
 }
 ////// TRDOS end
+
+void file_select_cpm(void) // 
+{
+	is_menu_mode = true;
+	
+    is_new_screen = true;
+	//     MenuTRDOS(); // меню выбора и подключения образов cpm
+	uint8_t Drive = MenuBox_trd(64, 54, 22, 7, "Drive CP/M", 4, 0, 1);
+	if (Drive < 5)
+	{
+		// Копируем строку длиною не более 10 символов из массива src в массив dst1.
+		// strncpy (dst1, src,3);
+        strncpy(conf.DiskName[Drive], files[cur_file_index], LENF);
+
+        conf.FileAutorunType=NONE;
+        file_type[Drive] = CP_M;
+        OpenCPMFile(conf.activefilename,Drive);
+
+        write_protected = false; // защита записи отключена для CP/M
+	}
+
+	draw_main_window(); // восстановление текста
+	draw_file_window();
+
+    g_delay_ms(200);
+	last_action = time_us_32();
+
+
+}
+////// CP/M end
+
 //++++++++++++++++++++++++++++++++++++++++++
 //================================================================
 void  config_init(void)
@@ -1982,7 +2070,8 @@ void setup_zx(void)
     while (1)
     {  
         draw_rect(30, 40, 240,155, CL_BLACK, true);				   // рамка 3 фон
-        draw_text(x1 + 120, y1 +20             , menu_ram[conf.mashine], CL_GRAY, CL_BLACK);
+        draw_text(x1 + 120, y1 +20, getZxMachineVariant(conf.mashine)->name, CL_GRAY, CL_BLACK);
+
 
       #ifdef GENERAL_SOUND
         draw_text(x1 + 126, y1 + 20+ M_SOUND*10, "GeneralSound + TS", CL_GRAY, CL_BLACK);
@@ -2010,51 +2099,22 @@ void setup_zx(void)
                        numsetup = MenuBox_bw(30, 20, 18, 15, menu_setup,15, numsetup, 1);
 
 //---
-        if (psram_avaiable)
-        {
-            if (numsetup == M_RAM)
-            {
-                uint8_t x = MenuBox(90, 52, 17, 9, "Model & RAM", menu_ram, 9, conf.mashine, 1);
+        if (numsetup == M_RAM) {
+            //todo get menu index
+            int count = getZxMachineVariantCount();
+            uint8_t x = MenuBox(90, 52, 17, count, "Model & RAM", (char **)getZxMachineNames(), count, 0 /*conf.mashine*/, 1);
+
                if (x==0xff) continue;
                #ifdef NO_GMX
                if (x==0x05) continue;
                #endif
-                conf.mashine  = x;
+               conf.mashine  = getZxMachineIds()[x];
+
                 init_mashine_and_extram(conf.mashine);
                 continue;
             }
-        }
-
-        #ifdef RP2350_256K
-        else // только 256 128 48 машины
-        {
-            if (numsetup == M_RAM)
-            {
-            uint8_t x = MenuBox(90, 52, 17, 4, "RAM Seting", menu_ram_128_48, 4, 0, 1);
-            if (x==0xff) continue;
-            switch (x)
-            {
-            case 0: conf.mashine = PENT128;  break;
-            case 1: conf.mashine = SPEC48 ;  break;
-            case 2: conf.mashine = SCORP256; break;    
-            case 3: conf.mashine = NOVA256;  break;
-            }
-            init_mashine_and_extram(conf.mashine);
-            continue;
-            }
-        }
-        #else // только 128 и 48 машина
-        {
-            if (numsetup == M_RAM)
-            {
-            uint8_t x = MenuBox(90, 52, 17, 2, "RAM Seting", menu_ram_128_48, 2, conf.mashine, 1);
-            if (x==0xff) continue;
-            conf.mashine  = x;
-            init_mashine_and_extram(conf.mashine);
-            continue;
-            }
-        }
-        #endif
+      
+        
 
         #if !defined(GENERAL_SOUND) && !defined(HDMI_HSTX)
         if (numsetup == M_SOUND)
@@ -2846,7 +2906,7 @@ if (size_psram==0)
 
           size_psram= get_psram_size();
       
-//size_psram=0;
+//size_psram=0;  test no psram
  if (size_psram==0) 
 {
     type_psram = NOT_PSRAM;// PSRAM not found
@@ -2887,6 +2947,7 @@ if (size_psram==0)
 void file_manager (void)
          //    if ((is_menu_mode) && (!trdos))// файловое меню
             {
+               strncpy(files[0],"..", LENF1);  //up-dir
                 //	tap_loader_active=false;// рудимент от аудио загрузки
                  hardAY_on_off=0;
                 hardAY_off();// off hard AY файловое меню
@@ -3159,6 +3220,13 @@ void file_manager (void)
                                 file_select_trdos();
                                 return; // continue;
                             }
+
+                            if (strcasecmp(ext, "cpm") == 0)
+                            {
+                                file_select_cpm();
+                                return; // continue;
+                            }
+
                             // SCL обработка
 
                             if (strcasecmp(ext, "scl") == 0)
@@ -3408,6 +3476,25 @@ void file_info (void)
                      return; 
                 }
                 //-----------------------------------------------
+                // CPM INFO
+                if (strcasecmp(ext, "cpm") == 0)
+                {
+                    strncpy(temp_msg, current_lfn, 22);
+                    strcpy(conf.activefilename, dir_patch);
+                    strcat(conf.activefilename, "/");
+                    strcat(conf.activefilename,files[cur_file_index]);
+                    cur_file_index_old = cur_file_index;
+
+                    if (!ReadCPMDir(conf.activefilename, current_lfn, false))
+                    {
+
+                        //    
+                    }
+
+                     return; 
+                }
+                //-----------------------------------------------
+
                 // FDI INFO
                 if (strcasecmp(ext, "fdi") == 0)
                 {

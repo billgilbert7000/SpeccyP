@@ -47,142 +47,60 @@ bool draw_pixel(int x,int y,color_t color)
 void draw_symbol(int x,int y,int symb,color_t colorText,color_t colorBg)
 {
 
+    const uint8_t *symb_ptr = &FONT[symb*FONT_H];
+
     for(int line=0;line<FONT_H;line++)
     {
-        
-        int yt=y+line;
-        int xt=x;
-          
-           uint8_t symb_data=FONT[symb*FONT_H+line];
-
-            for(int i=0;i<FONT_W;i++)
-           {
-            draw_pixel(xt++, yt, (symb_data & 0x01) ? colorText : colorBg);
-                symb_data>>=1;
-              //  symb_data<<=1;
-           }
-           
+        uint8_t symb_data = *symb_ptr;
+        for(int i=0;i<FONT_W;i++)
+        {
+            draw_pixel(x+i, y, (symb_data & (1<<i)) ? colorText : colorBg);
+            //    symb_data>>=1;
         }
+
+        symb_ptr++;
+        y++;
+    }
     
 }
 
 
 
-void draw_text(int x,int y,char* text,color_t colorText,color_t colorBg)
+void draw_text(int x,int y,const char* text,color_t colorText,color_t colorBg)
 {
-  
-   
-    for(int line=0;line<FONT_H;line++)
-    {
-        char* symb=text;
-
-        int yt=y+line;
-        int xt=x;
-
-        while(*symb)
-        {
-           uint8_t symb_data=FONT[*symb*FONT_H+line];
-       //      uint8_t wfont = (*symb== 0x2e) ? 2 : FONT_W ;
-
-      //    symb_data<<=1;
-            for(int i=0;i<FONT_W;i++)
-/* #ifdef FONT6X8 
- symb_data = (symb_data * 0x0202020202ULL & 0x010884422010ULL) % 1023; symb_data>>=1; // зеркалирование шрифта
-#endif */
-//symb_data = (symb_data * 0x0202020202ULL & 0x010884422010ULL) % 1023; //symb_data>>=1; // зеркалирование шрифта
-  // uint8_t s = symb_data; s<<=1; symb_data=s | symb_data ;// bold font
- // uint8_t s = symb_data; s>>=1; symb_data=s | symb_data ;// bold font
-       //    for(int i=0;i<FONT_W;i++) 
-           {
-        //    if (symb_data&(0x01))draw_pixel(xt++,yt,colorText); else draw_pixel(xt++,yt,colorBg);
-            draw_pixel(xt++, yt, (symb_data & 0x01) ? colorText : colorBg);
-                symb_data>>=1;
-              //  symb_data<<=1;
-           }
-    //   xt++;// увеличение расстояния между буквами
-           symb++;
-        }
+    while (*text) {
+        if (x >= scr_W) break;
+        draw_symbol(x, y, *text, colorText, colorBg);
+        text++;
+        x+=FONT_W;
     }
 }
 
 void draw_text_len(int x,int y,char* text,color_t colorText,color_t colorBg,int len){
  
-
-    for(int line=0;line<FONT_H;line++){
-
-      char* symb=text;
-        int yt=y+line;
-        int xt=x;
-        int inx_symb=0;
-
-
-
-
-        while(*symb){
-            uint8_t symb_data=FONT[*symb*FONT_H+line];
-        //   symb_data<<=1;
-
-     //    uint8_t wfont = (*symb== 0x2e) ? 2 : FONT_W ;
-
-   //     symb_data = (symb_data * 0x0202020202ULL & 0x010884422010ULL) % 1023; //symb_data>>=1; // зеркалирование шрифта
-
-
-            for(int i=0;i<FONT_W ;i++){
-
-            draw_pixel(xt++, yt, (symb_data & 0x01) ? colorText : colorBg);
-               symb_data>>=1;
- 
-           }
-           symb++;
-           inx_symb++;
-           if (inx_symb>=len) break;
-        }
-
-        while (inx_symb<len)
-        {
-           
-           for(int i=0;i<FONT_W;i++) 
-           {
-                 draw_pixel(xt++,yt,colorBg);
-              
-           }
-            inx_symb++;
-
-        }
+    while (*text) {
+        if (x >= scr_W) break;
+        if (len==0) break;
+        draw_symbol(x, y, *text, colorText, colorBg);
+        x+=FONT_W;
+        len--;
+        text++;
     }
+
+    while (len) {
+        if (x >= scr_W) break;
+        if (len==0) break;
+        draw_symbol(x, y, ' ', colorText, colorBg);
+        x+=FONT_W;
+        len--;
+    }
+
 }
 //####################################################################################
 // Вывод текста для выбора файлов с курсором
 void draw_text_file(int x,int y,char* text,color_t colorText,color_t colorBg,int len)
 {
-    for(int line=0;line<FONT_H;line++){
-      char* symb=text;
-        int yt=y+line;
-        int xt=x;
-        int inx_symb=0;
-        while(*symb){
-            uint8_t symb_data=FONT[*symb*FONT_H+line];
-         //  symb_data<<=1;
-            for(int i=0;i<FONT_W ;i++){
-            draw_pixel(xt++, yt, (symb_data & 0x01) ? colorText : colorBg);
-               symb_data>>=1;
-            }
-           symb++;
-           inx_symb++;
-           if (inx_symb>=len) break;
-        }
-
-        while (inx_symb<len)
-        {
-           
-           for(int i=0;i<FONT_W;i++) 
-           {
-                 draw_pixel(xt++,yt,colorBg);
-           }
-            inx_symb++;
-
-        }
-    }
+    draw_text_len(x, y, text, colorText, colorBg, len);
 }
 //#####################################################################
 void draw_rect(int x,int y,int w,int h,color_t color,bool filled)

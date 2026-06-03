@@ -142,6 +142,7 @@ void WD1793_Write(uint8_t Address, uint8_t Value);
 // Функции работы с файлами образов
 bool OpenTRDFile(char* sn, uint8_t drv);
 bool OpenFDI_File(char *sn, uint8_t drv);
+bool OpenCPMFile(char *sn, uint8_t drv);
 
 void SCL_read_sector(void);
 

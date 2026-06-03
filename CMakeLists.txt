@@ -23,6 +23,8 @@ set(VERSION_MINOR 6)
 set(VERSION_PATCH 6)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+## Номер версии конфигурационного файла
+math(EXPR CONFIG_VERSION_VALUE "2000 + ${VERSION_MAJOR}*100 + ${VERSION_MINOR}*10 + ${VERSION_PATCH}")
 
 # == Конфигурация SpeccyP ==
 
@@ -115,7 +117,7 @@ else()
     set(SPECCY_CONFIG "SPECCY")
     set(SPECCY_CONFIG_DEFINITIONS 
 
-        CPU_MHZ=378## MHz
+        CPU_MHZ=378 ## MHz
         FLASH_MAX_FREQ_MHZ=166
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
@@ -334,7 +336,7 @@ set (FATFS_SPI spi0)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
-CONFIG_VERSION=20626
+CONFIG_VERSION=${CONFIG_VERSION_VALUE}
 CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
 POWER_MODE_WEACT=1

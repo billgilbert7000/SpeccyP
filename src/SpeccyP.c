@@ -1657,15 +1657,12 @@ is_new_screen = true;
 		// Копируем строку длиною не более 10 символов из массива src в массив dst1.
 		// strncpy (dst1, src,3);
         strncpy(conf.DiskName[Drive], files[cur_file_index], LENF);
-
           if (Drive == 0) conf.FileAutorunType=TRD; // к диску а подключен TRD образ
-         // conf.FileAutorunType=TRD;
-         file_type[Drive] = TRD;
+          file_type[Drive] = TRD;
           OpenTRDFile(conf.activefilename,Drive);
-
           write_protected = false; // защита записи отключена для TRD
 	}
-
+    
 	draw_main_window(); // восстановление текста
 	draw_file_window();
 
@@ -2549,7 +2546,7 @@ uint8_t MenuBox_sv(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, char 
 //==============================================================================================
 // AUTORUN
 //==============================================================================================
-void load_all(void)
+void mount_image_Z80(void)
 	{
 		im_z80_stop = true;
 		is_menu_mode = true;
@@ -2574,14 +2571,10 @@ void load_all(void)
       //  hardAY_on();
 	}
 //===============================================================
-    void load_trd(void)
+    void mount_disk_image(void)
     {
-
-     //   hardAY_on();
-//conf.FileAutorunType = 4;
-        if (conf.FileAutorunType == SCL)
+         if (conf.FileAutorunType == SCL)
         {
-          //  write_protected = true; // защита записи для SCL
             strcpy(conf.activefilename, conf.Disks[0]);// disk A   
                file_type[0] = SCL;           
             Run_file_scl(conf.activefilename, 0);
@@ -2591,7 +2584,6 @@ void load_all(void)
              file_type[0] = TRD;// trd
                strcpy(conf.activefilename, conf.Disks[0]);// disk A
                OpenTRDFile(conf.activefilename, 0);        
-          //  write_protected = false; // защита записи отключена для TRD
         }
 
         if (conf.FileAutorunType == FDI)
@@ -2602,9 +2594,9 @@ void load_all(void)
                              write_protected = true; // защита записи включена
         }
 
-        im_z80_stop = false;
-        is_menu_mode = false;
-        zx_machine_enable_vbuf(true);
+     //   im_z80_stop = false;
+     //   is_menu_mode = false;
+     //   zx_machine_enable_vbuf(true);
     }
 //=========================================================
 void disk_autorun(void)
@@ -2612,12 +2604,17 @@ void disk_autorun(void)
 	switch (conf.autorun)
     {
     case 0:
-    break;         
+    if (conf.Disks[0][0] !=0 ) mount_disk_image();   ;  // диск есть  
+    break;   
+
     case 1:
-        load_trd();
+        mount_disk_image();
+        im_z80_stop = false;
+        is_menu_mode = false;
+        zx_machine_enable_vbuf(true);
     break;
     case 2:
-        load_all();
+        mount_image_Z80();
     break;  
   	    im_z80_stop = true;
 		is_menu_mode = true;
@@ -3047,7 +3044,7 @@ void file_manager (void)
                             is_new_screen = false;
                             return; // continue;
                         }
-//##########################################
+                           //##########################################
                         if (strcasecmp(ext, "fdi") == 0) //   запуск после сброса
                         {		
                             MessageBox(" RUNING FDI FILE ", "", CL_WHITE, CL_BLUE, 4);
@@ -3064,7 +3061,7 @@ void file_manager (void)
                             im_z80_stop = false;
                             return;// continue; 
                         }
-//##########################################
+                           //##########################################
                             return; // continue;
                     }// end KEY_SPACE
 

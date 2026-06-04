@@ -104,6 +104,7 @@ typedef struct
 void WD1793_Reset(uint8_t drive);
 void WD1793_Execute();
 void WD1793_Init();
+void WD1793_eject(void);
 
 extern uint8_t Requests; // Байт запросов (INTRQ/DRQ)
 

@@ -5,11 +5,14 @@
 #include "stdbool.h"
 
 #include "zx_machine.h"
+#include "../wd1793.h"
+
 #include "../screen_util.h"
 #include "util.h"
 #include "../aySoft.h"
 #include "../util_tap.h"
 #include "disassembler.h"
+
 
 // rom
 #include "rom/rom48original.h"//rom 48k original zx spectrum 48
@@ -2557,8 +2560,8 @@ void zx_machine_init()
      init_mashine_and_extram(conf.mashine);// <= это уже тут   machine_Pentagon_128(&cpu_zx);  // инициализация процессора
    
       z80_power(&cpu_zx, Z_TRUE);// Включаем питание машины
-  z80_instant_reset(&cpu_zx);  // Включаем питание машины
-     zx_machine_reset(0);// 0-первый запуск  1- запуск trd по SPACE  3-просто reset в BASIC128
+      z80_instant_reset(&cpu_zx);  // Включаем питание машины
+      zx_machine_reset(0);// 0-первый запуск  1- запуск trd по SPACE  3-просто reset в BASIC128
 
   
 };
@@ -2585,6 +2588,8 @@ void zx_machine_reset(uint8_t rom_x)
     zx_0000_lastOut = 0x00;// QUORUM
     
     zx_cpu_ram[3]==zx_ram_bank[zx_RAM_bank_active];
+
+ //   strcpy(conf.activefilename, conf.Disks[0]);// disk A   
     WD1793_Init();
 
    //memset(&RAM,0x00, 131072);	// стирание памяти 128kB

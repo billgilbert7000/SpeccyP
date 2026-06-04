@@ -577,9 +577,10 @@ uint8_t MenuBox_trd(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos,  cha
     if (kb_st_ps2.u[0] & KB_U0_Z) // Z-Eject Disk
     {
       //  memset(str,'_',12); // заполнить первые 12 байт символом '_'
-      memset(conf.Disks[cPos], 0, DIRS_DEPTH*(LENF));
+        memset(conf.Disks[cPos], 0, DIRS_DEPTH*(LENF));
       memset(conf.DiskName[cPos], 0, LENF);                                                                      // char Disks[4][160];
       draw_text_len(xPos + 3 * FONT_W, yPos + 8 + 10 * cPos, conf.Disks[cPos], CL_PAPER, CL_LT_CYAN, L_CURSOR); // курсор надпись файла
+      WD1793_eject();
     }
 // создание новог диска trd
  /*  if (kb_st_ps2.u[0] & KB_U0_N) // N-New TRD image

@@ -20,7 +20,7 @@ set(DEBUG ON)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 6)
-set(VERSION_PATCH 6)
+set(VERSION_PATCH 7)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
@@ -118,7 +118,7 @@ else()
     set(SPECCY_CONFIG_DEFINITIONS 
 
         CPU_MHZ=378 ## MHz
-        FLASH_MAX_FREQ_MHZ=166
+        FLASH_MAX_FREQ_MHZ=66
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
         HDMI_DIV=1.5 # hdmi 60Hz/378

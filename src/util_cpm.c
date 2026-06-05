@@ -126,7 +126,6 @@ bool ReadCPMDir(char *file_name,char *disk_name, bool open_file)
 
     int x = POS_X;
 	int y = POS_Y;
-	char symb[18];
 
     int e = 0;
     
@@ -140,18 +139,24 @@ bool ReadCPMDir(char *file_name,char *disk_name, bool open_file)
         char u = entry.user;
         if (u<10) u+='0'; else u+='A'-10;
 
-        symb[0] = '/';
-        symb[1] = u;
-        symb[2] = '/';
+          temp_msg[0] = '/';
+          temp_msg[1] = u;
+          temp_msg[2] = '/';
 
         int p=3;
-        for (int i=0; i<11; i++) {
-            if (i == 8) { symb[p++] = '.'; }
-            symb[p++] = entry.name[i] & 0x7f;
-        }
-        symb[p] = 0;
 
-        draw_text_len(x, y, symb, CL_GRAY, COLOR_BACKGOUND, 16);
+        // Имя файла (8 символов)
+        for (int i = 0; i < 8; i++) {
+            temp_msg[p++] = entry.name[i] & 0x7f;
+        }    
+        temp_msg[p++] = '.'; 
+        // Расширение (3 символа)
+        for (int i = 0; i < 3; i++) {
+            temp_msg[p++] = entry.type[i] & 0x7f;
+        }
+        temp_msg[p] = 0;
+
+       draw_text_len(x, y, temp_msg, CL_GRAY, COLOR_BACKGOUND, 16);
         y += FONT_H;
 
    		if (y >= POS_Y + 20 * FONT_H)//22

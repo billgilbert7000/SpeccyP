@@ -58,11 +58,11 @@ extern uint32_t dtcpu;
 
 //-----------------------------------------------------------------------------------------
 // частота RP2040
-//#define CPU_KHZ 378000//378000//315000//315000//378000//276000 //252000 264000 ////set_sys_clock_khz(300000, true); // main.h252000//
-//#define DEL_Z80 CPU_KHZ/14000 //80 // main.h 3500 turbo 7000
-#define Z80_3500 CPU_KHZ/3500 //   CPU_KHZ/3500
-#define Z80_7000 CPU_KHZ/7000
-#define Z80_14000 CPU_KHZ/14000
+//#define cpu_pico_khz 378000//378000//315000//315000//378000//276000 //252000 264000 ////set_sys_clock_khz(300000, true); // main.h252000//
+//#define DEL_Z80 cpu_pico_khz/14000 //80 // main.h 3500 turbo 7000
+/* #define Z80_3500 cpu_pico_khz/3500 //   cpu_pico_khz/3500
+#define Z80_7000 cpu_pico_khz/7000
+#define Z80_14000 cpu_pico_khz/14000 */
 
 //#define VOLTAGE VREG_VOLTAGE_1_30 //VREG_VOLTAGE_1_20 //	vreg_set_voltage(VOLTAGE); // main.h
 /* #ifdef PICO_RP2350 
@@ -374,12 +374,15 @@ strncpy для безопасного копирования строк
 
 Автоматическое создание конфига по умолчанию при отсутствии файла
 реализация записи конфигурационного файла с подробными комментариями */
+extern uint32_t cpu_pico_khz; 
 
 // данные конфигурационного файла
 extern struct data_config
 {
    uint64_t version;// версия конф. файла  
    uint8_t voltage;// Possible voltage values that can be applied to the regulator
+   uint16_t cpu_freq;// Частота pico
+   float hdmi_fdiv; // 1.0-> 90Hz  (cpu=378MHz)  1.5->60Hz (cpu=378MHz)
 
    uint8_t vol_ay; //громкость soft AY
    uint8_t vol_i2s; //громкость i2s AY
@@ -417,8 +420,7 @@ extern struct data_config
    char DiskName[4][LENF+1];
    char Disks[4][DIRS_DEPTH*(LENF+16)];//110 // 5*22
    char activefilename[DIRS_DEPTH*(LENF+16)]; // 400 // 5*22
-  
-   float hdmi_fdiv; // 1.0-> 90Hz  (cpu=378MHz)  1.5->60Hz (cpu=378MHz)
+
 }  conf;
 
 void config_defain(void);// процедура конфигурации по умолчанию

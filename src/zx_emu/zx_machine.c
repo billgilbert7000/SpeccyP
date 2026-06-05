@@ -2692,7 +2692,7 @@ void fast(zx_machine_main_loop_start)()
     uint8_t dt_cpu;
 	uint64_t d_dst_time_ticks=0; // Количесто тактов реального процессора на текущую выполненную команду Z80
 	uint64_t t0_time_ticks=0;    // Количество реальных тактов процессора после запуска машины Z80
-    ticks_per_cycle=Z80_3500;//
+    ticks_per_cycle=cpu_pico_khz/3500;//
 	//ticks_per_frame=71680 ;// 71680- Пентагон //70908 - 128 +2A
 
 	systick_hw->csr = 0x05;
@@ -2742,7 +2742,7 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 	
 		if (!trdos) // если еще не в trdos то вход
 		{
-			if ((Z80_PCH(cpu_zx) == 0x3D) && (rom == 1 ))// trdos работает с BASIC48 D4 = 1     
+			if ((Z80_PCH(cpu_zx) == 0x3D) && (rom == 1 ))// trdos работает с BASIC48 D4 = 1     rom =1 не выставляется при старте ??? TODO
 			//if ((Z80_PCH(z1->cpu) == 0x3D) && (rom != 3 ))// trdos работает с BASIC48 D4 = 1     
 			                                                                     
 			{
@@ -2766,7 +2766,7 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 		// tr-dos
 
-		if ((zx_1ffd_lastOut & 0x02)== 0x00) // 0000 00x0  0x02 если не теневик 
+		if ((zx_1ffd_lastOut & 0x02)== 0x00) // 0000 00x0  0x02 если не теневик у Scorpion есть доступ к портам TR-DOS в ROM S.Monitor 
       {
 	
 		if (!trdos) // если еще не в trdos то вход
@@ -2837,7 +2837,7 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 //=======================================================================================	
 
  //WD1793_Execute(); // так не работает демо UNREAL - не переходит на следующую часть, крутится на 1 части в цикле 
- // нет особого смысла выполнять WD1793_Execute() если не активен trdos и нет обращения к портам TR-DOS
+ // нет особого смысла выполнять WD1793_Execute() если не активен trdos и нет обращения к портам TR-DOS 
 if (trdos) WD1793_Execute(); // так работает
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3139,18 +3139,18 @@ void turbo_switch(void)
      switch (conf.turbo)
      {
      case 0:
-        ticks_per_cycle = CPU_KHZ / 3500; // 108
+        ticks_per_cycle = cpu_pico_khz / 3500; // 108
        // ticks_per_frame = 71680;          // 71680- Пентагон //70908 - 128 +2A
       //  ticks_per_frame_0 = ticks_per_frame;
         break;
      case 1:
-        ticks_per_cycle = 1;//CPU_KHZ /5250;//CPU_KHZ / (3500*3);// 5250; // 
-       // ticks_per_cycle = CPU_KHZ / 7000; // 108
+        ticks_per_cycle = 1;//cpu_pico_khz /5250;//cpu_pico_khz / (3500*3);// 5250; // 
+       // ticks_per_cycle = cpu_pico_khz / 7000; // 108
      //   ticks_per_frame = (71680);        // 71680- Пентагон //70908 - 128 +2A 1.5
      //   ticks_per_frame_0 = ticks_per_frame;
         break;   
      // case 2:
-     //   ticks_per_cycle = 1;//CPU_KHZ /28000; // 54
+     //   ticks_per_cycle = 1;//cpu_pico_khz /28000; // 54
     //    ticks_per_frame = 71680;    //=107520//120000;//71680*2 ;// 71680- Пентагон //70908 - 128 +2A
   
         break;          

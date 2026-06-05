@@ -11,7 +11,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 MURM2
 LED_BOARD=25
 VOLTAGE_RUN=VREG_VOLTAGE_1_30
-VOLTAGE_WORK=VREG_VOLTAGE_1_30
 ##############################################
 ##PicoBus ONLY GENERAL SOUND
 PBUS_OUT_PIN=11

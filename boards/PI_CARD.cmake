@@ -8,7 +8,6 @@
 set (M_VERSION pc)# версия платы
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 VOLTAGE_RUN=VREG_VOLTAGE_1_40
-VOLTAGE_WORK=VREG_VOLTAGE_1_40
 PI_CARD
 HDMI_ONLY # только HDMI
 SOUND_I2S_ONLY # только i2s звук

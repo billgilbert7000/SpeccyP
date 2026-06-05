@@ -4,7 +4,7 @@
 #include "hardware/vreg.h"
 
 uint8_t __in_flash() table_voltage[] = {55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,150,160,165};
-
+uint32_t cpu_pico_khz=378000; 
 //----------------------------------------------------------
 // Конфигурация по умолчанию
 //----------------------------------------------------------
@@ -14,11 +14,11 @@ void config_defain(void)
         conf.version =CONFIG_VERSION;
         
                #ifdef PICO_RP2350 
-               conf.voltage = VOLTAGE_WORK;// Possible voltage values that can be applied to the regulator
+               conf.voltage = VOLTAGE_RUN;// Possible voltage values that can be applied to the regulator
                #else
                conf.voltage=VOLTAGE_RP2040;
                #endif
-               
+        conf.cpu_freq = CPU_MHZ;     
         conf.tft=TFT_9345I;// st7789
 
         conf.tft_invert=0;// TFT_INV=0 или 1
@@ -29,9 +29,8 @@ void config_defain(void)
         conf.vout=VIDEO_AUTO; // AUTO по умолчанию
         conf.gpio_strength=GPIO_DRIVE_STRENGTH_4MA;
 
-        conf.hdmi_fdiv = 1.0; // 1.0->60Hz (cpu=252MHz)
-        if (CPU_MHZ==378)
-        conf.hdmi_fdiv = 1.5; // 1.5->60Hz (cpu=378MHz)
+        if (conf.cpu_freq==378) conf.hdmi_fdiv=1.5; // 1.5->60Hz (cpu=378MHz)
+        else conf.hdmi_fdiv=1.0; // 1.0->60Hz (cpu=252MHz или 504MHz)
 
         conf.autorun =0;//off   1 trdos
 
@@ -70,7 +69,7 @@ void config_defain(void)
 void config_defain(void)
 {
         conf.version =CONFIG_VERSION;
-        conf.voltage = VOLTAGE_WORK;// Possible voltage values that can be applied to the regulator
+        conf.voltage = VOLTAGE_RUN;// Possible voltage values that can be applied to the regulator
         conf.gpio_strength=GPIO_DRIVE_STRENGTH_4MA;
         conf.vout=VIDEO_HDMI;// Видевыход 0-AUTO 1-VGA 2-HDMI 3-TFT 
         conf.tft=0;// ili9341
@@ -113,7 +112,7 @@ void config_defain(void)
 void config_defain(void)
 {
         conf.version =CONFIG_VERSION;
-        conf.voltage = VOLTAGE_WORK;// Possible voltage values that can be applied to the regulator
+        conf.voltage = VOLTAGE_RUN;// Possible voltage values that can be applied to the regulator
         conf.gpio_strength=GPIO_DRIVE_STRENGTH_4MA;
          conf.vout=VIDEO_HDMI;// Видевыход 0-AUTO 1-VGA 2-HDMI 3-TFT  //2- только HDMI
         conf.tft=0;// ili9341
@@ -406,6 +405,15 @@ static bool parse_uint8(const char *str, uint8_t *value) {
     return true;
 }
 
+static bool parse_uint16(const char *str, uint16_t *value) {
+    if (!str) return false;
+    char *endptr;
+    unsigned long val = strtoul(str, &endptr, 0);
+    if (endptr == str) return false;
+    *value = (uint16_t)val;
+    return true;
+}
+
 static bool parse_uint32(const char *str, uint32_t *value) {
     if (!str) return false;
     char *endptr;
@@ -458,8 +466,8 @@ bool config_ini_save(const char *filename) {
         "video_out = %u\n"
         ";Video GPIO drive strength: 2mA=0, 4mA=1, 8mA=2, 12mA=3 \n" 
         "gpio_strength = %u\n"
-        "; HDMI frequency divider (1.0, 1.5, 2.0)\n"
-        "hdmi_divider = %.2f\n\n"
+     //   "; HDMI frequency divider (1.0, 1.5, 2.0)\n"
+     //   "hdmi_divider = %.2f\n\n"
         "; TFT type: 0=ILI9341, 1=ST7789, 2=ILI9341_IPS\n"
         "tft_type = %u\n"
         "; TFT inversion: 0=normal, 1=inverted\n"
@@ -474,7 +482,7 @@ bool config_ini_save(const char *filename) {
         u,               // conf.voltage,
         conf.vout,
         conf.gpio_strength,
-        conf.hdmi_fdiv,
+    //    conf.hdmi_fdiv,
         conf.tft,
         conf.tft_invert,
         conf.tft_rotate,

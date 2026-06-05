@@ -13,7 +13,6 @@ NO_PSRAM
 SOUND_PWM_ONLY # только PWM звук (R=27, L=28, BEEP=26)
 LED_BOARD=25
 VOLTAGE_RUN=VREG_VOLTAGE_1_40
-VOLTAGE_WORK=VREG_VOLTAGE_1_40
 #########################################################################
 ##PicoBus ONLY GENERAL SOUND — на PICO_PC не используется (конфликт пинов с PWM audio)
 PBUS_OUT_PIN=29

@@ -505,9 +505,18 @@ void video_output_init(uint16_t width, uint16_t height)
     // приходить ещё раз.
     uint32_t sys_freq = clock_get_hz(clk_sys);
 
+
+ /* # HSTX хочет целочисленный делитель clk_sys в свой 126 МГц домен
+    # пиксельклока. CPU_MHZ выставляется выше через SPECCY_CONFIG_DEFINITIONS;
+    # пересчитываем его в MODE_HSTX_CLK_DIV (504/4=126, 252/2=126 и т.д.). */
+    uint8_t hstx_div_clock = 1;
+    if (sys_freq==504000000)      hstx_div_clock = 4;
+    else if (sys_freq==378000000) hstx_div_clock = 3;
+    else if (sys_freq==252000000) hstx_div_clock = 2;
+
     clock_configure_int_divider(clk_hstx,
                                 0, // без glitchless mux
-                                CLOCKS_CLK_HSTX_CTRL_AUXSRC_VALUE_CLK_SYS, sys_freq, MODE_HSTX_CLK_DIV);
+                                CLOCKS_CLK_HSTX_CTRL_AUXSRC_VALUE_CLK_SYS, sys_freq, hstx_div_clock );
 
     // Берём под HSTX каналы DMA 0 и 1.
     dma_channel_claim(DMACH_PING);

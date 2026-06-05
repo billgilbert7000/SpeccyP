@@ -38,9 +38,11 @@
 // Делитель clk_sys для clk_hstx: clk_sys/N = 126 МГц, дальше CSR_CLKDIV=5
 // даёт пиксельклок 25.2 МГц. Если sys_clk не 126 МГц — задавайте свой
 // MODE_HSTX_CLK_DIV через -D (например, для 252 МГц возьмите DIV=2).
-#ifndef MODE_HSTX_CLK_DIV
-#define MODE_HSTX_CLK_DIV 1
-#endif
+
+//#ifndef MODE_HSTX_CLK_DIV
+//#define MODE_HSTX_CLK_DIV 1
+//#endif
+
 #ifndef MODE_HSTX_CSR_CLKDIV
 #define MODE_HSTX_CSR_CLKDIV 5
 #endif
@@ -60,9 +62,9 @@
 #define MODE_V_ACTIVE_LINES 480
 
 // Делитель HSTX, переопределяется -D если sys_clk не 126 МГц.
-#ifndef MODE_HSTX_CLK_DIV
-#define MODE_HSTX_CLK_DIV 1
-#endif
+//#ifndef MODE_HSTX_CLK_DIV
+//#define MODE_HSTX_CLK_DIV 1
+//#endif
 #ifndef MODE_HSTX_CSR_CLKDIV
 #define MODE_HSTX_CSR_CLKDIV 5
 #endif

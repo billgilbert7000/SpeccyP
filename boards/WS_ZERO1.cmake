@@ -12,7 +12,6 @@ WS_ZERO1
 HDMI_ONLY # только HDMI
 LED_BOARD=255  # 255 светодиод не подключен
 VOLTAGE_RUN=VREG_VOLTAGE_1_30
-VOLTAGE_WORK=VREG_VOLTAGE_1_30
 
 #PS/2 клавиатура
 beginPS2_PIN=0

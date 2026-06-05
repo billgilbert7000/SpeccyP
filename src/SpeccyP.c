@@ -367,26 +367,6 @@ const ZxMachineVariant  *getZxMachineVariant(int machineIndex) {
     " Q A O P M  Arrows ",
     " Kempston   WASDKL ",
     };
-  //  char __in_flash() *menu_trdos[2];
-/* extern	char __in_flash() *menu_trdos[2]={
-    " TR-DOS 5.04T  ",
-    " TR-DOS 5.05D  ",
-    };    */
-	// меню advanced
-/* 	 char __in_flash() *menu_advanced[10]={
-    " Volume       ",    
-	" I2S  buster  ",
-	" Noise FDD    ",
-	" Volume LOAD  ",
-    " Mouse Speed  ",
-    " Video OUT    ",
-    menu_trdos[conf.trdos_version]," TR-DOS       ",
-    " Z80 model    ",
-    " Save config  ",
-    " Return       ",
-    };
- */
-
 
 
     // menu_autorun
@@ -733,19 +713,23 @@ static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
 //############################################################
 void fast(init_pico)(void) // настройка и разгон для RP2350
 {  
+    cpu_pico_khz = conf.cpu_freq *1000;
+    if (conf.cpu_freq==378) conf.hdmi_fdiv=1.5;
+    else conf.hdmi_fdiv=1.0;
+
     volatile uint32_t *qmi_m0_timing=(uint32_t *)0x400d000c;
     vreg_disable_voltage_limit();
-    vreg_set_voltage(VOLTAGE_RUN);
-
+    vreg_set_voltage(conf.voltage);
+    
 #if (FLASH_MAX_FREQ_MHZ==166)
     real_flash_freq = CPU_MHZ/3;
 
     *qmi_m0_timing = 0x60007204; //  ???
-    set_sys_clock_khz(CPU_KHZ, 0);
+    set_sys_clock_khz(conf.cpu_freq*1000, 0);
     *qmi_m0_timing = 0x60007303;   // ???
 #else 
      set_flash_timings();
-     set_sys_clock_khz(CPU_KHZ, 0);
+     set_sys_clock_khz(conf.cpu_freq*1000, 0);
 #endif
 }
 
@@ -757,10 +741,9 @@ void fast(init_pico)(void) // настройка и разгон для RP2040
     vreg_set_voltage(VREG_VOLTAGE_1_30);
    sleep_ms(500);
    // запуск на пониженной частоте 
-   set_sys_clock_khz(CPU_KHZ , false);
+   set_sys_clock_khz(cpu_pico_khz , false);
 
 }
-
 #endif
 //========================================================================
 static bool  rp2350a;
@@ -835,8 +818,6 @@ void init_and_info()
 #endif  
 
 
-
-
 #ifdef  GENERAL_SOUND    
    gpio_out_init(BEEP_PIN);// на выход  для реалиации звука бипера
 #endif
@@ -849,15 +830,12 @@ void init_and_info()
 
 //---------------------------------------------------------------------------
 
-  init_fs = disk_initialize(0);// инициализация SD
+/*   init_fs = disk_initialize(0);// инициализация SD
     DIR fs;
  init_fs  =init_filesystem();// монтирование и инициализация SD
 
-    config_init();
+    config_init(); */
 
-#ifdef PICO_RP2350 
-vreg_set_voltage(conf.voltage);// установка напряжения из ini
-#endif
     gpio_put(LED_BOARD, 0);
 //------------------------------------------------------------------
     turbo_switch(); // переключение режима turbo
@@ -866,12 +844,9 @@ vreg_set_voltage(conf.voltage);// установка напряжения из i
 //--------------------------------------------------------------
 
 #ifdef  HDMI_ONLY
-     //  conf.hdmi_fdiv = 1.5;// 1.5-> 60Hz  (cpu=378MHz)
-        conf.hdmi_fdiv = HDMI_DIV;
          vout_select= VIDEO_HDMI;
          startVIDEO(VIDEO_HDMI);// только HDMI
 #else 
-         conf.hdmi_fdiv = HDMI_DIV;
     #if defined(HDMI_HSTX)  // Only HDMI
          vout_select= VIDEO_HDMI;
     #else 
@@ -945,8 +920,8 @@ vreg_set_voltage(conf.voltage);// установка напряжения из i
         draw_text_len(7+11*FONT_W+XPOS,YPOS,FW_VERSION,CL_LT_CYAN ,CL_BLACK,16);
 
         #ifndef PICO_RP2040
-        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A %dMHz",CPU_MHZ);
-        else snprintf(temp_msg, sizeof temp_msg, "RP2350B %dMHz",CPU_MHZ);
+        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A %dMHz",conf.cpu_freq);
+        else snprintf(temp_msg, sizeof temp_msg, "RP2350B %dMHz",conf.cpu_freq);
         #else
         snprintf(temp_msg, sizeof temp_msg, " RP2040 %dMHz",CPU_MHZ);    
         #endif
@@ -1122,20 +1097,20 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
 
 
 
-if (vout_select==VIDEO_VGA)
+        if (vout_select==VIDEO_VGA)
         {
         snprintf(temp_msg, sizeof temp_msg, "VGA %dHz",60);   
-       // snprintf(temp_msg, sizeof temp_msg, "VGA %dHz",(int) (CPU_MHZ*10/63)); 
+       // snprintf(temp_msg, sizeof temp_msg, "VGA %dHz",(int) (conf.cpu_freq*10/63)); 
        draw_text(246+XPOS,YPOS+110,temp_msg,CL_LT_CYAN ,CL_BLACK);  	
         }
 
         if (vout_select==VIDEO_HDMI)
         {
         #if defined(HDMI_HSTX) 
-        snprintf(temp_msg, sizeof temp_msg, "HDMI HSTX %dHz",(int) (CPU_MHZ*10/(42*conf.hdmi_fdiv)));  
+        snprintf(temp_msg, sizeof temp_msg, "HDMI HSTX %dHz",(int) (conf.cpu_freq*10/(42*conf.hdmi_fdiv)));  
         draw_text(210+XPOS,YPOS+110,temp_msg,CL_BLUE ,CL_BLACK);
         #else
-        snprintf(temp_msg, sizeof temp_msg, "HDMI %dHz",(int) (CPU_MHZ*10/(42*conf.hdmi_fdiv)));  
+        snprintf(temp_msg, sizeof temp_msg, "HDMI %dHz",(int) (conf.cpu_freq*10/(42*conf.hdmi_fdiv)));  
         draw_text(240+XPOS,YPOS+110,temp_msg,CL_LT_CYAN,CL_BLACK);
         #endif
         }
@@ -1587,6 +1562,13 @@ void keyboard_and_other(void)
 // MAIN
 int fast(main)(void){  
 
+
+  init_fs = disk_initialize(0);// инициализация SD
+    DIR fs;
+ init_fs  =init_filesystem();// монтирование и инициализация SD
+
+    config_init();
+
     init_pico();
 
     init_and_info();
@@ -1610,18 +1592,7 @@ int fast(main)(void){
  //   gpio_put(25,1);//error
 		return 1;
 	}
-//---------------------------------------------------------
-// INT generator 50Hz
-/*  	repeating_timer_t int_timer; 
-     // hz=50;
-	if (!add_repeating_timer_us(-1000000 / 50, zx_int, NULL, &int_timer))
-     {
-		//G_PRINTF_ERROR("Failed to add INT timer\n");
-    //    gpio_put(25,1);//error
-		return 1;
-	}   
-    */
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//---------------------------------------------------------------
 
 	multicore_launch_core1(ZXThread);
 
@@ -2153,7 +2124,7 @@ if (numsetup == M_JOY)
 
   if (numsetup == M_ADVANCED)
         {
-          uint8_t x = MenuBox_advanced_setup(94, 44, 17, 8, "Advanced setup", 8, 7, 1);
+          uint8_t x = MenuBox_advanced_setup(94, 44, 17, 9, "Advanced setup", 9, 8, 1);
            if (x==0xff) continue;
 
            continue;

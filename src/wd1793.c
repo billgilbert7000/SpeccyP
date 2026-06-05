@@ -47,7 +47,7 @@ FRESULT res;
 uint8_t FilesCount = 0;
 
 unsigned int br;                // Количество прочитанных/записанных байт
-uint8_t CmdType = 1;            // Тип текущей команды (1 - позиционирование, 2 - сектор, 3 - трек)
+uint8_t CmdType = 1;            // Тип текущей команды 1-восстановительные, 2-позиционирования, 3-чтения/записи
 uint16_t CurrentDiskPos = DEFULTDISKPOS; // Текущая позиция в файле образа (чтобы не сикать постоянно)
 
 WD1793_struct WD1793;           // Экземпляр контроллера
@@ -221,6 +221,60 @@ bool OpenFDI_File(char *sn, uint8_t drv)
 //=============================================================================
 
 //-----------------------------------------------------------------------------
+// эмулируется вращение диска (индексные импульсы)
+// Эмуляция индексного импульса (длительность 4 мс, период 200 мс)
+//-----------------------------------------------------------------------------
+/* 
+void UpdateIndexPulse(void)
+{
+    uint64_t now = time_us_64();
+    uint64_t revolution_time = 200000;  // 200 мс на оборот
+    uint64_t index_pulse_start = revolution_time - 4000;  // Импульс за 4 мс до конца
+    
+    // Вычисляем позицию в обороте
+    uint64_t time_in_revolution = (now - tindex) % revolution_time;
+    
+    // Обновляем состояние индексного импульса
+    if (time_in_revolution >= index_pulse_start)
+    {
+        // Импульс активен
+        if (!(WD1793.StatusRegister & _BV(stsIndexImpuls)))
+        {
+            // Фронт импульса - начало новой дорожки
+            WD1793.StatusRegister |= _BV(stsIndexImpuls);
+          //  DiskSector = 0; //????
+            DiskIndex = true;
+        }
+    }
+    else
+    {
+        // Импульс неактивен
+        if (WD1793.StatusRegister & _BV(stsIndexImpuls))
+        {
+            // Спад импульса
+            WD1793.StatusRegister &= ~_BV(stsIndexImpuls);
+            DiskIndex = false;
+        }
+    }
+    
+    // Сброс таймера при переполнении
+    if (time_in_revolution < 1000 && (now - tindex) > revolution_time)
+    {
+        tindex = now;
+    }
+} 
+*/
+// эмулируется вращение диска (индексные импульсы)
+void UpdateIndexPulse_(void) // TEST TODO
+{
+    if (NoDisk == 1)  return;
+    if (CmdType != 1) return;
+    static bool x = 0;  
+    WD1793.StatusRegister &= 0b11111101;
+    if (x)  WD1793.StatusRegister |= _BV(stsIndexImpuls);
+    x = !x;
+}
+//-----------------------------------------------------------------------------
 // Запись в порт контроллера со стороны Z80
 // Address: 0 - 0x1F, 1 - 0x3F, 2 - 0x5F, 3 - 0x7F
 //-----------------------------------------------------------------------------
@@ -256,7 +310,11 @@ uint8_t WD1793_Read(uint8_t Address)
         case 0 : // 0x1F Чтение регистра состояния
             // Сброс флага прерывания (INTRQ) после чтения статуса
             Requests &= ~_BV(rqINTRQ);
-            break;
+
+          UpdateIndexPulse_(); // TEST TODO
+   
+             return WD1793.StatusRegister; // 0x1F (R) Регистр состояния
+        //    break;
         case 3 : // 0x7F Чтение регистра данных
             // Сброс флага запроса данных (DRQ) после чтения данных
             WD1793.StatusRegister &= ~_BV(stsDRQ);
@@ -421,12 +479,12 @@ void WD1793_Reset(uint8_t drive)
 //-----------------------------------------------------------------------------
 void WD1793_CmdIdle()
 {
-    if (NoDisk == 1) return;
+/*    if (NoDisk == 1) return;
 
     switch (CmdType)
     {
         case 1:
-            // Эмуляция индексного импульса (длительность 4 мс, период 200 мс)
+             // Эмуляция индексного импульса (длительность 4 мс, период 200 мс)
             if ( ((time_us_64() - tindex) < (200000 - 4000)) ) // 4ms = 4000 µs
             {
                 WD1793.StatusRegister |= _BV(stsIndexImpuls); // Установка бита импульса
@@ -438,9 +496,10 @@ void WD1793_CmdIdle()
             }
 
             if ( ((time_us_64() - tindex) > (200000)) ) 
-                tindex = time_us_64(); // Сброс таймера оборота
+                tindex = time_us_64(); // Сброс таймера оборота 
             break;
     }  
+*/    
 }
 
 //-----------------------------------------------------------------------------

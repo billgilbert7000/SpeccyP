@@ -674,6 +674,7 @@ static uint8_t envelope_ay_count = 0;       // Текущий шаг огиба�
  */
 uint8_t fast(AY_get_reg)()
 {
+    if (TSFM_MaskReadyBit==0x7f) return TSFM_MaskReadyBit; // TODO
     return reg_ay0[N_sel_reg];
 }
 
@@ -858,6 +859,7 @@ static uint8_t envelope_ay1_count = 0;      // Текущий шаг огиба�
  */
 uint8_t fast(AY_get_reg1)()
 {
+     if (TSFM_MaskReadyBit==0x7f) return TSFM_MaskReadyBit; // TODO
     return reg_ay1[N_sel_reg_1];
 }
 
@@ -1878,7 +1880,7 @@ void select_audio(void)
             break;
             
         case TSFM:  // Turbo Sound FM
-            maskAY[1] = maskAY[3] = maskAY[5] = 0x1f;  // Маска для TSFM (5 бит)
+        //    maskAY[1] = maskAY[3] = maskAY[5] = 0x1f;  // Маска для TSFM (5 бит)
             Init_AY_595();
             hardAY_on_off = 0;
             AY_out_FFFD = ay_set_reg_tsfm;

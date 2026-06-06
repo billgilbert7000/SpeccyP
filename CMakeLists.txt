@@ -43,7 +43,7 @@ endif()
 
 # Список плат
 set(M_BOARD_VALUES MURM1 MURM2 PI_CARD WS_ZERO1 WS_ZERO2 PICO_DV PICO_PC GSP_M2)
-set(M_BOARD "MURM2" CACHE STRING "Тип платы: ${M_BOARD_VALUES}")
+set(M_BOARD "MURM1" CACHE STRING "Тип платы: ${M_BOARD_VALUES}")
 set_property(CACHE M_BOARD PROPERTY STRINGS ${M_BOARD_VALUES})
 
 # Проверка валидности M_BOARD

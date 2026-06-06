@@ -735,14 +735,15 @@ void fast(init_pico)(void) // настройка и разгон для RP2350
 
 #else
 void fast(init_pico)(void) // настройка и разгон для RP2040
-{  
-   // hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
-   // sleep_ms(10);
+{
+    // hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
+    // sleep_ms(10);
     vreg_set_voltage(VREG_VOLTAGE_1_30);
-   sleep_ms(500);
-   // запуск на пониженной частоте 
-   set_sys_clock_khz(cpu_pico_khz , false);
-
+    sleep_ms(50);
+    cpu_pico_khz = CPU_MHZ * 1000;
+    conf.cpu_freq = CPU_MHZ;
+    set_sys_clock_khz(cpu_pico_khz, false);
+    conf.hdmi_fdiv = 1.5;
 }
 #endif
 //========================================================================
@@ -1561,18 +1562,12 @@ void keyboard_and_other(void)
 //=========================================================================
 // MAIN
 int fast(main)(void){  
-
-
-  init_fs = disk_initialize(0);// инициализация SD
+    init_fs = disk_initialize(0);// инициализация SD
     DIR fs;
- init_fs  =init_filesystem();// монтирование и инициализация SD
-
+    init_fs  =init_filesystem();// монтирование и инициализация SD
     config_init();
-
     init_pico();
-
     init_and_info();
-
 //-----------------------------------------------------------------    
 // если одна плата без GS 
     #ifndef  GENERAL_SOUND     

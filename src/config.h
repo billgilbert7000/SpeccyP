@@ -54,23 +54,8 @@ extern uint32_t dtcpu;
 #include "usb_key.h"// это добавить
 
 #define OUT_SND_MASK (0b00011000)
-#define SHOW_SCREEN_DELAY 50  //500  в милисекундах
+#define SHOW_SCREEN_DELAY 50  //500  в миллисекундах
 
-//-----------------------------------------------------------------------------------------
-// частота RP2040
-//#define cpu_pico_khz 378000//378000//315000//315000//378000//276000 //252000 264000 ////set_sys_clock_khz(300000, true); // main.h252000//
-//#define DEL_Z80 cpu_pico_khz/14000 //80 // main.h 3500 turbo 7000
-/* #define Z80_3500 cpu_pico_khz/3500 //   cpu_pico_khz/3500
-#define Z80_7000 cpu_pico_khz/7000
-#define Z80_14000 cpu_pico_khz/14000 */
-
-//#define VOLTAGE VREG_VOLTAGE_1_30 //VREG_VOLTAGE_1_20 //	vreg_set_voltage(VOLTAGE); // main.h
-/* #ifdef PICO_RP2350 
-#define VOLTAGE_MIN VREG_VOLTAGE_1_30
-#define VOLTAGE VREG_VOLTAGE_1_40
-#else
-#define VOLTAGE VREG_VOLTAGE_1_30
-#endif */
 //=======================================================================================================
 
 // 126MHz SPI

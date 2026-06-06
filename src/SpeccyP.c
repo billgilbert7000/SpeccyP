@@ -1528,11 +1528,10 @@ void keyboard_and_other(void)
 
                hardAY_off();
                MessageBox(" ZX SPECTRUM RESET ", "", CL_WHITE, CL_RED, 2);
-
+               kb_st_ps2.u[1] = 0; // Обнуляет ряд клавиш с LCTRL, RCTRL и т.д.
                zx_machine_reset(3);
                im_z80_stop = false;
                is_menu_mode = false;
-            //   is_new_screen = false;
            }
             }
             // ######################################################
@@ -3414,7 +3413,6 @@ void file_manager (void)
 void file_info (void)       
       
       {
-
        //     if ((last_action > 0) && (time_us_32() - last_action) > SHOW_SCREEN_DELAY * 1000)
             {
                  last_action = 0;
@@ -3432,10 +3430,8 @@ void file_info (void)
 
                     if (!ReadCatalog(conf.activefilename, current_lfn, false))
                     {
-
-                        //    
+                        //  TODO  
                     }
-
                      return; 
                 }
                 //-----------------------------------------------
@@ -3450,14 +3446,11 @@ void file_info (void)
 
                     if (!ReadCPMDir(conf.activefilename, current_lfn, false))
                     {
-
-                        //    
+                        //   TODO
                     }
-
                      return; 
                 }
                 //-----------------------------------------------
-
                 // FDI INFO
                 if (strcasecmp(ext, "fdi") == 0)
                 {
@@ -3469,10 +3462,8 @@ void file_info (void)
 
                     if (!Read_Info_FDI(conf.activefilename, current_lfn, false))
                     {
-
-                        //    
+                        // TODO    
                     }
-
                      return; 
                 }
                 //-----------------------------------------------               
@@ -3486,6 +3477,7 @@ void file_info (void)
 					cur_file_index_old=cur_file_index;		
 			    	if(!ReadCatalog_scl(conf.activefilename,current_lfn,false))
                     {
+                        // TODO
 				    } 
                  return; 
                  }
@@ -3540,10 +3532,5 @@ void file_info (void)
 					cur_file_index_old=cur_file_index;    
 				}
 			}
-
-
 		}
-
-
-
 //################################################################################

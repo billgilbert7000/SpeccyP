@@ -938,8 +938,6 @@ wait_enter(); // ожидание отпускания enter
 
       switch (cPos)
       {
-
-
           case 0:// скорость мыши -
           if (conf.mouse_dpi<=1) conf.mouse_dpi=1;
              else conf.mouse_dpi--;

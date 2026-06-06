@@ -1880,7 +1880,7 @@ void select_audio(void)
             break;
             
         case TSFM:  // Turbo Sound FM
-        //    maskAY[1] = maskAY[3] = maskAY[5] = 0x1f;  // Маска для TSFM (5 бит)
+            maskAY[1] = maskAY[3] = maskAY[5] = 0x1f;  // Маска для TSFM (5 бит)
             Init_AY_595();
             hardAY_on_off = 0;
             AY_out_FFFD = ay_set_reg_tsfm;

@@ -210,7 +210,7 @@ uint8_t type_psram;
 // other
  char temp_msg[80]; // Буфер для вывода строк
 
- bool main_nmi_key = false;
+// bool main_nmi_key = false;
 //=====================================================
 // данные конфигурационного файла
  struct data_config conf;

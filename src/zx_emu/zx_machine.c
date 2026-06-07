@@ -2596,13 +2596,17 @@ void zx_machine_reset(uint8_t rom_x)
     cash_f = 0;// отключение кеш для Пентагон 512 CASH
 
     seekbuf =0;// обнуление счетчика tape при сбросе
-	if (conf.tape_mode == 0) {
-		enable_tape = true;
+    // в Кворум в режиме CP/M при роковом стечении обстоятельств 
+    // может быть ошибка связанная с перехватом точек входа TAPE LOADER
+    // используемых для работы FAST загрузки !!!  TODO
+ 	if (conf.mashine==QUORUM1024) conf.tape_mode = 1; 
+    if (conf.tape_mode == 0) {
+	   	enable_tape = true;
 		tap_loader_active = false;
 	} else {
 		enable_tape = false;
 		tap_loader_active = true;
-	}
+	} 
     TapeStatus = TAPE_STOPPED;
     init_vol_ay(); 
 
@@ -2675,8 +2679,77 @@ void init_zx_2_pix_buffer()
 	}
 	
 }
+//===========================================================
+//--------------------------------------------------
+// отдельные обработчики DOS для определенных машин
+//--------------------------------------------------
+void (*main_loop_DOS)(void);   // Указатель на функцию DOS
+// tr-dos normal
+void fast(dos_default)(void)
+{
+		if (!trdos) // если еще не в trdos то вход
+		{
+			if ((Z80_PCH(cpu_zx) == 0x3D) && ((zx_7ffd_lastOut & 0x10) == 0x10))// trdos работает с BASIC48 D4 = 1     rom =1 не выставляется при старте ??? TODO                                                                     
+			{
+			trdos = true;
+            rom=2;
+			zx_cpu_ram[0]=zx_rom_bank[2];// tr-dos
+            }	
+		}
+        if (trdos) if ((Z80_PCH(cpu_zx) & 0xc0))// выход из trdos если в RAM
+		{
+		 trdos = false;
+         rom_select(); // переключение ПЗУ по портам  
+		}
 
-//------------------------------------------
+        if (trdos) WD1793_Execute();
+}
+// tr-dos scorpion
+void fast(dos_scorpion)(void)
+{
+		if ((zx_1ffd_lastOut & 0x02)== 0x00) // 0x02 если не теневик у Scorpion есть доступ к портам TR-DOS в ROM S.Monitor 
+      {
+	
+		if (!trdos) // если еще не в trdos то вход
+		{
+			if ((Z80_PCH(cpu_zx) == 0x3D) && ((zx_7ffd_lastOut & 0x10) == 0x10))// trdos работает с BASIC48 D4 = 1     rom =1 не выставляется при старте ??? TODO                                                                     
+			{
+			trdos = true;
+            rom=2;
+			zx_cpu_ram[0]=zx_rom_bank[2];// tr-dos
+            }	
+		}
+      }  
+        if (trdos) if ((Z80_PCH(cpu_zx) & 0xc0))// выход из trdos если в RAM
+		{
+		 trdos = false;
+         rom_select(); // переключение ПЗУ по портам  
+		}
+      
+        else if (trdos) WD1793_Execute();
+}
+// dos Quorum
+void fast(dos_quorum)(void)
+{
+		if (!trdos) // если еще не в trdos то вход
+		{
+			if ((Z80_PCH(cpu_zx) == 0x3D) && ((zx_7ffd_lastOut & 0x10) == 0x10))// trdos работает с BASIC48 D4 = 1     rom =1 не выставляется при старте ??? TODO                                                                     
+			{
+			trdos = true;
+            rom=2;
+			zx_cpu_ram[0]=zx_rom_bank[2];// tr-dos
+            }	
+		}
+        if (trdos) if ((Z80_PCH(cpu_zx) & 0xc0))// выход из trdos если в RAM
+		{
+		 trdos = false;
+         rom_select(); // переключение ПЗУ по портам  
+		}
+        
+        WD1793_Execute(); // Кворум всегда есть доступ к портам DOS
+}
+//=======================================================================================
+
 extern uint16_t beepPWM;
 uint8_t* active_screen_buf=NULL;
 //------------------------------------------
@@ -2767,46 +2840,10 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 		 trdos = false;
          rom_select(); // переключение ПЗУ по портам  
 		} */
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-// исправить сделать отдельные обработчики для определенных машин
-// void (*DOS)(uint8_t);   // Указатель на функцию DOS
-// DOS = tr_dos_default
-// DOS = tr-dos_scorpion
-// DOS = dos_quorum 
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-		// tr-dos
 
-		if ((zx_1ffd_lastOut & 0x02)== 0x00) // 0000 00x0  0x02 если не теневик у Scorpion есть доступ к портам TR-DOS в ROM S.Monitor 
-      {
-	
-		if (!trdos) // если еще не в trdos то вход
-		{
-			if (((Z80_PC(cpu_zx) & 0x3D00) == 0x3D00) && ((zx_7ffd_lastOut & 0x10) == 0x10) )// trdos работает с BASIC48 D4 = 1     
-			                                                                     
-			{
-			trdos = true;
 
-           rom=2;
-			zx_cpu_ram[0]=zx_rom_bank[2];// tr-dos
-			
-            }
-			
-		}
-	  
-      }
-	  
-		if ((Z80_PC(cpu_zx) > 0x3FFF) && (trdos))// выход из trdos если в RAM
-		{
-		 trdos = false;
-         rom_select(); // переключение ПЗУ по портам  
-		}
-//=======================================================================================
-// В Кворуме порты DOS всегда доступны!
-// WD1793_Execute(); // так не работает демо UNREAL - не переходит на следующую часть, крутится на 1 части в цикле 
-// нет особого смысла выполнять WD1793_Execute() если не активен trdos и нет обращения к портам TR-DOS 
-//if (trdos) WD1793_Execute(); // так работает но не работает Кворум-1024 ))
-if (conf.mashine==QUORUM1024) WD1793_Execute();
-else if (trdos) WD1793_Execute();
+          main_loop_DOS();
+
 
 //=======================================================================================	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3037,13 +3074,15 @@ void init_mashine_and_extram(uint8_t config_mashine) // инициализаци
 */
 //conf.shift_img=(((16+40)*224)+48);//
     conf.shift_img=12582;
-    main_nmi_key = false;
+ //   main_nmi_key = false;
     
  // zx_cpu_init(&cpu_zx);  // одна строка инициализации
 
     select_cpu_z80(&cpu_zx);
 
     setZxExtKeysDefault();
+
+   main_loop_DOS = dos_default;
 
 	switch (config_mashine)
 	{
@@ -3063,22 +3102,20 @@ void init_mashine_and_extram(uint8_t config_mashine) // инициализаци
     machine_Pentagon_1024(&cpu_zx);
 		break; //
 	case SCORP256:
-      //  main_nmi_key = true;
+        main_loop_DOS = dos_scorpion;
         machine_Scorpion_256(&cpu_zx);   
 		break; //
  
-    // #ifndef NO_GMX     
-	case GMX2048:
+    case GMX2048:
         machine_Scorpion_GMX(&cpu_zx);
 		break; //
-    //  #endif    
 
 	case NOVA256:
-      //    main_nmi_key = true;
-          machine_NOVA_256(&cpu_zx);
+        machine_NOVA_256(&cpu_zx);
 		break; //
 
     case QUORUM1024:
+        main_loop_DOS = dos_quorum;
         machine_Quorum1024(&cpu_zx);
         break;
 
@@ -3088,7 +3125,7 @@ void init_mashine_and_extram(uint8_t config_mashine) // инициализаци
 		break; //
 
 	case PENT_512CASH :// Пентагон 512 с кеш
-        main_nmi_key = true;
+    //    main_nmi_key = true;
         machine_Pentagon_512_cash(&cpu_zx);
 		break; //
 

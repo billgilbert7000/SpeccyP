@@ -622,18 +622,14 @@ void joy_redirecting(void)
 }
 //=========================================================
 void pico_reset(){
-
     #ifdef GENERAL_SOUND
     sys_GS(GS_RESET);// принудителный сброс GS
  //   sleep_ms(1000);
     #endif
 //#define AIRCR_Register (*((volatile uint32_t*)(PPB_BASE + 0x0ED0C)))
-
 //AIRCR_Register = 0x5FA0004;
 	watchdog_enable(1, 1);// сброс watch dog
 	while(1);
-
-
 }
 //-----------------------------------------------------
 //bool b_beep;
@@ -903,7 +899,13 @@ void init_and_info()
 #endif
 //#####################################################################	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
-//#####################################################################        
+//#####################################################################  
+
+// Защита от автозапуска пустого или некорректного диска в CP/M Кворума
+// после включения и при Hard Reset 
+if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;  
+// TODO надо сделать правильно и поумнее
+
 // инициализация с выводом результата на дисплей
         zx_machine_enable_vbuf(false);
 	    init_screen(g_gbuf,SCREEN_W,SCREEN_H);

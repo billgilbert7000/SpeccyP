@@ -271,7 +271,7 @@ void UpdateIndexPulse_(void) // TEST TODO
     if (CmdType != 1) return;
     static bool x = 0;  
     WD1793.StatusRegister &= 0b11111101;
-    if (x)  WD1793.StatusRegister |= _BV(stsIndexImpuls);
+   if (x)  WD1793.StatusRegister |= _BV(stsIndexImpuls);
     x = !x;
 }
 //-----------------------------------------------------------------------------

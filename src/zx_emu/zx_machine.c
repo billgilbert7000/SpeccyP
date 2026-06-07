@@ -2596,8 +2596,13 @@ void zx_machine_reset(uint8_t rom_x)
     cash_f = 0;// отключение кеш для Пентагон 512 CASH
 
     seekbuf =0;// обнуление счетчика tape при сбросе
-    tap_loader_active = false;
-    enable_tape = false;
+	if (conf.tape_mode == 0) {
+		enable_tape = true;
+		tap_loader_active = false;
+	} else {
+		enable_tape = false;
+		tap_loader_active = true;
+	}
     TapeStatus = TAPE_STOPPED;
     init_vol_ay(); 
 
@@ -2762,7 +2767,12 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 		 trdos = false;
          rom_select(); // переключение ПЗУ по портам  
 		} */
-///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// исправить сделать отдельные обработчики для определенных машин
+// void (*DOS)(uint8_t);   // Указатель на функцию DOS
+// DOS = tr_dos_default
+// DOS = tr-dos_scorpion
+// DOS = dos_quorum 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 		// tr-dos
 
@@ -2790,59 +2800,15 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 		 trdos = false;
          rom_select(); // переключение ПЗУ по портам  
 		}
-		//=======================================================================================
-			// Если нажали клавишу NMI // QUORUM // SCORPION
-		//	if (main_nmi_key)
-		//	{
-                
-         //   	 main_nmi_key = false;
-
-//z80_run(&cpu_zx, 1);
-         //   }
-		//    if (conf.mashine == NOVA256)
-	    	//	{
-			//		rom=3;
-			// НОВЫЙ ЭМУЛЯТОР	
-           // 	zx_cpu_ram[0] = zx_rom_bank[3]; zx_0000_lastOut = 0; z80_nmi(&cpu_zx);
-        //     } // QUORUM
-
-        //   if (conf.mashine == SCORP256)
-	    //		{
-		//			rom=3;
-				// НОВЫЙ ЭМУЛЯТОР	
-         //       	 zx_cpu_ram[0] = zx_rom_bank[3];  z80_nmi(&cpu_zx);
-           //      } // 
-
-
-         //   if (conf.mashine == PENT_512CASH) // Пентагон 512 с кеш
-	    //		{
-					// zx_7ffd_lastOut = zx_7ffd_lastOut | 0x10;
-					// zx_7ffd_lastOut = zx_7ffd_lastOut & 0xef;
-				//	  cash_f = 1;
-				// НОВЫЙ ЭМУЛЯТОР		
-               //   z80_nmi(&cpu_zx);
-          //       } // 
-			
-
-/*             if (conf.mashine == PENT1024) // Пентагон 1024
-	    		{
-				 //	 zx_7ffd_lastOut = zx_7ffd_lastOut | 0x10;
-					// zx_7ffd_lastOut = zx_7ffd_lastOut & 0xef;
-										rom=3;
-					 zx_cpu_ram[0] = zx_rom_bank[3]; 
-					  z80_gen_nmi(&cpu); } //  
-			}
-
-*/
-//=======================================================================================	
-
+//=======================================================================================
+// В Кворуме порты DOS всегда доступны!
 // WD1793_Execute(); // так не работает демо UNREAL - не переходит на следующую часть, крутится на 1 части в цикле 
 // нет особого смысла выполнять WD1793_Execute() если не активен trdos и нет обращения к портам TR-DOS 
 //if (trdos) WD1793_Execute(); // так работает но не работает Кворум-1024 ))
 if (conf.mashine==QUORUM1024) WD1793_Execute();
 else if (trdos) WD1793_Execute();
 
-
+//=======================================================================================	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Цикл ождания пока количество потраченных тактов реального процессора
 		// меньше количества расчетных тактов реального процессора на команду Z80
@@ -3163,3 +3129,48 @@ void turbo_switch(void)
      }
 
 }
+
+// На заметку ;)
+			// Если нажали клавишу NMI // QUORUM // SCORPION
+		//	if (main_nmi_key)
+		//	{
+                
+         //   	 main_nmi_key = false;
+
+//z80_run(&cpu_zx, 1);
+         //   }
+		//    if (conf.mashine == NOVA256)
+	    	//	{
+			//		rom=3;
+			// НОВЫЙ ЭМУЛЯТОР	
+           // 	zx_cpu_ram[0] = zx_rom_bank[3]; zx_0000_lastOut = 0; z80_nmi(&cpu_zx);
+        //     } // QUORUM
+
+        //   if (conf.mashine == SCORP256)
+	    //		{
+		//			rom=3;
+				// НОВЫЙ ЭМУЛЯТОР	
+         //       	 zx_cpu_ram[0] = zx_rom_bank[3];  z80_nmi(&cpu_zx);
+           //      } // 
+
+
+         //   if (conf.mashine == PENT_512CASH) // Пентагон 512 с кеш
+	    //		{
+					// zx_7ffd_lastOut = zx_7ffd_lastOut | 0x10;
+					// zx_7ffd_lastOut = zx_7ffd_lastOut & 0xef;
+				//	  cash_f = 1;
+				// НОВЫЙ ЭМУЛЯТОР		
+               //   z80_nmi(&cpu_zx);
+          //       } // 
+			
+
+/*             if (conf.mashine == PENT1024) // Пентагон 1024
+	    		{
+				 //	 zx_7ffd_lastOut = zx_7ffd_lastOut | 0x10;
+					// zx_7ffd_lastOut = zx_7ffd_lastOut & 0xef;
+										rom=3;
+					 zx_cpu_ram[0] = zx_rom_bank[3]; 
+					  z80_gen_nmi(&cpu); } //  
+			}
+
+*/

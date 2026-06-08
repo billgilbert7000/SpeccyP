@@ -24,7 +24,7 @@ set(VERSION_PATCH 7)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
-math(EXPR CONFIG_VERSION_VALUE "4000 + ${VERSION_MAJOR}*100 + ${VERSION_MINOR}*10 + ${VERSION_PATCH}")
+math(EXPR CONFIG_VERSION_VALUE "1000 + ${VERSION_MAJOR}*100 + ${VERSION_MINOR}*10 + ${VERSION_PATCH}")
 
 # == Конфигурация SpeccyP ==
 
@@ -101,7 +101,7 @@ elseif(SPECCY_CONFIG STREQUAL "GSP_LITE")
 ###
 elseif(SPECCY_CONFIG STREQUAL "SPECCY_WSZERO")
     set(SPECCY_CONFIG_DEFINITIONS  
-        CPU_MHZ=378 
+        CPU_MHZ=252
         FLASH_MAX_FREQ_MHZ=66
         PSRAM_MAX_FREQ_MHZ=100
         TEST_DEBUG #
@@ -114,7 +114,7 @@ else()
     set(SPECCY_CONFIG "SPECCY")
     set(SPECCY_CONFIG_DEFINITIONS 
 
-        CPU_MHZ=378
+        CPU_MHZ=378###378
         FLASH_MAX_FREQ_MHZ=66
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #

@@ -29,8 +29,10 @@ void config_defain(void)
         conf.vout=VIDEO_AUTO; // AUTO по умолчанию
         conf.gpio_strength=GPIO_DRIVE_STRENGTH_4MA;
 
-        if (conf.cpu_freq==378) conf.hdmi_fdiv=1.5; // 1.5->60Hz (cpu=378MHz)
-        else conf.hdmi_fdiv=1.0; // 1.0->60Hz (cpu=252MHz или 504MHz)
+        conf.hdmi_fdiv=1.0; // 1.0->60Hz cpu=252MHz 
+        if (conf.cpu_freq==504)     conf.hdmi_fdiv=2.0;  // 60Hz 
+        else if (conf.cpu_freq==378) conf.hdmi_fdiv=1.5; // 60Hz 
+        //else if (conf.cpu_freq==252) conf.hdmi_fdiv=1.0; // 60Hz 
 
         conf.autorun =0;//off   1 trdos
 

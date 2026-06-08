@@ -710,8 +710,10 @@ static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
 void fast(init_pico)(void) // настройка и разгон для RP2350
 {  
     cpu_pico_khz = conf.cpu_freq *1000;
-    if (conf.cpu_freq==378) conf.hdmi_fdiv=1.5;
-    else conf.hdmi_fdiv=1.0;
+    
+        conf.hdmi_fdiv=1.0; // 1.0->60Hz cpu=252MHz 
+        if (conf.cpu_freq==504)     conf.hdmi_fdiv=2.0;  // 60Hz 
+        else if (conf.cpu_freq==378) conf.hdmi_fdiv=1.5; // 60Hz 
 
     volatile uint32_t *qmi_m0_timing=(uint32_t *)0x400d000c;
     vreg_disable_voltage_limit();

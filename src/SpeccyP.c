@@ -1,6 +1,8 @@
-#include "config.h" 
+
 
 #include <stdio.h>
+#include "config.h" 
+
 #include "SpeccyP.h"
 
 #include "hardware/gpio.h"
@@ -1137,11 +1139,22 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
        init_picobus();
 
        flag_gs=1;
-        sys_GS(0x00);
+        sys_GS(GS_INFO);
         tx_buffer[60]=0;
        draw_text_len(12+FONT_W,100+YPOS,tx_buffer,CL_GREEN,CL_BLACK,32); 
        draw_text(12+FONT_W,110+YPOS,tx_buffer+32,CL_LT_BLUE,CL_BLACK); 
        select_audio(); // переключение режимов вывода звука 
+
+    #ifdef RTC
+           // дата и время RTC
+           sys_GS(DATE_TIME);
+           tx_buffer[60]=0;
+        //   snprintf(temp_msg, sizeof tx_buffer, "%s %s",BUILD_DATE, BUILD_TIME); 
+           draw_text((320-(18*FONT_W))/2,190+YPOS,tx_buffer,CL_LT_CYAN,CL_BLACK); 
+         //  draw_text((320-(18*FONT_W))/2,180+YPOS,"[F12]-Setup [F11]-Files [F1]-Help",CL_GREEN,CL_BLACK);
+    #endif
+
+
     #endif
 //-----------------------------------------------------------------    
      y_info += 10;
@@ -1164,9 +1177,6 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
     }
     draw_text(10+XPOS,y_info,temp_msg,CL_GREEN,CL_BLACK); 
 
-    
-    //    snprintf(temp_msg, sizeof temp_msg, "#%x ",kb_st_ps2.u[2]);
-	 //  	draw_text(254+XPOS,YPOS+20,temp_msg,CL_LT_CYAN,CL_BLACK);
 
 flag_usb_kb = false;
 
@@ -1487,8 +1497,6 @@ void keyboard_and_other(void)
 #endif
 
 #ifdef  GENERAL_SOUND         
-      //   if ((z_controler_cs & 0x02) == 0x00) // Z-Controller не активен
-     /// if (gpio_get(PBUS_CS)) // Z-Controller не активен
            {
                if (F7) // громкость -
                {

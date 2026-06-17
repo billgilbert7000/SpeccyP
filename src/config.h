@@ -486,7 +486,7 @@ extern bool flag_gs;
 #define TS_RESET        0x03 // второй байт команды
 #define TS_BUSTER       0x04 // второй байт команды третий  значение 
 #define MUTE_GLOBAL     0x05 // Полное отключение звука
-
+#define DATE_TIME       0x06 // Передача строки Data Time  
 
 
 #define PICOBUS_CONNECT    0x77    // команда инициализации

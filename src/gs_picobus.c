@@ -94,8 +94,9 @@ PBUS_CS_0;
         tx_buffer[1] =  command_sys;
         send_buffer(tx_buffer, 2);
 PBUS_CS_1;
-       if (command_sys==0)   receive_buffer(tx_buffer , 64 ); // получение инфы от GS
-       if (command_sys==1)   return; // сброс GS
+       if (command_sys==GS_INFO)   receive_buffer(tx_buffer , 64 ); // получение инфы от GS
+       if (command_sys==GS_RESET)   return; // сброс GS
+       if (command_sys==DATE_TIME)   receive_buffer(tx_buffer , 64 ); // получение строки даты и времени
 }
 //################################################################################
 

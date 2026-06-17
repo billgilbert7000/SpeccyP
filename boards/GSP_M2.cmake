@@ -12,11 +12,12 @@ LED_BOARD=25
 VOLTAGE_RUN=VREG_VOLTAGE_1_30
 #########################################################################
 ##PicoBus ONLY GENERAL SOUND
-PBUS_OUT_PIN=10
-PBUS_IN_PIN=11
+PBUS_OUT_PIN=11
+PBUS_IN_PIN=10
 PBUS_PIO=pio0   #only pio 0
 ## Beep
 BEEP_PIN=9  #  # на IN
+RTC
 #######################################################################
 
 #PS/2 клавиатура

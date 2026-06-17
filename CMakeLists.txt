@@ -7,20 +7,20 @@ else()
 endif()
 set(sdkVersion 2.2.0)
 set(toolchainVersion 14_2_Rel1)
-set(picotoolVersion 2.2.0)
+set(picotoolVersion 2.2.0-a4)
 set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
-# ======================================================================================
+# ====================================================================================
 # Устанавливаем параметры платы и чипа и так далее
-set(PICO_BOARD pico2 CACHE STRING "Board type")
+set(PICO_BOARD pico CACHE STRING "Board type")
 
 set(DEBUG ON)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 6)
-set(VERSION_PATCH 7)
+set(VERSION_PATCH 8)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
@@ -83,7 +83,8 @@ if(SPECCY_CONFIG STREQUAL "GSP_FULL")
         GENERAL_SOUND 
         TURBOSOUND
         Z_CONTROLER
-        MIDI
+      ##  MIDI
+      RTC_NOVA
     )
       set(GENERAL_SOUND ON)
 #

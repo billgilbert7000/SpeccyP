@@ -14,7 +14,7 @@ if (EXISTS ${picoVscode})
 endif()
 # ====================================================================================
 # Устанавливаем параметры платы и чипа и так далее
-set(PICO_BOARD pico CACHE STRING "Board type")
+set(PICO_BOARD pico2 CACHE STRING "Board type")
 
 set(DEBUG ON)
 

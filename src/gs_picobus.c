@@ -96,7 +96,8 @@ PBUS_CS_0;
 PBUS_CS_1;
        if (command_sys==GS_INFO)   receive_buffer(tx_buffer , 64 ); // получение инфы от GS
        if (command_sys==GS_RESET)   return; // сброс GS
-       if (command_sys==DATE_TIME)   receive_buffer(tx_buffer , 64 ); // получение строки даты и времени
+       if (command_sys==RTC_DATE_TIME)   receive_buffer(tx_buffer , 20); // получение строки даты и времени
+       if (command_sys==RTC_TIME)   receive_buffer(tx_buffer , 9 ); // получение строки времени 00:00:00
 }
 //################################################################################
 

@@ -36,7 +36,7 @@
 
 
 
-//#include "rom/service.h"// сервис монитор пентагон 
+#include "rom/service.h"// сервис монитор пентагон 
 
 #include "rom/romScorpion295.h"// Scorpion ZS256
 //#include "rom/romScorpion.h"// Scorpion ZS256 Old
@@ -274,7 +274,6 @@ void fast(rom_select)(void)
 //#define ROM48  1
 //#define ROM_TRDOS 2
 //#define ROM_SM  3
-
 
 switch (conf.mashine)
 {
@@ -730,7 +729,6 @@ inline static void fast(_write_z80_cash)(Z80 *cpu, uint16_t addr, uint8_t val)
 }
 //---------------------------------------------------------------------------------
 //#########################################################
-//#define PIN_ZX_LOAD (22)
 //функции ввода звука спектрума
 
 static uint64_t loadLastCycle = 0;
@@ -1905,6 +1903,11 @@ void machine_Spectrum_48(Z80 *cpu)
 		ticks_per_frame=71680 ;// 71680- Пентагон //70908 - 128 +2A // 70784 Scorpion
         }
 // инициализация Z80 defain Pentagon 128
+void nmi_Pentagon(Z80 *cpu)
+{
+   zx_cpu_ram[0] = zx_rom_bank[3]; 
+}
+//
 void machine_Pentagon_128(Z80 *cpu)
         {
         cpu->context      = cpu;
@@ -1916,7 +1919,7 @@ void machine_Pentagon_128(Z80 *cpu)
         cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
         cpu->out          = (Z80Write)spec128;//machine_cpu_out;
         cpu->halt         = Z_NULL;//= (Z80Halt)halt_z80;
-        cpu->nmia         = Z_NULL;
+        cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
@@ -1955,7 +1958,7 @@ void machine_Pentagon_512(Z80 *cpu)
         cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
         cpu->out          = (Z80Write)extram128;//machine_cpu_out;
         cpu->halt         = Z_NULL;
-        cpu->nmia         = Z_NULL;
+        cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
@@ -2038,7 +2041,7 @@ void machine_Pentagon_1024(Z80 *cpu)
         cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
         cpu->out          = (Z80Write)extram128;//machine_cpu_out;
         cpu->halt         = Z_NULL;
-        cpu->nmia         = Z_NULL;
+        cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
@@ -2056,8 +2059,6 @@ void nmi_Scorpion_256(Z80 *cpu)
 {
     rom=3;
     zx_cpu_ram[0] = zx_rom_bank[3];
-
-
 }     
 
 #ifdef RP2350_256K   //для памяти RAM 256kB на RP2350 не используя PSRAM
@@ -2328,14 +2329,13 @@ void init_rom_ram(uint8_t rom_x)
     zx_RAM_bank_dffd =0x00;
     zx_RAM_bank_ext8 =0x00;
 
-
 	zx_state_48k_MODE_BLOCK = false;
 
 	zx_vbuf[0].is_displayed = true;
 	zx_vbuf[0].data = g_gbuf;
 	zx_vbuf_active = &zx_vbuf[0];
 
- return; // выход нафиг больше тут делать нечего
+    return; // выход нафиг больше тут делать нечего
 break;
 
 
@@ -2355,22 +2355,16 @@ case QUORUM1024:
 
 break;
 
-
-
-
-
-
-#ifndef NO_GMX
     case GMX2048 :
-    zx_rom_bank[0]=&ROM_128K[0*16384];//128k 
+        zx_rom_bank[0]=&ROM_128K[0*16384];//128k 
 	    zx_rom_bank[1]=&ROM_48K[0*16384];//48k 
         if (conf.trdos_version==0) zx_rom_bank[2]=&ROM_TRDOS_504T[0*16384];//TRDOS 5.04T
         else zx_rom_bank[2]=&ROM_TRDOS_505D[0*16384];//TRDOS 5.05D
-		zx_rom_bank[3]=&ROM_Qsm[0*16384];//SERVICE PENTAGON
+		zx_rom_bank[3]=&ROM_Qsm[0*16384];//Заглушка TODO
         rom=0;
 	    zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF с какой банки стартовать
 break;
-#endif
+
  case SCORP256:
         zx_rom_bank[0]=&ROM_SCORPION[0x0000];//128k 
 	    zx_rom_bank[1]=&ROM_SCORPION[0x4000];//48k 
@@ -2453,8 +2447,8 @@ break;
         if (conf.trdos_version==0) zx_rom_bank[2]=&ROM_TRDOS_504T[0*16384];//TRDOS 5.04T
         else zx_rom_bank[2]=&ROM_TRDOS_505D[0*16384];//TRDOS 5.05D
 
-       // zx_rom_bank[3]=&ROM_SV[0*16384];//SERVICE PENTAGON
-		zx_rom_bank[3]=&ROM_Qsm[0*16384];//SERVICE PENTAGON
+       zx_rom_bank[3]=&ROM_SV[0*16384];//SERVICE PENTAGON
+	//	zx_rom_bank[3]=&ROM_Qsm[0*16384];//
         rom=0;
 	    zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF с какой банки стартовать
 	  break;
@@ -2596,9 +2590,12 @@ void zx_machine_reset(uint8_t rom_x)
 
     seekbuf =0;// обнуление счетчика tape при сбросе
     // в Кворум в режиме CP/M при роковом стечении обстоятельств 
+    // и в  Nova 256  При тесте памяти
     // может быть ошибка связанная с перехватом точек входа TAPE LOADER
     // используемых для работы FAST загрузки !!!  TODO
  	if (conf.mashine==QUORUM1024) conf.tape_mode = 1; 
+    if (conf.mashine==NOVA256)    conf.tape_mode = 1; 
+
     if (conf.tape_mode == 0) {
 	   	enable_tape = true;
 		tap_loader_active = false;
@@ -3165,48 +3162,3 @@ void turbo_switch(void)
      }
 
 }
-
-// На заметку ;)
-			// Если нажали клавишу NMI // QUORUM // SCORPION
-		//	if (main_nmi_key)
-		//	{
-                
-         //   	 main_nmi_key = false;
-
-//z80_run(&cpu_zx, 1);
-         //   }
-		//    if (conf.mashine == NOVA256)
-	    	//	{
-			//		rom=3;
-			// НОВЫЙ ЭМУЛЯТОР	
-           // 	zx_cpu_ram[0] = zx_rom_bank[3]; zx_0000_lastOut = 0; z80_nmi(&cpu_zx);
-        //     } // QUORUM
-
-        //   if (conf.mashine == SCORP256)
-	    //		{
-		//			rom=3;
-				// НОВЫЙ ЭМУЛЯТОР	
-         //       	 zx_cpu_ram[0] = zx_rom_bank[3];  z80_nmi(&cpu_zx);
-           //      } // 
-
-
-         //   if (conf.mashine == PENT_512CASH) // Пентагон 512 с кеш
-	    //		{
-					// zx_7ffd_lastOut = zx_7ffd_lastOut | 0x10;
-					// zx_7ffd_lastOut = zx_7ffd_lastOut & 0xef;
-				//	  cash_f = 1;
-				// НОВЫЙ ЭМУЛЯТОР		
-               //   z80_nmi(&cpu_zx);
-          //       } // 
-			
-
-/*             if (conf.mashine == PENT1024) // Пентагон 1024
-	    		{
-				 //	 zx_7ffd_lastOut = zx_7ffd_lastOut | 0x10;
-					// zx_7ffd_lastOut = zx_7ffd_lastOut & 0xef;
-										rom=3;
-					 zx_cpu_ram[0] = zx_rom_bank[3]; 
-					  z80_gen_nmi(&cpu); } //  
-			}
-
-*/

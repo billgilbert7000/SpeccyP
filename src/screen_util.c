@@ -404,7 +404,10 @@ uint8_t MenuBox_bw(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos,  char
 
   while (1)
   {
-
+    #if defined(GENERAL_SOUND) && defined(RTC_NOVA)
+           sys_GS(RTC_TIME);
+           draw_text(140,23,tx_buffer,CL_BLACK,CL_GRAY); 
+    #endif
 if (!decode_key_joy()) continue; // если нажата кнопка на клавиатуре или джой
 
     if (kb_st_ps2.u[2] & KB_U2_DOWN)

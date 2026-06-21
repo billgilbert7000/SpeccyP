@@ -95,9 +95,7 @@ enum {
     PENT512 = 2,
     PENT1024 = 3,
     SCORP256 = 4,
-    //PROFI1024 = 5, // отключено
     GMX2048 = 5,
-    //ZX4096 = 7, // отключенно
     NOVA256 = 6,
     PENT8M = 7,
     PENT_512CASH = 8,
@@ -486,8 +484,8 @@ extern bool flag_gs;
 #define TS_RESET        0x03 // второй байт команды
 #define TS_BUSTER       0x04 // второй байт команды третий  значение 
 #define MUTE_GLOBAL     0x05 // Полное отключение звука
-#define DATE_TIME       0x06 // Передача строки Data Time  
-
+#define RTC_DATE_TIME   0x06 // Передача строки Data Time  
+#define RTC_TIME        0x07 // Передача строки Time  
 
 #define PICOBUS_CONNECT    0x77    // команда инициализации
 // дефайны эмуляции портов GS 

@@ -308,8 +308,6 @@ void filterZxMachines(bool psram) {
 } 
 
 
-
-
 const char ** getZxMachineNames() {  
     return menu_machineNames;   
 }
@@ -326,27 +324,6 @@ const ZxMachineVariant  *getZxMachineVariant(int machineIndex) {
     }
     return NULL;
 }
-
-
-/* #ifdef RP2350_256K
-	// меню menu_ram_48_128_256
-	char __in_flash() *menu_ram_128_48[4]={
-        //char*  menu_ram[7]={	
-        " Pentagon 128     ",
-        " ZX Spectrum 48   ",
-        " Scorpion ZS 256  ",
-        " Navigator 256    ",
-       };
-
-#else
-	// меню menu_ram_128_48
-	char __in_flash() *menu_ram_128_48[2]={
-        //char*  menu_ram[7]={	
-        " Pentagon 128     ",
-        " ZX Spectrum 48   ",
-       };
-#endif */
-
 
 	// меню sound
 	 char __in_flash() *menu_sound[8]={
@@ -984,16 +961,22 @@ switch (type_psram)
 {
 case NOT_PSRAM:
     draw_text_len(10+XPOS,y_info,"PSRAM not found",CL_RED,CL_BLACK,16); 
-    #ifdef RP2350_256K
+     #ifdef RP2350_256K
 	{
-		if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
-        else conf.mashine = SCORP256;    
+	//	if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
+     //   else conf.mashine = SCORP256; 
+        
+        if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 1)  conf.mashine = PENT128;
+
+
 	}
     #else
 	{
-		if (conf.mashine > 1) conf.mashine = 0;
+	//	if (conf.mashine > 1) conf.mashine = 0;
+        if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 0)  conf.mashine = PENT128;
+
 	}
-    #endif
+    #endif  
     psram_avaiable =0;
     break;
 
@@ -1004,28 +987,28 @@ case BUTTER_PSRAM:
     psram_type = 0;
     psram_avaiable =1;
     break;
-case BOARD_PSRAM:
+
+    case BOARD_PSRAM:
     snprintf(temp_msg, sizeof temp_msg, "PSRAM %d Mb SPI board", size_psram); //available
 	draw_text(10+XPOS,y_info,temp_msg,CL_GREEN,CL_BLACK);
     psram_type = 1;
     psram_avaiable =1;
     break;
-/* case NOT_PSRAM_PIN21:    
-	draw_text(10+XPOS,y_info,"NO PSRAM / Clock AY on pin21",CL_LT_PINK,CL_BLACK);
-    if (conf.mashine > 1) conf.mashine = 0;// only 128kB
-    psram_avaiable = 0;
-    break; */
+
 case BOARD_PSRAM_NOSUPORT:
     snprintf(temp_msg, sizeof temp_msg, "PSRAM board is not supported");
 	draw_text(10+XPOS,y_info,temp_msg,CL_BLUE,CL_BLACK);
     #ifdef RP2350_256K
 	{
-		if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
-        else conf.mashine = SCORP256;    
+	//	if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
+     //   else conf.mashine = SCORP256; 
+        
+        if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 1)  conf.mashine = PENT128;
 	}
     #else
 	{
-		if (conf.mashine > 1) conf.mashine = 0;
+		//	if (conf.mashine > 1) conf.mashine = 0;
+        if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 0)  conf.mashine = PENT128;
 	}
     #endif
     psram_avaiable =0;
@@ -1034,7 +1017,7 @@ case BOARD_PSRAM_NOSUPORT:
 
 
     filterZxMachines(psram_avaiable);
-    if (getZxMachineVariant(conf.mashine)->NeedPSRAM && !psram_avaiable) conf.mashine = PENT128;
+ //   if (getZxMachineVariant(conf.mashine)->NeedPSRAM && !psram_avaiable) conf.mashine = PENT128; // TODO ИСПРАВИТЬ 
 
 
 
@@ -1145,13 +1128,10 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
        draw_text(12+FONT_W,110+YPOS,tx_buffer+32,CL_LT_BLUE,CL_BLACK); 
        select_audio(); // переключение режимов вывода звука 
 
-    #ifdef RTC
+    #ifdef RTC_NOVA
            // дата и время RTC
-           sys_GS(DATE_TIME);
-           tx_buffer[60]=0;
-        //   snprintf(temp_msg, sizeof tx_buffer, "%s %s",BUILD_DATE, BUILD_TIME); 
+           sys_GS(RTC_DATE_TIME);
            draw_text((320-(18*FONT_W))/2,190+YPOS,tx_buffer,CL_LT_CYAN,CL_BLACK); 
-         //  draw_text((320-(18*FONT_W))/2,180+YPOS,"[F12]-Setup [F11]-Files [F1]-Help",CL_GREEN,CL_BLACK);
     #endif
 
 
@@ -2011,11 +1991,11 @@ void setup_zx(void)
     draw_text(x1 + 10, y1 + 3, FW_VERSION, CL_BLACK, CL_GRAY); // шапка меню
     
          if (vout_select==VIDEO_VGA)
-		draw_text(x1 + 180, y1 + 3,"VGA",CL_BLACK, CL_GRAY);	
+		draw_text(x1 +200, y1 + 3,"VGAW",CL_BLACK, CL_GRAY);	
         if (vout_select==VIDEO_HDMI)
-		draw_text(x1 + 180, y1 + 3,"HDMI",CL_BLACK, CL_GRAY);	
+		draw_text(x1 + 200, y1 + 3,"HDMI",CL_BLACK, CL_GRAY);	
         if (vout_select==VIDEO_TFT)
-		draw_text(x1 + 180, y1 + 3,"TFT",CL_BLACK, CL_GRAY);	  
+		draw_text(x1 + 200, y1 + 3,"TFT",CL_BLACK, CL_GRAY);	  
 
 	char str[10];
 	snprintf(str, sizeof str, "%dMHz", (int)(clock_get_hz(clk_sys) / 1000000));
@@ -2027,16 +2007,11 @@ void setup_zx(void)
 		draw_text(x1 + 206+12, y1 + 3, temp_msg, CL_BLACK, CL_GRAY);
     }
     else
+    
     #ifdef RP2350_256K
-	{
-		if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
-        else conf.mashine = SCORP256;
-        
-	}
+        if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 1)  conf.mashine = PENT128;
     #else
-	{
-		if (conf.mashine > 1) conf.mashine = 0;
-	}
+        if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 0)  conf.mashine = PENT128;
     #endif
 
 
@@ -2045,7 +2020,6 @@ void setup_zx(void)
     {  
         draw_rect(30, 40, 240,155, CL_BLACK, true);				   // рамка 3 фон
         draw_text(x1 + 120, y1 +20, getZxMachineVariant(conf.mashine)->name, CL_GRAY, CL_BLACK);
-
 
       #ifdef GENERAL_SOUND
         draw_text(x1 + 126, y1 + 20+ M_SOUND*10, "GeneralSound + TS", CL_GRAY, CL_BLACK);
@@ -2058,7 +2032,6 @@ void setup_zx(void)
         draw_text(x1 + 120, y1 + 20+ M_TURBO*10,  menu_speed[conf.turbo], CL_GRAY, CL_BLACK);
         draw_text(x1 + 120, y1 + 20+ M_JOY*10, menu_joy[conf.joyMode], CL_GRAY, CL_BLACK);
 
-       /// if (conf.vout!=VIDEO_TFT) 
         if (vout_select != VIDEO_TFT)
         draw_text(x1 + 120, y1 + 20+ M_PALLETE*10, menu_pallete[conf.pallete], CL_GRAY, CL_BLACK);
 

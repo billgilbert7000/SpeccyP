@@ -283,7 +283,7 @@ case NOVA256:
 	//	zx_cpu_ram[0] =  zx_rom_bank[ table_nova256 [rom_n] ];
 if ((zx_0000_lastOut&0b00100000) == 0)
 {
-	rom=3;
+	rom=ROM_SM;
  zx_cpu_ram[0] = zx_rom_bank[3]; 
 }
 	else 
@@ -305,7 +305,7 @@ case SCORP256:
 
 if ((zx_1ffd_lastOut & 0x02) == 0x02)
 {
-	rom=3;  zx_cpu_ram[0] = zx_rom_bank[3]; 
+	rom=ROM_SM;  zx_cpu_ram[0] = zx_rom_bank[3]; 
 }
 	else 
 	{
@@ -1141,7 +1141,7 @@ inline void fast (zx_machine_set_7ffd_out)(uint8_t val)// переключени
         zx_state_48k_MODE_BLOCK=true; // 5bit = 1 48k mode 
         zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
         zx_video_ram=zx_ram_bank[5];  
-		rom=1;
+		rom=ROM_48;
         zx_cpu_ram[0]=zx_rom_bank[1]; 
 		break;
 
@@ -2057,7 +2057,7 @@ void machine_Pentagon_1024(Z80 *cpu)
 // Scorpion ZS256    
 void nmi_Scorpion_256(Z80 *cpu)
 {
-    rom=3;
+    rom=ROM_SM;
     zx_cpu_ram[0] = zx_rom_bank[3];
 }     
 
@@ -2172,7 +2172,7 @@ void machine_Scorpion_GMX(Z80 *cpu)
 // NOVA 256 Кворум 256       
 void nmi_NOVA_256(Z80 *cpu)
 {
-    rom=3;  
+    rom=ROM_SM;  
     zx_cpu_ram[0] = zx_rom_bank[3];
     zx_0000_lastOut = 0; 
 }
@@ -2320,7 +2320,7 @@ void init_rom_ram(uint8_t rom_x)
 	    zx_rom_bank[1]=&ROM_48Q[0*16384];//48k 
 		zx_rom_bank[2]=&ROM_Qtr[0*16384];//TRDOS 6.04
 	    zx_rom_bank[3]=&ROM_Qsm[0*16384];//NAVIGATOR
-		rom=3;
+		rom=ROM_SM;
 	    zx_cpu_ram[0]=zx_rom_bank[3]; // 0x0000 - 0x3FFF с какой банки стартовать
 
 	zx_RAM_bank_active =0x00;
@@ -2361,7 +2361,7 @@ break;
         if (conf.trdos_version==0) zx_rom_bank[2]=&ROM_TRDOS_504T[0*16384];//TRDOS 5.04T
         else zx_rom_bank[2]=&ROM_TRDOS_505D[0*16384];//TRDOS 5.05D
 		zx_rom_bank[3]=&ROM_Qsm[0*16384];//Заглушка TODO
-        rom=0;
+        rom=ROM_128;
 	    zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF с какой банки стартовать
 break;
 
@@ -2370,7 +2370,7 @@ break;
 	    zx_rom_bank[1]=&ROM_SCORPION[0x4000];//48k 
 		zx_rom_bank[2]=&ROM_SCORPION[0xc000];//TRDOS 5.03
 	    zx_rom_bank[3]=&ROM_SCORPION[0x8000];//SM
-		rom=0;
+		rom=ROM_128;
 	    zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF с какой банки стартовать
       //  psram_cleanup(); очистка PSRAM SPI
 	break;
@@ -2381,14 +2381,14 @@ break;
         if (conf.trdos_version==0) zx_rom_bank[2]=&ROM_TRDOS_504T[0*16384];//TRDOS 5.04T
         else zx_rom_bank[2]=&ROM_TRDOS_505D[0*16384];//TRDOS 5.05D
         zx_rom_bank[3]=&ROM_Qsm[0*16384];//SERVICE PENTAGON  /// TODO     заглушка не используется
-		rom=1;
+		rom=ROM_48;
 	
 		if (rom_x ==0) // первый запуск при включении или hard reset
         {
         switch (conf.autorun)
 		{
 		case 0     /* OFF */:
-		    rom=1;
+		    rom=ROM_48;
 			zx_cpu_ram[0]=zx_rom_bank[1]; // 0x0000 - 0x3FFF 48 BASIC 0  с какой банки стартовать
 		break;
 
@@ -2397,18 +2397,18 @@ break;
 			  zx_cpu_ram[0]=zx_rom_bank[1]; // диска нет 48 BASIC 
 			else 
 			{
-			rom=2;
+			rom=ROM_DOS;
 			zx_cpu_ram[0]=zx_rom_bank[2]; // диск есть TR-DOS  
 			}
 		break;
 
 		case 2     /* QS SLOT 0*/:
-		    rom=1;
+		    rom=ROM_48;
 			zx_cpu_ram[0]=zx_rom_bank[1]; // 0x0000 - 0x3FFF 48 BASIC 0  с какой банки стартовать
 		break;
 
 		default:
-		    rom=1;
+		    rom=ROM_48;
 		    zx_cpu_ram[0]=zx_rom_bank[1]; // 0x0000 - 0x3FFF 48 BASIC 0  с какой банки стартовать	
 			break;
 		}
@@ -2416,13 +2416,13 @@ break;
 
         if (rom_x ==1) // загрузка с вставленной дискетой по SPACE
 		{
-		 rom=2;
+		 rom=ROM_DOS;
 		 zx_cpu_ram[0]=zx_rom_bank[2]; // 0x0000 - 0x3FFF TR-DOS    запуск trd по   SPACE
 		}
 
 		if (rom_x ==3) // просто reset в  48 BASIC
 		{
-		 rom=1;
+		 rom=ROM_48;
 		 zx_cpu_ram[0]=zx_rom_bank[1]; //  48 BASIC
 		}
 
@@ -2449,7 +2449,7 @@ break;
 
        zx_rom_bank[3]=&ROM_SV[0*16384];//SERVICE PENTAGON
 	//	zx_rom_bank[3]=&ROM_Qsm[0*16384];//
-        rom=0;
+        rom=ROM_128;
 	    zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF с какой банки стартовать
 	  break;
  }
@@ -2459,7 +2459,7 @@ break;
         switch (conf.autorun)
 		{
 		case 0     /* OFF */:
-		     rom=0;
+		     rom=ROM_128;
 			zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF 128 BASIC 0  с какой банки стартовать
 			zx_7ffd_lastOut=0x00;
 			break;    
@@ -2469,33 +2469,33 @@ break;
 		
 			if (conf.Disks[0][0] ==0 ) 
 			{
-				rom=0;
+				rom=ROM_128;
 				zx_cpu_ram[0]=zx_rom_bank[0]; // диска нет 128 BASIC 
 				zx_7ffd_lastOut=0x00;
 			}
 			else 
 			{
-				rom=2;
+			rom=ROM_DOS;
 			zx_cpu_ram[0]=zx_rom_bank[2]; // диск есть TR-DOS  
 			zx_7ffd_lastOut=0x10;//0x10
 			//trdos=true;
 			}
            if (conf.mashine== SCORP256) // загрузка только через меню  TODO!
 			{
-				rom=0;
+				rom=ROM_128;
 				zx_cpu_ram[0]=zx_rom_bank[0]; // диска нет 128 BASIC 
 				zx_7ffd_lastOut=0x10;
 			}
 
 		break;
 		case 2     /* QS SLOT 0*/:
-		    rom=0;
+		    rom=ROM_128;
 			zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF 128 BASIC 0  с какой банки стартовать
 			zx_7ffd_lastOut=0x00;
 		break;
 
 		default:
-		    rom=0;
+		    rom=ROM_128;
 		    zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF 128 BASIC 0  с какой банки стартовать
 			zx_7ffd_lastOut=0x00;
 			break;
@@ -2503,7 +2503,7 @@ break;
 		}
         if (rom_x ==1) // загрузка с вставленной дискетой по SPACE
 		{
-		 rom=2;
+		 rom=ROM_DOS;
 		 zx_cpu_ram[0]=zx_rom_bank[2]; // 0x0000 - 0x3FFF TR-DOS    запуск trd по   SPACE
 		 zx_7ffd_lastOut=0x10;//0x10
 		// trdos=true;
@@ -2512,7 +2512,7 @@ break;
 
 		if (rom_x ==3) // просто reset в  128 BASIC
 		{
-		 rom=0;
+		 rom=ROM_128;
 		 zx_cpu_ram[0]=zx_rom_bank[0]; //  128 BASIC
 		 zx_7ffd_lastOut=0x00;
 		}
@@ -2593,8 +2593,8 @@ void zx_machine_reset(uint8_t rom_x)
     // и в  Nova 256  При тесте памяти
     // может быть ошибка связанная с перехватом точек входа TAPE LOADER
     // используемых для работы FAST загрузки !!!  TODO
- 	if (conf.mashine==QUORUM1024) conf.tape_mode = 1; 
-    if (conf.mashine==NOVA256)    conf.tape_mode = 1; 
+ 	if (conf.mashine==QUORUM1024) conf.tape_mode = 1; // проверить 
+  //  if (conf.mashine==NOVA256)    conf.tape_mode = 1; // добавленна проверка в tape loader
 
     if (conf.tape_mode == 0) {
 	   	enable_tape = true;
@@ -2688,7 +2688,7 @@ void fast(dos_default)(void)
 			if ((Z80_PCH(cpu_zx) == 0x3D) && ((zx_7ffd_lastOut & 0x10) == 0x10))// trdos работает с BASIC48 D4 = 1     rom =1 не выставляется при старте ??? TODO                                                                     
 			{
 			trdos = true;
-            rom=2;
+            rom=ROM_DOS;
 			zx_cpu_ram[0]=zx_rom_bank[2];// tr-dos
             }	
 		}
@@ -2711,7 +2711,7 @@ void fast(dos_scorpion)(void)
 			if ((Z80_PCH(cpu_zx) == 0x3D) && ((zx_7ffd_lastOut & 0x10) == 0x10))// trdos работает с BASIC48 D4 = 1     rom =1 не выставляется при старте ??? TODO                                                                     
 			{
 			trdos = true;
-            rom=2;
+            rom=ROM_DOS;
 			zx_cpu_ram[0]=zx_rom_bank[2];// tr-dos
             }	
 		}
@@ -2732,7 +2732,7 @@ void fast(dos_quorum)(void)
 			if ((Z80_PCH(cpu_zx) == 0x3D) && ((zx_7ffd_lastOut & 0x10) == 0x10))// trdos работает с BASIC48 D4 = 1     rom =1 не выставляется при старте ??? TODO                                                                     
 			{
 			trdos = true;
-            rom=2;
+            rom=ROM_DOS;
 			zx_cpu_ram[0]=zx_rom_bank[2];// tr-dos
             }	
 		}
@@ -2796,10 +2796,14 @@ void fast(zx_machine_main_loop_start)()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // tape load
 if (enable_tape)
-{
-if (Z80_PC(cpu_zx) == 0x0556)  tape_load(); // вход в меню tape // CALL 1366 (0x0556)
-////if (Z80_PC(cpu_zx) == 0x0562)  tape_load_0562(); // вход в меню tape // CALL 0x0562
-if (Z80_PC(cpu_zx) == 0x056a)  tape_load_056a(); // вход в меню tape // CALL 0x056a
+// FAST режим:
+{    
+    if (rom==ROM_48)    
+    //if ((zx_7ffd_lastOut & 0x10) == 0x10)
+        {
+        if (Z80_PC(cpu_zx) == 0x0556)  tape_load(); // вход в меню tape // CALL 1366 (0x0556)
+        if (Z80_PC(cpu_zx) == 0x056a)  tape_load_056a(); // вход в меню tape // CALL 0x056a
+        }
 }
 // NORMAL режим: запуск ленты когда ROM-загрузчик начинает читать
 if (tap_loader_active && TapeStatus==TAPE_STOPPED)
@@ -2822,7 +2826,7 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 			{
 			trdos = true;
 
-           rom=2;
+           rom=ROM_DOS;
 			zx_cpu_ram[0]=zx_rom_bank[2];// tr-dos
 			
             }

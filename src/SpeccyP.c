@@ -1990,12 +1990,12 @@ void setup_zx(void)
 	draw_rect(x1 + 3, y1 + 3, w1 - 6, 8, CL_GRAY, true);	   // шапка меню
     draw_text(x1 + 10, y1 + 3, FW_VERSION, CL_BLACK, CL_GRAY); // шапка меню
     
-         if (vout_select==VIDEO_VGA)
-		draw_text(x1 +200, y1 + 3,"VGAW",CL_BLACK, CL_GRAY);	
+/*          if (vout_select==VIDEO_VGA)
+		draw_text(x1 +200, y1 + 3,"VGA",CL_BLACK, CL_GRAY);	
         if (vout_select==VIDEO_HDMI)
 		draw_text(x1 + 200, y1 + 3,"HDMI",CL_BLACK, CL_GRAY);	
         if (vout_select==VIDEO_TFT)
-		draw_text(x1 + 200, y1 + 3,"TFT",CL_BLACK, CL_GRAY);	  
+		draw_text(x1 + 200, y1 + 3,"TFT",CL_BLACK, CL_GRAY);	   */
 
 	char str[10];
 	snprintf(str, sizeof str, "%dMHz", (int)(clock_get_hz(clk_sys) / 1000000));

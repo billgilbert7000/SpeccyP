@@ -63,7 +63,7 @@ void fast(rom_select_Quorum1024)() {
         zx_cpu_ram[0] = zx_rom_bank[3]; // STUB
     } else 
     if ((zx_0000_lastOut & 0b00100000) == 0) {
-	    rom=3;
+	    rom=ROM_SM;
         zx_cpu_ram[0] = zx_rom_bank[3]; 
     }
 	else 
@@ -104,7 +104,7 @@ void init_rom_ram_Q1024() {
 	zx_rom_bank[1]=ROM_B48_QU1024; //48k 
 	zx_rom_bank[2]=ROM_TRD_QU1024; //TRDOS 6.04
 	zx_rom_bank[3]=ROM_SM_QU1024;  //SYSTEM MENU
-	rom=3;
+	rom=ROM_SM;
 	zx_cpu_ram[0]=zx_rom_bank[3]; // 0x0000 - 0x3FFF с какой банки стартовать
 
    	zx_RAM_bank_active =0x00;
@@ -115,7 +115,7 @@ void init_rom_ram_Q1024() {
 
 void nmi_Quorum1024(Z80 *cpu)
 {
-    rom=3;  
+    rom=ROM_SM;  
     zx_cpu_ram[0] = zx_rom_bank[3];
     zx_0000_lastOut = 0; 
 }

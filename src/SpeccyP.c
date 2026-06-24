@@ -814,13 +814,13 @@ void init_and_info()
 
     config_init(); */
 
-    gpio_put(LED_BOARD, 0);
+    gpio_put(LED_BOARD, 1);
 //------------------------------------------------------------------
     turbo_switch(); // переключение режима turbo
  
     joy_redirecting();// установка режима работы kempston joy
 //--------------------------------------------------------------
-
+ 
 #ifdef  HDMI_ONLY
          vout_select= VIDEO_HDMI;
          startVIDEO(VIDEO_HDMI);// только HDMI
@@ -881,7 +881,7 @@ void init_and_info()
 //#####################################################################	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
 //#####################################################################  
-
+gpio_put(LED_BOARD, 0);
 // Защита от автозапуска пустого или некорректного диска в CP/M Кворума
 // после включения и при Hard Reset 
 if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;  

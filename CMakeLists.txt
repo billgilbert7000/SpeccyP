@@ -20,7 +20,7 @@ set(DEBUG OFF)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 6)
-set(VERSION_PATCH 8)
+set(VERSION_PATCH 9)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
@@ -83,8 +83,8 @@ if(SPECCY_CONFIG STREQUAL "GSP_FULL")
         GENERAL_SOUND 
         TURBOSOUND
         Z_CONTROLER
-      ##  MIDI
-      RTC_NOVA
+        MIDI
+        RTC_NOVA
     )
       set(GENERAL_SOUND ON)
 #

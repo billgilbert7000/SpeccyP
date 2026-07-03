@@ -19,8 +19,8 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 set(DEBUG OFF)
 
 set(VERSION_MAJOR 1)
-set(VERSION_MINOR 6)
-set(VERSION_PATCH 9)
+set(VERSION_MINOR 7)
+set(VERSION_PATCH 0)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла

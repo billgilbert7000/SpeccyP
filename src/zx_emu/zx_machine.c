@@ -763,12 +763,18 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
 	uint8_t portH = port16 >> 8;
 	uint8_t portL = (uint8_t)port16&0x00ff;
 
-//return 0;
-
     #if defined(GENERAL_SOUND)
     if (portL == 0xB3) return in_GSP(GS_READ_IN_B3); 
     if (portL == 0xBB) return in_GSP(GS_STATUS_IN_BB); 
     #endif 
+
+    #if defined(RTC_NOVA)
+    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
+    #endif
+
+    #ifdef MIDI    
+    if (port16 == 0xa1cf ) 	return in_GSP(MIDI_IN); 
+    #endif
 
     #if defined(Z_CONTROLER)
     if (portL == 0x57) return in_GSP(ZC_READ_IN_57); 
@@ -780,14 +786,6 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
         if (is_SD_active)   return 0xfc;
                             return 0xff;
     }
-    #endif
-
-    #if defined(RTC_NOVA)
-    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
-    #endif
-
-    #ifdef MIDI    
-    if (port16 == 0xa1cf ) 	return in_GSP(MIDI_IN); 
     #endif
 
 	if (trdos) // если это tr-dos
@@ -818,9 +816,6 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
 		if ((port16 & 0xc002) == 0xc000) 	return AY_in_FFFD(); 
         #endif    
         
-
-
-
 	}
 	else
     {
@@ -859,6 +854,14 @@ inline static uint8_t fast(in_z80_cash)(Z80 *cpu,uint16_t port16) {
     if (portL == 0xBB) return in_GSP(GS_STATUS_IN_BB); 
     #endif 
 
+    #if defined(RTC_NOVA)
+    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
+    #endif
+
+    #ifdef MIDI    
+    if (port16 == 0xa1cf ) 	return in_GSP(MIDI_IN); 
+    #endif
+
     #if defined(Z_CONTROLER)
     if (portL == 0x57) return in_GSP(ZC_READ_IN_57); 
     if (portL == 0x77) return in_GSP(ZC_READ_IN_77); 
@@ -870,11 +873,6 @@ inline static uint8_t fast(in_z80_cash)(Z80 *cpu,uint16_t port16) {
                             return 0xff;
     }
     #endif
-
-    #if defined(RTC_NOVA)
-    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
-    #endif
-
 
 
 	if (trdos) // если это tr-dos
@@ -943,6 +941,14 @@ inline static uint8_t fast(in_z80_p8)(Z80 *cpu, uint16_t port16) {
     if (portL == 0xBB) return in_GSP(GS_STATUS_IN_BB); 
     #endif 
 
+    #if defined(RTC_NOVA)
+    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
+    #endif
+
+    #ifdef MIDI    
+    if (port16 == 0xa1cf ) 	return in_GSP(MIDI_IN); 
+    #endif
+
     #if defined(Z_CONTROLER)
     if (portL == 0x57) return in_GSP(ZC_READ_IN_57); 
     if (portL == 0x77) return in_GSP(ZC_READ_IN_77); 
@@ -953,10 +959,6 @@ inline static uint8_t fast(in_z80_p8)(Z80 *cpu, uint16_t port16) {
         if (is_SD_active)   return 0xfc;
                             return 0xff;
     }
-    #endif
-    
-    #if defined(RTC_NOVA)
-    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
     #endif
 
 
@@ -1347,6 +1349,13 @@ inline static void fast(extram128)(Z80 *cpu,uint16_t port16, uint8_t val)
     #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
+    #else
+       // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
+        if ((portL & 0xFE) == 0x88) return;//для работы кое чего
+    #endif
+
+    #ifdef MIDI    
+    if (port16 == 0xa0cf ) 	{out_GSP(MIDI_OUT,val);   return;};  // out 0xa0cf 
     #endif
 
 //------------------------------------------------------------------------------
@@ -1411,14 +1420,14 @@ inline static void fast(extram_1ffd)(Z80 *cpu,uint16_t port16, uint8_t val)
 
         if (trdos) {  trdos_out(portL,val); return;}// если это tr-dos
 
-		#ifdef GENERAL_SOUND   
+	#ifdef GENERAL_SOUND   
         if (portL == 0xB3) {out_GSP(GS_WRITE_OUT_B3,  val);   return;}// передача данных в GS
         if (portL == 0xBB) {out_GSP(GS_COMMAND_OUT_BB,val);   return;}// передача команды в GS
-        #else
+    #else
 		//SAA1099
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
-        #endif
+    #endif
 
     #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
@@ -1439,10 +1448,17 @@ inline static void fast(extram_1ffd)(Z80 *cpu,uint16_t port16, uint8_t val)
         }
     #endif
 
-        #ifdef  RTC_NOVA
+    #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
-        #endif
+    #else
+       // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
+        if ((portL & 0xFE) == 0x88) return;//для работы кое чего
+    #endif
+
+    #ifdef MIDI    
+    if (port16 == 0xa0cf ) 	{out_GSP(MIDI_OUT,val);   return;};  // out 0xa0cf 
+    #endif
 
 
          if (port16 == 0x1ffd)
@@ -1511,14 +1527,14 @@ inline static void fast(extram_gmx)(Z80 *cpu,uint16_t port16, uint8_t val)
 
 	if (trdos) {trdos_out(portL,val); return;}// если это tr-dos
 
-		#ifdef GENERAL_SOUND   
+	#ifdef GENERAL_SOUND   
         if (portL == 0xB3) {out_GSP(GS_WRITE_OUT_B3,  val);   return;}// передача данных в GS
         if (portL == 0xBB) {out_GSP(GS_COMMAND_OUT_BB,val);   return;}// передача команды в GS
-        #else
+    #else
 		//SAA1099
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
-        #endif
+    #endif
 
     #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
@@ -1539,10 +1555,17 @@ inline static void fast(extram_gmx)(Z80 *cpu,uint16_t port16, uint8_t val)
         }
     #endif
 
-        #ifdef  RTC_NOVA
+    #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
-        #endif
+    #else
+       // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
+        if ((portL & 0xFE) == 0x88) return;//для работы кое чего
+    #endif
+
+    #ifdef MIDI    
+    if (port16 == 0xa0cf ) 	{out_GSP(MIDI_OUT,val);   return;};  // out 0xa0cf 
+    #endif
 
 
 		if (port16 == 0x1ffd)
@@ -1620,14 +1643,14 @@ inline static void fast(extram_p8)(Z80 *cpu, uint16_t port16, uint8_t val)
 
 	if (trdos) {trdos_out(portL,val); return;}// если это tr-dos
 
-		#ifdef GENERAL_SOUND   
+	#ifdef GENERAL_SOUND   
         if (portL == 0xB3) {out_GSP(GS_WRITE_OUT_B3,  val);   return;}// передача данных в GS
         if (portL == 0xBB) {out_GSP(GS_COMMAND_OUT_BB,val);   return;}// передача команды в GS
-        #else
+    #else
 		//SAA1099
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
-        #endif
+    #endif
 
     #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
@@ -1648,10 +1671,17 @@ inline static void fast(extram_p8)(Z80 *cpu, uint16_t port16, uint8_t val)
         }
     #endif
 
-        #ifdef  RTC_NOVA
+    #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
-        #endif
+    #else
+       // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
+        if ((portL & 0xFE) == 0x88) return;//для работы кое чего
+    #endif
+
+    #ifdef MIDI    
+    if (port16 == 0xa0cf ) 	{out_GSP(MIDI_OUT,val);   return;};  // out 0xa0cf 
+    #endif
 
             if (port16 == 0xaff7) // #AFF7       
 		{
@@ -1745,14 +1775,14 @@ inline static void fast(nova_256)(Z80 *cpu, uint16_t port16, uint8_t val)
 
 	if (trdos) {trdos_out(portL,val); return;}// если это tr-dos
 
-		#ifdef GENERAL_SOUND   
+	#ifdef GENERAL_SOUND   
         if (portL == 0xB3) {out_GSP(GS_WRITE_OUT_B3,  val);   return;}// передача данных в GS
         if (portL == 0xBB) {out_GSP(GS_COMMAND_OUT_BB,val);   return;}// передача команды в GS
-        #else
+    #else
 		//SAA1099
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
-        #endif
+    #endif
 
     #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
@@ -1773,12 +1803,17 @@ inline static void fast(nova_256)(Z80 *cpu, uint16_t port16, uint8_t val)
         }
     #endif
 
-        #ifdef  RTC_NOVA
+    #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
-        #endif
+    #else
+       // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
+        if ((portL & 0xFE) == 0x88) return;//для работы кое чего
+    #endif
 
-
+    #ifdef MIDI    
+    if (port16 == 0xa0cf ) 	{out_GSP(MIDI_OUT,val);   return;};  // out 0xa0cf 
+    #endif
 
 
 	if (port16 & 1) // 
@@ -1830,34 +1865,26 @@ inline static zuint8 fast(inta_callback)(Z80 *cpu, zuint16 address)
  // led_blink();
  //int_enable = false;
  //z80_int(&cpu_zx, false);// INT OFF
-
         // Сброс линии INT после обработки
    //     if (int_enable && !(cpu_zx.request & Z80_REQUEST_INT)) {
     //        z80_int(&cpu_zx, Z_FALSE);
            // z1->int_pending = 0;
      //      int_enable = false;
     //    }
-
-
-
-
 return 0xff;
 }
 
 inline static zuint8 fast(nop_callback)(Z80 *cpu, zuint16 address)
 {
- // gpio_put(LED_BOARD, 1);
- // led_blink();
- //z80_int(&cpu_zx, false);// INT OFF
 return 0x00;
 }
+
 //#define Z80_CHIP Z80_MODEL_ZILOG_NMOS
 //#define Z80_CHIP Z80_MODEL_ZILOG_CMOS
 //#define Z80_CHIP Z80_MODEL_NEC_NMOS
 //#define Z80_CHIP Z80_MODEL_ST_CMOS
 //########################
 
-//
 void select_cpu_z80(Z80 *cpu) {
     switch (conf.cpu_version) {
         case 0: cpu->options = Z80_MODEL_ZILOG_NMOS; return;
@@ -2446,9 +2473,7 @@ break;
 	    zx_rom_bank[1]=&ROM_48K[0*16384];//48k 
         if (conf.trdos_version==0) zx_rom_bank[2]=&ROM_TRDOS_504T[0*16384];//TRDOS 5.04T
         else zx_rom_bank[2]=&ROM_TRDOS_505D[0*16384];//TRDOS 5.05D
-
-       zx_rom_bank[3]=&ROM_SV[0*16384];//SERVICE PENTAGON
-	//	zx_rom_bank[3]=&ROM_Qsm[0*16384];//
+       zx_rom_bank[3]=&ROM_GLUK[0*16384];//GLUK SERVICE PENTAGON
         rom=ROM_128;
 	    zx_cpu_ram[0]=zx_rom_bank[0]; // 0x0000 - 0x3FFF с какой банки стартовать
 	  break;

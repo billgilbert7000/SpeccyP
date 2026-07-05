@@ -461,7 +461,7 @@ bool config_ini_save(const char *filename) {
         "; SpeccyP Configuration\n"
         "; =====================\n"
         "; Version (do not modify)\n"
-        "version = %llu\n\n"
+        "version = %lu\n\n"
         "; Voltage 1.30V=130 ,1.35V=135, 1.40V=140, 1.50V=150, 1.60V=160 \n"
         "voltage = %u\n\n"
         ";Video  0=AUTO 1=VGA, 2=HDMI, 3=TFT\n"

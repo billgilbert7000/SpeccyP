@@ -369,7 +369,7 @@ extern uint32_t cpu_pico_khz;
 // данные конфигурационного файла
 extern struct data_config
 {
-   uint64_t version;// версия конф. файла  
+   uint32_t version;// версия конф. файла  
    uint8_t voltage;// Possible voltage values that can be applied to the regulator
    uint16_t cpu_freq;// Частота pico
    float hdmi_fdiv; // 1.0-> 90Hz  (cpu=378MHz)  1.5->60Hz (cpu=378MHz)

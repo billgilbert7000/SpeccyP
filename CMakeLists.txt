@@ -24,7 +24,7 @@ set(VERSION_PATCH 0)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
-math(EXPR CONFIG_VERSION_VALUE "3000 + ${VERSION_MAJOR}*100 + ${VERSION_MINOR}*10 + ${VERSION_PATCH}")
+math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 1")
 
 # == Конфигурация SpeccyP ==
 

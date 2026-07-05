@@ -1553,6 +1553,7 @@ void keyboard_and_other(void)
 //=========================================================================
 // MAIN
 int fast(main)(void){  
+    set_sys_clock_khz(120*1000, 0);// стартовая частота pico
     init_fs = disk_initialize(0);// инициализация SD
     DIR fs;
     init_fs  =init_filesystem();// монтирование и инициализация SD

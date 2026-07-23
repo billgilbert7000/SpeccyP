@@ -109,7 +109,9 @@ extern psram_spi_inst_t* async_spi_inst;
  * @param dst_len Length of the destination data in bytes. Set to 0 if no data
  * is to be read.
  */
-__force_inline static void __time_critical_func(pio_spi_write_read_blocking)(
+
+//__force_inline static void __time_critical_func(pio_spi_write_read_blocking)(
+static void __time_critical_func(pio_spi_write_read_blocking)(    
         psram_spi_inst_t* spi,
         const uint8_t* src, const size_t src_len,
         uint8_t* dst, const size_t dst_len
@@ -156,7 +158,8 @@ __force_inline static void __time_critical_func(pio_spi_write_read_blocking)(
  * @param src Pointer to the source data to write.
  * @param src_len Length of the source data in bytes.
  */
-__force_inline static void __time_critical_func(pio_spi_write_dma_blocking)(
+//__force_inline static void __time_critical_func(pio_spi_write_dma_blocking)(
+static void __time_critical_func(pio_spi_write_dma_blocking)(    
         psram_spi_inst_t* spi,
         const uint8_t* src, const size_t src_len
 ) {
@@ -197,7 +200,8 @@ __force_inline static void __time_critical_func(pio_spi_write_dma_blocking)(
  * @param dst_len Length of the destination data in bytes. Set to 0 if no data
  * is to be read.
  */
-__force_inline static void __time_critical_func(pio_spi_write_read_dma_blocking)(
+//__force_inline static void __time_critical_func(pio_spi_write_read_dma_blocking)(
+static void __time_critical_func(pio_spi_write_read_dma_blocking)(
         psram_spi_inst_t* spi,
         const uint8_t* src, const size_t src_len,
         uint8_t* dst, const size_t dst_len
@@ -237,7 +241,8 @@ __force_inline static void __time_critical_func(pio_spi_write_read_dma_blocking)
  * @param src_len Length of the source data in bytes.
  */
 #if defined(PSRAM_ASYNC)
-__force_inline static void __time_critical_func(pio_spi_write_async)(
+//__force_inline static void __time_critical_func(pio_spi_write_async)(
+static void __time_critical_func(pio_spi_write_async)(    
         psram_spi_inst_t* spi,
         const uint8_t* src, const size_t src_len
 ) {

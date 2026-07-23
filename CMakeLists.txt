@@ -5,9 +5,9 @@ if(WIN32)
 else()
     set(USERHOME $ENV{HOME})
 endif()
-set(sdkVersion 2.2.0)
-set(toolchainVersion 14_2_Rel1)
-set(picotoolVersion 2.2.0-a4)
+set(sdkVersion 2.3.0)
+set(toolchainVersion 15_2_Rel1)
+set(picotoolVersion 2.3.0)
 set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
     include(${picoVscode})
@@ -16,15 +16,15 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
-set(DEBUG OFF)
+set(DEBUG ON)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 7)
-set(VERSION_PATCH 0)
+set(VERSION_PATCH 1)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
-math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 1")
+math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 3")
 
 # == Конфигурация SpeccyP ==
 
@@ -43,7 +43,7 @@ endif()
 
 # Список плат
 set(M_BOARD_VALUES MURM1 MURM2 PI_CARD WS_ZERO1 WS_ZERO2 PICO_DV PICO_PC GSP_M2)
-set(M_BOARD "MURM2" CACHE STRING "Тип платы: ${M_BOARD_VALUES}")
+set(M_BOARD "MURM1" CACHE STRING "Тип платы: ${M_BOARD_VALUES}")
 set_property(CACHE M_BOARD PROPERTY STRINGS ${M_BOARD_VALUES})
 
 # Проверка валидности M_BOARD
@@ -84,7 +84,8 @@ if(SPECCY_CONFIG STREQUAL "GSP_FULL")
         TURBOSOUND
         Z_CONTROLER
         MIDI
-        RTC_NOVA
+      ##  RTC_NOVA
+        RTC_GLUK
     )
       set(GENERAL_SOUND ON)
 #
@@ -104,7 +105,7 @@ elseif(SPECCY_CONFIG STREQUAL "SPECCY_WSZERO")
     set(SPECCY_CONFIG_DEFINITIONS  
         CPU_MHZ=252
         FLASH_MAX_FREQ_MHZ=66
-        PSRAM_MAX_FREQ_MHZ=100
+        PSRAM_MAX_FREQ_MHZ=66
         TEST_DEBUG #
     )
       set(GENERAL_SOUND OFF)
@@ -114,9 +115,8 @@ else()
     # По умолчанию используем SPECCY
     set(SPECCY_CONFIG "SPECCY")
     set(SPECCY_CONFIG_DEFINITIONS 
-
-        CPU_MHZ=378###378
-        FLASH_MAX_FREQ_MHZ=66
+        CPU_MHZ=378
+        FLASH_MAX_FREQ_MHZ=166  
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
     )
@@ -143,11 +143,12 @@ if(PICO_BOARD STREQUAL "pico")
     if(NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE MinSizeRel CACHE STRING "Build type" FORCE)
     endif()
-elseif(PICO_BOARD STREQUAL "pico2")
+elseif(PICO_BOARD STREQUAL "pico2") ## speccy_pico2
     set(PICO_PLATFORM "rp2350" CACHE STRING "Chip type" FORCE)
     if(NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
     endif()
+  
 else()
     message(FATAL_ERROR "Unsupported PICO_BOARD: ${PICO_BOARD}")
 endif()
@@ -313,7 +314,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 CONFIG_VERSION=${CONFIG_VERSION_VALUE}
 ###CPU_KHZ=CPU_MHZ*1000
 PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
-POWER_MODE_WEACT=1
+POWER_MODE=1
 VOLTAGE_RP2040=VREG_VOLTAGE_1_30
 ##DEBUG_MSG
 ##LEDBLINK           #define LEDBLINK
@@ -360,7 +361,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         AY_DELTA=2
         # -9  111111 Гц  ## -21 μs = 47619 Гц	-0,79% ??? 
         AY_SAMPLE_RATE=-9 ##Чем чаше вызывать тем качество эмуляции AY лучше
-        I2S_FREQ=48000 ##111111 #48000 
+        I2S_FREQ=111111 #48000 
         TRANSFER_COUNT=1<<31
 )
 endif()
@@ -375,7 +376,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         # -9  111111 Гц  ## -21 μs = 47619 Гц	-0,79% ??? 
         # для RP2350 можно и -5 выставить
         AY_SAMPLE_RATE=-9 ##Чем чаше вызывать тем качество эмуляции AY лучше 
-        I2S_FREQ=48000 ##111111 #48000 
+        I2S_FREQ=111111 #48000 
         TRANSFER_COUNT=1<<24
 )
 endif()
@@ -444,7 +445,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         pico_multicore
         hardware_dma
         hardware_pio
-     #   hardware_i2c
         hardware_spi
         hardware_interp
         hardware_timer
@@ -453,7 +453,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_flash
        tinyusb_host 
        tinyusb_board
-      # audio_i2s
        pico_fatfs
 )
 

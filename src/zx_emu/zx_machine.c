@@ -772,6 +772,12 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
     if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
     #endif
 
+    #if defined(RTC_GLUK)
+    if (port16 == 0xBFF7) return in_GSP(RTC_READ_IN_89); 
+    #endif
+
+
+
     #ifdef MIDI    
     if (port16 == 0xa1cf ) 	return in_GSP(MIDI_IN); 
     #endif
@@ -1241,6 +1247,13 @@ inline static void fast(spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
          return;
         }
     #endif
+
+    #ifdef  RTC_GLUK
+        if (port16  ==  0xDFF7 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
+        if (port16  ==  0xBFF7 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
+    #endif
+
+
 
     #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов

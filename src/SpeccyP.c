@@ -599,21 +599,8 @@ void joy_redirecting(void)
         break;
     }
 }
-//=========================================================
-void pico_reset(){
-    #ifdef GENERAL_SOUND
-    sys_GS(GS_RESET);// принудителный сброс GS
- //   sleep_ms(1000);
-    #endif
-//#define AIRCR_Register (*((volatile uint32_t*)(PPB_BASE + 0x0ED0C)))
-//AIRCR_Register = 0x5FA0004;
-	watchdog_enable(1, 1);// сброс watch dog
-	while(1);
-}
-//-----------------------------------------------------
-//bool b_beep;
-//bool b_save;
 
+//-----------------------------------------------------
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)  \
@@ -687,26 +674,29 @@ static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
 #endif
 //############################################################
 void fast(init_pico)(void) // настройка и разгон для RP2350
-{  
-    cpu_pico_khz = conf.cpu_freq *1000;
-    
-        conf.hdmi_fdiv=1.0; // 1.0->60Hz cpu=252MHz 
-        if (conf.cpu_freq==504)     conf.hdmi_fdiv=2.0;  // 60Hz 
-        else if (conf.cpu_freq==378) conf.hdmi_fdiv=1.5; // 60Hz 
-
-    volatile uint32_t *qmi_m0_timing=(uint32_t *)0x400d000c;
+{
+    volatile uint32_t *qmi_m0_timing = (uint32_t *)0x400d000c;
     vreg_disable_voltage_limit();
     vreg_set_voltage(conf.voltage);
-    
-#if (FLASH_MAX_FREQ_MHZ==166)
-    real_flash_freq = CPU_MHZ/3;
+
+    cpu_pico_khz = conf.cpu_freq * 1000;
+    conf.hdmi_fdiv = 1.0; // 1.0->60Hz cpu=252MHz
+    if (conf.cpu_freq == 504)
+        conf.hdmi_fdiv = 2.0; // 60Hz
+    else if (conf.cpu_freq == 378)
+        conf.hdmi_fdiv = 1.5; // 60Hz
+    else if (conf.cpu_freq == 252)
+        conf.hdmi_fdiv = 2.0; // 60Hz
+
+#if (FLASH_MAX_FREQ_MHZ == 166)
+    real_flash_freq = CPU_MHZ / 3;
 
     *qmi_m0_timing = 0x60007204; //  ???
-    set_sys_clock_khz(conf.cpu_freq*1000, 0);
-    *qmi_m0_timing = 0x60007303;   // ???
-#else 
-     set_flash_timings();
-     set_sys_clock_khz(conf.cpu_freq*1000, 0);
+    set_sys_clock_khz(conf.cpu_freq * 1000, 0);
+    *qmi_m0_timing = 0x60007303; // ???
+#else
+    set_flash_timings();
+    set_sys_clock_khz(conf.cpu_freq * 1000, 0);
 #endif
 }
 
@@ -730,45 +720,49 @@ static uint inx=0;
 
 void init_and_info()
 {
-
 /* //#else // RP2040 или RP2350A
-   for (int gpio = 0; gpio < 30; gpio++) {
+   for (int gpio = 6; gpio < 30; gpio++) {
     gpio_init(gpio);          // Сброс в SIO, вход
     gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
     gpio_set_dir(gpio, GPIO_IN); // Направление: вход
     }
-//#endif     */
+//#endif   
 
 #if LED_BOARD != 255
     gpio_init(LED_BOARD);
     gpio_set_dir(LED_BOARD, GPIO_OUT);
-//	g_delay_ms(100);
     gpio_put(LED_BOARD, 1);
-#endif 
+#endif  */
 
 #ifdef PICO_RP2350 
   // определение RP2350 A или B  
      rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
       psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
 
-    // для корректного запуска с бутербродом PSRAM  
+// для корректного запуска с бутербродом PSRAM  
+/*   gpio_init(psram_pin_cs);
+  gpio_set_dir((psram_pin_cs), GPIO_IN);
+  gpio_pull_up(psram_pin_cs);  
+  gpio_put(psram_pin_cs, 1); */
+
     gpio_init(psram_pin_cs);
-    gpio_set_dir((psram_pin_cs), GPIO_IN);
-    gpio_pull_up(psram_pin_cs); // 
+    gpio_set_dir(psram_pin_cs, GPIO_OUT);
     gpio_put(psram_pin_cs, 1);
+
+
 
 // Weact RP2350A v20 GPIO 23 
 // MODE=0 (PFM — Pulse Frequency Modulation)
 // MODE=1 (PWM — Pulse Width Modulation)
-#if POWER_MODE_WEACT != 255
+#if POWER_MODE != 255
     gpio_init(23);
     gpio_set_dir(23, GPIO_OUT);
-    gpio_put(23, POWER_MODE_WEACT);
+    gpio_put(23, POWER_MODE);
 #endif 
 //--------------------------------------
 #endif
 
-  #if PI_CARD // ???? это для того чтобы настроить выходы для PICARD 1 ИНАЧЕЕ МИКРОСХЕМЫ ОБВЯЗКИ ГРЕЮТСЯ
+  #if PI_CARD // ???? это для того чтобы настроить выходы для PICARD 1 ИНАЧЕ МИКРОСХЕМЫ ОБВЯЗКИ ГРЕЮТСЯ
         pio_set_gpio_base(PIO_PS2, 0x10);//использование на pio0 GPIO 16...48
         gpio_init(40);
         gpio_set_dir(40, GPIO_OUT);
@@ -800,21 +794,15 @@ void init_and_info()
    gpio_out_init(BEEP_PIN);// на выход  для реалиации звука бипера
 #endif
 
-	//пин ввода звука
-	gpio_in_init(PIN_ZX_LOAD);
-    
-
+ //пин ввода звука
+ gpio_in_init(PIN_ZX_LOAD);
+   
  init_psram_board_all_version();// инициализация всех видов psram
+//   psram_avaiable =0;
+//    type_psram=NOT_PSRAM;
 
 //---------------------------------------------------------------------------
-
-/*   init_fs = disk_initialize(0);// инициализация SD
-    DIR fs;
- init_fs  =init_filesystem();// монтирование и инициализация SD
-
-    config_init(); */
-
-    gpio_put(LED_BOARD, 1);
+ gpio_put(LED_BOARD, 0);
 //------------------------------------------------------------------
     turbo_switch(); // переключение режима turbo
  
@@ -881,7 +869,6 @@ void init_and_info()
 //#####################################################################	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
 //#####################################################################  
-gpio_put(LED_BOARD, 0);
 // Защита от автозапуска пустого или некорректного диска в CP/M Кворума
 // после включения и при Hard Reset 
 if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;  
@@ -1050,10 +1037,10 @@ snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq);
       // snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %d mV ",conf.voltage );
         draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
     #endif
-#if POWER_MODE_WEACT == 0
+#if POWER_MODE == 0
       //  draw_text(210+XPOS,YPOS+30,"MODE    PFM",CL_GRAY ,CL_BLACK); 
 #endif 
-#if POWER_MODE_WEACT == 1
+#if POWER_MODE == 1
      //   draw_text(210+XPOS,YPOS+30,"MODE    PWM",CL_GRAY ,CL_BLACK); 
 #endif 
 
@@ -1128,11 +1115,13 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
        draw_text(12+FONT_W,110+YPOS,tx_buffer+32,CL_LT_BLUE,CL_BLACK); 
        select_audio(); // переключение режимов вывода звука 
 
-    #ifdef RTC_NOVA
+    #if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
            // дата и время RTC
            sys_GS(RTC_DATE_TIME);
            draw_text((320-(18*FONT_W))/2,190+YPOS,tx_buffer,CL_LT_CYAN,CL_BLACK); 
     #endif
+
+
 
 
     #endif
@@ -1553,10 +1542,22 @@ void keyboard_and_other(void)
 //=========================================================================
 // MAIN
 int fast(main)(void){  
-    set_sys_clock_khz(120*1000, 0);// стартовая частота pico
+    volatile uint32_t *qmi_m0_timing = (uint32_t *)0x400d000c;
+    vreg_disable_voltage_limit();
+    vreg_set_voltage(VREG_VOLTAGE_1_30);
+
+    set_sys_clock_khz(252*1000, 0);// стартовая частота pico
+   
+#if LED_BOARD != 255
+    gpio_init(LED_BOARD);
+    gpio_set_dir(LED_BOARD, GPIO_OUT);
+    gpio_put(LED_BOARD, 1);
+#endif 
+
     init_fs = disk_initialize(0);// инициализация SD
     DIR fs;
     init_fs  =init_filesystem();// монтирование и инициализация SD
+    
     config_init();
     init_pico();
     init_and_info();
@@ -1564,7 +1565,7 @@ int fast(main)(void){
 // если одна плата без GS 
     #ifndef  GENERAL_SOUND     
     select_audio(); // переключение режимов вывода звука 
- 	int hz = 96000;	//44000 //44100 //96000 //22050
+ 	//int hz = 96000;	//44000 //44100 //96000 //22050
 	repeating_timer_t timer_audio;
 	// negative timeout means exact delay (rather than delay between callbacks)
     // f = 1 / T = 1 / 9 μs = 111111 Гц
@@ -1573,10 +1574,7 @@ int fast(main)(void){
     #endif
 
 	repeating_timer_t zx_flash_timer;
-	//hz=2;
 	if (!add_repeating_timer_us(-1000000 / 2/*Hz*/, zx_flash_callback, NULL, &zx_flash_timer)) {
-	//	G_PRINTF_ERROR("Failed to add zx flash timer\n");
- //   gpio_put(25,1);//error
 		return 1;
 	}
 //---------------------------------------------------------------
@@ -1600,7 +1598,7 @@ int fast(main)(void){
 
 
       } // while(1)
-    pico_reset(); // аварийный сброс ;)
+  //  pico_reset(); // аварийный сброс ;)
 }
 //==========================================================================
 void file_select_trdos(void) // 
@@ -2594,7 +2592,7 @@ void led_trdos(void)
     {    
       //  static uint8_t x =0;
         uint8_t color_fon = zx_Border_color & 0x07; // дублируем для 4 битного видеобуфера
-        draw_symbol(0, 240-16,0,CL_LT_BLUE, color_fon);
+        draw_symbol(0, 240-16,0,CL_LT_GREEN, color_fon);
     }
 
 #ifdef Z_CONTROLER
@@ -2605,15 +2603,21 @@ if ((z_controler_cs & 0x02) == 0)
         //if (x&0x80) 
          draw_symbol(0, 240-16,0,CL_LT_GREEN, color_fon);
     }
+#else
+if ((z_controler_cs & 0x02) == 0)
+    {    
+        static uint8_t x =0;
+         uint8_t color_fon = zx_Border_color & 0x07; // дублируем для 4 битного видеобуфера
+        //if (x&0x80) 
+         draw_symbol(0, 240-16,0,CL_LT_BLUE, color_fon);
+    }
 #endif
 }
 //===============================================================
 // Работа с бутербродной PSRAM 
-//===============================================================
 volatile uint8_t * PSRAM_DATA = (uint8_t*)0x11000000;
 #if defined(PICO_RP2350)
-#include <hardware/structs/qmi.h>
-#include <hardware/structs/xip.h>
+
 //=================================================================
 /**
  * @brief Проверка доступности PSRAM 
@@ -2752,6 +2756,32 @@ void __no_inline_not_in_flash_func(init_psram_butter)(uint cs_pin) {
  * @brief Деинициализация PSRAM и восстановление настроек по умолчанию
  * @param cs_pin Номер пина Chip Select для PSRAM
  */
+
+void __no_inline_not_in_flash_func(deinit_psram_butter)(uint cs_pin)  {
+    // 1. Отключить запись в PSRAM
+    hw_clear_bits(&xip_ctrl_hw->ctrl, XIP_CTRL_WRITABLE_M1_BITS);
+/*     
+    // 2. Сбросить настройки QMI для CS1
+    qmi_hw->m[1].rfmt = 0;
+    qmi_hw->m[1].wfmt = 0;
+    qmi_hw->m[1].rcmd = 0;
+    qmi_hw->m[1].wcmd = 0;
+    qmi_hw->m[1].timing = 0;
+     */
+// Выключение прямого доступа, но QMI остается настроенным
+    qmi_hw->direct_csr = 0;
+
+    // 3. Переключить CS1 в обычный GPIO режим
+    gpio_set_function(cs_pin, GPIO_FUNC_SIO);
+    gpio_set_dir(cs_pin, GPIO_IN);
+    
+  // 4. Сбросить указатель на PSRAM
+  //   PSRAM_DATA = (uint8_t*)0;
+    
+    // 5. Обнулить размер
+  //   BUTTER_PSRAM_SIZE = 0;
+}
+/* 
 void __no_inline_not_in_flash_func(deinit_psram_butter)(uint cs_pin) {
     // 1. Запрещаем запись в PSRAM через XIP
     hw_clear_bits(&xip_ctrl_hw->ctrl, XIP_CTRL_WRITABLE_M1_BITS);
@@ -2773,24 +2803,20 @@ void __no_inline_not_in_flash_func(deinit_psram_butter)(uint cs_pin) {
     qmi_hw->direct_csr = 0;
 
     // 6. Сбрасываем настройки QSPI
-   // qmi_hw->io_ctrl = 0;        // Сброс управления вводом-выводом
-   // qmi_hw->ctrl = 0;           // Сброс основного контроля
+   //qmi_hw->io_ctrl = 0;        // Сброс управления вводом-выводом TODO
+   // qmi_hw->ctrl = 0;           // Сброс основного контроля TODO
 
     // 7. Восстанавливаем функцию пина CS
     gpio_set_function(cs_pin, GPIO_FUNC_NULL);
     gpio_set_dir(cs_pin, GPIO_IN);
 
     // 8. Сбрасываем тактирование QSPI
-  //  clocks_hw->periph_reset |= CLOCKS_PERIPH_RESET_QSPI_BITS;
+ //   clocks_hw->periph_reset |= CLOCKS_PERIPH_RESET_QSPI_BITS;
  //   clocks_hw->periph_reset &= ~CLOCKS_PERIPH_RESET_QSPI_BITS;
 
     // 9. Отключаем банк памяти M1 в XIP
    // hw_clear_bits(&xip_ctrl_hw->ctrl, XIP_CTRL_ENABLE_M1_BITS);
-}
-//------------------------------------------------------------------------
-
-//########################
-
+} */
 #endif
 //######################################################################################
 
@@ -2803,7 +2829,7 @@ void  fast(init_psram_board_all_version)(void)
   }
 //----------------- PSRAM END ---------------
 #endif
-//#define NOT_PSRAM_21
+//#define NOT_PSRAM_21   рудимент ))
 #ifdef NOT_PSRAM_21    
 //-----------------NO PSRAM -------------------
   {
@@ -2814,81 +2840,95 @@ void  fast(init_psram_board_all_version)(void)
 //----------------- PSRAM -------------------
 //conf.mashine = 0; // only 128kB test
 //----------------------------------------------------------------------------
-#ifdef  PSRAM_BUTTER_OR_PSRAM_PSRAM_BOARD// если rp23550 на murm1  psram бутерброд и psram board
-{
-        init_psram_butter(psram_pin_cs);//PSRAM_BUTTER_PIN_CS=19 это PSRAM_PIN_CS для платы murm1 psram бутерброд
-     //  size_psram=psram_b_size();
-       size_psram= get_psram_size();
-      if (size_psram!=0) 
+#ifdef PSRAM_BUTTER_OR_PSRAM_PSRAM_BOARD // если rp23550 на murm1  psram бутерброд и psram board
+  {
+      init_psram_butter(psram_pin_cs); // PSRAM_BUTTER_PIN_CS=19 это PSRAM_PIN_CS для платы murm1 psram бутерброд
+      size_psram = get_psram_size();
+      if (size_psram != 0)
       {
-       psram_avaiable =1;
-       type_psram=BUTTER_PSRAM;// тип psram бутерброд или на плате murm1
-       gpio_put(LED_BOARD, 0); 
-       return;
-      }  
+          psram_avaiable = 1;
+          type_psram = BUTTER_PSRAM; // тип psram бутерброд или на плате murm1
+          return;                    // test отключенна QSPI PSRAM
+      }
 
-      /*значит PSRAM бутерброд нет проверяем PSRAM  на плате*/ 
-        
-       deinit_psram_butter(psram_pin_cs);
+      deinit_psram_butter(psram_pin_cs);
 
+      /*значит PSRAM бутерброд нет проверяем PSRAM  на плате*/
+      size_psram = init_psram_board(); // если 0 то деинсталяция программы
 
-      size_psram =  init_psram_board();// если 0 то деинсталяция программы
-      gpio_put(LED_BOARD, 0); 
-//
-if (size_psram==0) 
-{
-    type_psram = NOT_PSRAM;// PSRAM not found
-}
-    type_psram=BOARD_PSRAM;
-    
-}
-#endif ////////////////////////////////////////////////////////////
-//----------------------------------------------------------------
-#ifdef PSRAM_BUTTER// если rp2350 и psram бутерброд 
-{
-       
-    init_psram_butter(psram_pin_cs);  
-    gpio_put(LED_BOARD, 0); 
-
-      
-
-          size_psram= get_psram_size();
-      
-//size_psram=0;  test no psram
- if (size_psram==0) 
-{
-    type_psram = NOT_PSRAM;// PSRAM not found
-    deinit_psram_butter(psram_pin_cs);
-} 
-else 
-{
-    psram_avaiable =1;
-    type_psram=BUTTER_PSRAM;
-}
-}
-#endif////////////////////////////////////////////////////////////
+      if (size_psram == 0)
+          type_psram = NOT_PSRAM; // PSRAM not found
+      else
+          type_psram = BOARD_PSRAM; // PSRAM SPI
+  }
+#endif
+  //----------------------------------------------------------------
+#ifdef PSRAM_BUTTER // если rp2350 и psram бутерброд
+  {
+      init_psram_butter(psram_pin_cs);
+      size_psram = get_psram_size();
+      if (size_psram == 0)
+      {
+          type_psram = NOT_PSRAM; // PSRAM not found
+          deinit_psram_butter(psram_pin_cs);
+      }
+      else
+      {
+          psram_avaiable = 1;
+          type_psram = BUTTER_PSRAM;
+      }
+  }
+#endif
 //----------------------------------------------------------------
 #ifdef PSRAM_BOARD // если rp2040 и psram на плате murm1
-{
-   size_psram =  init_psram_board();// если 0 то деинсталяция программы
-//
-if (size_psram==0) 
-{
-    type_psram =NOT_PSRAM;// PSRAM not found
-    return;
-}
+  {
+      size_psram = init_psram_board(); // если 0 то деинсталяция программы
 
-    type_psram = BOARD_PSRAM;
-}
+      if (size_psram == 0)
+      {
+          type_psram = NOT_PSRAM; // PSRAM not found
+          return;
+      }
+      type_psram = BOARD_PSRAM;
+  }
 #endif
 //--------------------------------------------------------------
 #ifdef PSRAM_NOSUPORT // если rp2040 и psram на плате murm1
-{
-
-    type_psram=BOARD_PSRAM_NOSUPORT; 
-}
+  {
+      type_psram = BOARD_PSRAM_NOSUPORT;
+  }
 #endif
 //----------------- PSRAM END ---------------
+//=========================================================
+void close_all(void) {
+#ifdef PSRAM_BUTTER_OR_PSRAM_PSRAM_BOARD
+  if (type_psram=BUTTER_PSRAM) {
+    memset((void *)PSRAM_DATA, 0, size_psram);  // Очистка PSRAM
+    qmi_hw->direct_csr = 0;
+    gpio_set_function(psram_pin_cs, GPIO_FUNC_NULL);
+    gpio_set_dir(psram_pin_cs, GPIO_IN);
+    return;
+  }
+  if (type_psram=BOARD_PSRAM) {
+    gpio_init(psram_pin_cs);
+    gpio_set_dir(psram_pin_cs, GPIO_OUT);
+    gpio_put(psram_pin_cs, true);  // Сброс CS пина
+  }
+#endif
+}
+//=========================================================
+void pico_reset()
+{
+#ifdef GENERAL_SOUND
+    sys_GS(GS_RESET); // принудителный сброс GS
+#endif
+    // #define AIRCR_Register (*((volatile uint32_t*)(PPB_BASE + 0x0ED0C)))
+    // AIRCR_Register = 0x5FA0004;
+    close_all();
+   // watchdog_enable(1, true); // Включение watchdog на 1ms
+   watchdog_enable(1, 0);//
+    while (1);
+}
 //###########################################
 //   Файловое меню
 //###########################################         
@@ -2930,9 +2970,7 @@ void file_manager (void)
                         {
                             cur_file_index_old = -1;
                         }
-
                     }
-
                 }
                   //+++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -3017,14 +3055,10 @@ void file_manager (void)
                     }// end KEY_SPACE
 
                        if (((KEY_ENTER)|JOY_A) && (init_fs==FR_OK))// нажатие enter
-                      
                     {
-     
                         flag_usb_kb = false;  
-
                         if (files[cur_file_index][LENF1])
                         { // выбран каталог
-
                             if (cur_file_index == 0)
                             { // на уровень выше
                                 if (cur_dir_index)
@@ -3033,7 +3067,7 @@ void file_manager (void)
                                     N_files = read_select_dir(cur_dir_index);
                                     cur_file_index = 0;
                                    // draw_text_len(2 + FONT_W, 2 * FONT_H , " ****     ", CL_TEST, COLOR_BORDER, 14);
-                                    return; // continue;
+                                    return; 
                                 };
                             }
                             if (cur_dir_index < (DIRS_DEPTH - 2))
@@ -3045,7 +3079,7 @@ void file_manager (void)
                                 cur_file_index_old = cur_file_index;
                                shift_file_index=0;
                                 last_action = time_us_32();
-                                return; // continue;
+                                return;
                             }
                         }
                         //
@@ -3100,8 +3134,7 @@ void file_manager (void)
                             }
                             else if (strcasecmp(ext, "sna") == 0)
                             {
-                                // G_PRINTF_DEBUG("current file select=%s\n",conf.activefilename);
-                                // load_image_z80(conf.activefilename);
+
                                 im_z80_stop = true;
                                 while (im_z80_stop)
                                 {
@@ -3134,14 +3167,14 @@ void file_manager (void)
                                         }
                                     }
                                 }
-                                return; // continue;
+                                return; 
                             }
                             else if (strcasecmp(ext, "scr") == 0)
                             {
                                 if (LoadScreenshot(conf.activefilename, true))
                                 {
                                     is_menu_mode = false;
-                                    return; // continue;
+                                    return;
                                 }
                                 else
                                 {
@@ -3321,7 +3354,7 @@ void file_manager (void)
 
                     for (int i = 0; i < num_show_files; i++)
                     {
-                        uint8_t color_text = CL_GREEN;//!!!!!
+                        uint8_t color_text = CL_GREEN;
                         uint8_t color_text_d = CL_YELLOW; // если директория
                         uint8_t color_bg = COLOR_BACKGOUND;
 
@@ -3371,13 +3404,13 @@ void file_manager (void)
                  if (cur_file_index)  
                  {
 //======================================================================================================================
-               strncpy(temp_msg, get_lfn_from_dir(dir_patch, files[cur_file_index]),72); // имя длинное должно быть
-				draw_text_len(12+FONT_W*14,18, temp_msg,CL_INK,COLOR_BACKGOUND,35); // длинное имя должно быть показывается вверху
+               strncpy(temp_msg, get_lfn_from_dir(dir_patch, files[cur_file_index]),72); // имя длинное 
+				draw_text_len(12+FONT_W*14,18, temp_msg,CL_INK,COLOR_BACKGOUND,35); // длинное имя  показывается вверху
                 for (size_t i = 0; i < 36; i++)
                 {
                    temp_msg[i] = temp_msg[i+35];
                 }
-                draw_text_len(12+FONT_W*14,28, temp_msg,CL_INK,COLOR_BACKGOUND,35); // длинное имя длжно быть показывается вверху
+                draw_text_len(12+FONT_W*14,28, temp_msg,CL_INK,COLOR_BACKGOUND,35); // длинное имя показывается вверху
  //=====================================================================================================================
                  }
                    else
@@ -3486,7 +3519,7 @@ void file_info (void)
 					CLEAR_INFO;
 					cur_file_index_old=cur_file_index;
 					if(!LoadScreenshot(conf.activefilename,false)){
-						CLEAR_INFO;
+					CLEAR_INFO;
 
 					} 
 					return; 
@@ -3498,7 +3531,7 @@ void file_info (void)
 					CLEAR_INFO;
 					cur_file_index_old=cur_file_index;
 					if(!LoadScreenFromTap(conf.activefilename))
-						CLEAR_INFO;;
+					CLEAR_INFO;;
 					return; 
 				} 
 				if(strcasecmp(ext, "sna") == 0) {
@@ -3508,7 +3541,7 @@ void file_info (void)
 					CLEAR_INFO;;
 					cur_file_index_old=cur_file_index;
 					if(!LoadScreenFromSNASnapshot(conf.activefilename)){
-						CLEAR_INFO;;
+					CLEAR_INFO;;
 					}
 					return; 
 				} 

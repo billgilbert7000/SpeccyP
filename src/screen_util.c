@@ -404,7 +404,7 @@ uint8_t MenuBox_bw(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos,  char
 
   while (1)
   {
-    #if defined(GENERAL_SOUND) && defined(RTC_NOVA)
+    #if defined(GENERAL_SOUND) &&  defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
            sys_GS(RTC_TIME);
            draw_text(140,23,tx_buffer,CL_BLACK,CL_GRAY); 
     #endif

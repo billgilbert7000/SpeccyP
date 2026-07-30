@@ -428,7 +428,7 @@ DSTATUS disk_initialize (
 )
 {
     BYTE n, cmd, ty, ocr[4];
-    const uint32_t timeout = 2000; /* Увеличиваем таймаут до 2 секунд */
+    const uint32_t timeout = 100; /* Увеличиваем таймаут до 2 секунд 2000*/
     uint32_t t;
     DSTATUS response;
 
@@ -440,10 +440,13 @@ DSTATUS disk_initialize (
 
     if (Stat & STA_NODISK) return Stat;
 
-    FCLK_SLOW();
-    
+  FCLK_SLOW();
+
+
     /* Улучшенная отправка dummy clocks */
     for (n = 80; n; n--) xchg_spi(0xFF);  /* 80 dummy clocks как в спецификации */
+
+
 
     /* Улучшенная отправка CMD0 с повторными попытками */
     ty = 0;
@@ -491,7 +494,7 @@ DSTATUS disk_initialize (
                     send_cmd(CMD0, 0);
                 }
                 
-                sleep_ms(10);  /* Задержка между попытками */
+                sleep_ms(10);  /* Задержка между попытками */ //  
                 
             } while (_millis() - init_start < timeout);
             

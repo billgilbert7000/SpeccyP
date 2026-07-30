@@ -349,7 +349,7 @@ uint8_t command_gs=0xff;    // Порт 1
 uint8_t data_zx=0xff;
 uint8_t data_gs=0xff;
 uint8_t status_gs=0xff;     // Порт 4: D0 - флаг команд, D7 - флаг данных
-
+bool rtc_enable;
 
 
 #endif
@@ -455,15 +455,21 @@ bool config_ini_save(const char *filename) {
     else if (conf.voltage==17) u=140;
     else if (conf.voltage==18) u=150;
     else if (conf.voltage==19) u=160;
-
+    //CPU 
+    uint8_t freq = 1;
+    if (conf.cpu_freq == 252) freq=0;
+    else if (conf.cpu_freq == 378) freq=1;
+    else if (conf.cpu_freq == 504) freq=2;
     // Заголовок файла
     offset = snprintf(sd_buffer, sizeof(sd_buffer),
         "; SpeccyP Configuration\n"
         "; =====================\n"
         "; Version (do not modify)\n"
         "version = %lu\n\n"
-        "; Voltage 1.30V=130 ,1.35V=135, 1.40V=140, 1.50V=150, 1.60V=160 \n"
+        ";Voltage 1.30V=130 ,1.35V=135, 1.40V=140, 1.50V=150, 1.60V=160 \n"
         "voltage = %u\n\n"
+        ";CPU freq 0=252 1=378, 2=504\n"
+        "cpu_freq = %u\n"
         ";Video  0=AUTO 1=VGA, 2=HDMI, 3=TFT\n"
         "video_out = %u\n"
         ";Video GPIO drive strength: 2mA=0, 4mA=1, 8mA=2, 12mA=3 \n" 
@@ -481,7 +487,8 @@ bool config_ini_save(const char *filename) {
         "; TFT backlight  0-100%%\n"
         "tft_brightness = %u\n",
         conf.version,
-        u,               // conf.voltage,
+        u,               // conf.voltage
+        freq,            // conf.cpu_freq 
         conf.vout,
         conf.gpio_strength,
     //    conf.hdmi_fdiv,
@@ -506,21 +513,16 @@ bool config_ini_save(const char *filename) {
 bool config_ini_load(const char *filename) {
     FIL file;
     FRESULT res;
-   
-    //char line[512];
     char section[32] = "";
-    
+        
     // Проверка существования файла
     res = f_open(&file, filename, FA_READ);
     if (res != FR_OK) {
-     //   printf("Config file %s not found, creating default\n", filename);
-        config_defain();
+     // Config file not found
+        f_close(&file);
         config_ini_save(filename);
-        return true;
+        return false;
     }
-    
-    // Загружаем значения по умолчанию
-  //  config_defain();
     
     // Чтение файла построчно
     while (f_gets(sd_buffer, 512, &file)) {
@@ -569,6 +571,18 @@ bool config_ini_load(const char *filename) {
                else if (u==150) conf.voltage=18;
                else if (u==160) conf.voltage=19;
             }
+            else if (strcmp(key, "cpu_freq") == 0)
+            //cpu freq
+            {
+               uint8_t freq; 
+               parse_uint8(value, &freq);
+               conf.cpu_freq=CPU_MHZ;
+               if (freq == 0) conf.cpu_freq=252;
+               else if (freq == 1) conf.cpu_freq=378;
+               else if (freq == 2) conf.cpu_freq=504;
+            }
+
+
             else if (strcmp(key, "video_out") == 0) parse_uint8(value, &conf.vout);
             else if (strcmp(key, "gpio_strength") == 0) parse_uint8(value, &conf.gpio_strength);
          //   else if (strcmp(key, "hdmi_divider") == 0) parse_float(value, &conf.hdmi_fdiv);

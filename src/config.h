@@ -493,6 +493,7 @@ extern bool flag_gs;
 #define MUTE_GLOBAL     0x05 // Полное отключение звука
 #define RTC_DATE_TIME   0x06 // Передача строки Data Time  
 #define RTC_TIME        0x07 // Передача строки Time  
+#define RTC_BIN         0x08 // Передача данных RTC  9 байт
 
 #define PICOBUS_CONNECT    0x77    // команда инициализации
 // дефайны эмуляции портов GS 
@@ -510,17 +511,18 @@ extern bool flag_gs;
 #define TS_READ_IN_BFFD    0x0A // ;)
 #define TS_WRITE_OUT_FFFD  0x0B
 #define TS_WRITE_OUT_BFFD  0x0C
-// дефайны эмуляции портов RTC версия для NOVA
-#define RTC_READ_IN_89     0x0D
-#define RTC_WRITE_OUT_89   0x0E
-#define RTC_WRITE_OUT_88   0x0F
-// дефайны эмуляции портов RTC версия для SMUC
-#define RTC_READ_IN_DFBA   0x0D
-#define RTC_WRITE_OUT_FFBA 0x0E
-#define RTC_WRITE_OUT_DFBA 0x0F
 // дефайны эмуляции портов MIDI
-#define MIDI_IN            0x10
-#define MIDI_OUT           0x11
+#define MIDI_IN            0x0E
+#define MIDI_OUT           0x0F
+// дефайны эмуляции портов RTC 
+#define RTC_READ_REG       0x10
+#define RTC_WRITE_REG      0x11
+#define RTC_WRITE_ADRESS   0x12
+#define RTC_READ_REG_NOVA  0x13
+// дефайны эмуляции портов RTC версия для SMUC
+#define RTC_READ_IN_DFBA   0x14
+#define RTC_WRITE_OUT_FFBA 0x15
+#define RTC_WRITE_OUT_DFBA 0x16
 
 
 
@@ -530,6 +532,8 @@ extern uint8_t data_gs;
 extern uint8_t status_gs;     // Порт 4: D0 - флаг команд, D7 - флаг данных
 
 extern uint8_t z_controler_cs;
+extern bool rtc_enable;
+
 
 #include "fdi_stream.h"
 extern fdi_sector_info_t *sector_inf;
@@ -537,6 +541,8 @@ extern fdi_sector_info_t *sector_inf;
 #ifdef LEDBLINK
 void led_blink(void);
      #endif
+
+
 
 //####################################################
 bool config_ini_save(const char *filename); 

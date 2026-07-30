@@ -53,7 +53,7 @@ void fast(pager7ffd_Quorum1024)(uint8_t val) {
 	   zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_active & 0x07];
     #endif
 	
-	if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
+	//if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
     rom_select(); // переключение ПЗУ по портам и по сигналу DOS
 }
 
@@ -242,7 +242,7 @@ inline static uint8_t fast(in_z80quorum)(Z80 *cpu, uint16_t port16) {
     if (portL == 0x77) return in_GSP(ZC_READ_IN_77); 
     #endif
     #if defined(RTC_NOVA)
-    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
+    if (portL == 0x89) return in_GSP(RTC_READ_REG_NOVA); 
     #endif
 
     #ifdef MIDI    

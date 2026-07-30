@@ -612,7 +612,6 @@ void graphics_init(g_out g_out)
         active_out=g_out;
 //настройка PIO
         SM_video = SM_VIDEO;// pio_claim_unused_sm(PIO_VIDEO, true);
-
         SM_conv = SM_CONV; //pio_claim_unused_sm(PIO_VIDEO_ADDR, true);
 //выделение  DMA каналов 
         dma_chan_ctrl=dma_claim_unused_channel(true);
@@ -624,7 +623,7 @@ void graphics_init(g_out g_out)
        //заполнение палитры по умолчанию(ч.б.)
         for(int ci=0;ci<240;ci++) graphics_set_palette(ci,(ci<<16)|(ci<<8)|ci);//
 
-               //---------------
+        //---------------
 
         uint offs_prg0=0;
         uint offs_prg1=0;
@@ -657,6 +656,7 @@ void graphics_init(g_out g_out)
                 conv_color64[2*(base_inx+3)+1]=get_ser_diff_data(b0,b0,b0);
 
             break;
+            
          case g_out_VGA:
                 offs_prg1= pio_add_program(PIO_VIDEO_ADDR, &pio_program_conv_addr_VGA);
                 offs_prg0 = pio_add_program(PIO_VIDEO, &program_pio_VGA);

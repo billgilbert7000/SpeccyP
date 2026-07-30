@@ -131,7 +131,7 @@ static uint8_t* zx_colors_2_pix=(uint8_t*)&zx_colors_2_pix32;//предпосч�
 
 
 //uint8_t* zx_cpu_ram[4];//Адреса 4х областей памяти CPU при использовании страниц
-uint8_t* zx_video_ram;//4 области памяти CPU
+uint8_t* zx_video_ram;
 
  //uint8_t* zx_ram_bank[8];//Хранит адреса 8ми банков памяти
 uint8_t* zx_rom_bank[4];//Адреса 4х областей ПЗУ (48к 128к TRDOS и резерв для какого либо режима(типа тест))
@@ -242,10 +242,10 @@ uint8_t fast(zx_keyboardDecode)(uint8_t addrH)
 //====================
 void fast (trdos_out)(uint8_t port, uint8_t val)
 	{
-         #ifdef  RTC_SMUC// теневой порт
-         if (port16  == 0xFFBA) {out_GSP(RTC_WRITE_OUT_FFBA,  val); return;}//rtc_write=(val>>7); return;} // D7 
-         if (port16  == 0xDFBA) {out_GSP(RTC_WRITE_OUT_DFBA,  val); return;}//данные регистра часов
-         #endif
+/*          #ifdef  RTC_SMUC// теневой порт
+         if (port  == 0xFFBA) {out_GSP(RTC_WRITE_OUT_FFBA,  val); return;}//rtc_write=(val>>7); return;} // D7 
+         if (port  == 0xDFBA) {out_GSP(RTC_WRITE_OUT_DFBA,  val); return;}//данные регистра часов
+         #endif */
 
         if ((port & 0x1f) > 0)
 		{
@@ -769,11 +769,11 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
     #endif 
 
     #if defined(RTC_NOVA)
-    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
+    if (portL == 0x89) return in_GSP(RTC_READ_REG_NOVA); 
     #endif
 
     #if defined(RTC_GLUK)
-    if (port16 == 0xBFF7) return in_GSP(RTC_READ_IN_89); 
+    if (port16 == 0xBFF7) return in_GSP(RTC_READ_REG); 
     #endif
 
 
@@ -798,12 +798,75 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
 	{
           	if (portL == 0xFF)       return Requests;
             //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
-            if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port
-             
+            if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port          
+           return 0xFF;  
+	} // end tr-dos
+
+	if (port16&1)
+	{
+		// МЫШЬ
+			if (port16 == 0xfadf) return mouse[1]; //#FADF - поpт  кнопок
+			if (port16 == 0xfbdf) return mouse[2]; //#FBDF - поpт X-кооpдинаты;
+			if (port16 == 0xffdf) return mouse[3]; //#FFDF - поpт У-кооpдинаты.
+        //Kempston джойстик    
+		    if (portL==0x1f) return (zx_input.kempston | joy_k);
+            
+        #ifdef  TURBOSOUND         
+        if ((port16 & 0xc002) == 0xc000) 	return in_GSP(TS_READ_IN_FFFD); 
+        #else  
+		if ((port16 & 0xc002) == 0xc000) 	return AY_in_FFFD(); 
+        #endif    
+        
+	}
+	else
+    {
+		//загрузка с магнитофона и опрос клавиатуры
+		if (hw_zx_get_bit_LOAD())  return zx_keyboardDecode(portH);
+		else return(zx_keyboardDecode(portH) & 0b10111111);	
+    }
+
+  if (portL== 0xFF) return port_atr();
+	return 0xFF;
+}
+//###################################################################
+
+inline static uint8_t fast(in_scorpion)(Z80 *cpu, uint16_t port16) {
+	uint8_t portH = port16 >> 8;
+	uint8_t portL = (uint8_t)port16&0x00ff;
+
+    #if defined(GENERAL_SOUND)
+    if (portL == 0xB3) return in_GSP(GS_READ_IN_B3); 
+    if (portL == 0xBB) return in_GSP(GS_STATUS_IN_BB); 
+    #endif 
+
+    #ifdef MIDI    
+    if (port16 == 0xa1cf ) 	return in_GSP(MIDI_IN); 
+    #endif
+
+    #if defined(Z_CONTROLER)
+    if (portL == 0x57) return in_GSP(ZC_READ_IN_57); 
+    if (portL == 0x77) return in_GSP(ZC_READ_IN_77); 
+    #else
+    if (portL == 0x57) return READ_SD_BYTE();
+    if (portL == 0x77) 
+    {
+        if (is_SD_active)   return 0xfc;
+                            return 0xff;
+    }
+    #endif
+
             #if defined RTC_SMUC  // теневой порт
             if (port16  ==  0xDFBA) { return in_GSP(RTC_READ_IN_DFBA);}//чтение порта часов
             if (port16  == 0x5FBA) return 0b01101000;//SMUK_VER;
             #endif
+
+
+
+	if (trdos) // если это tr-dos
+	{
+          	if (portL == 0xFF)       return Requests;
+            //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
+            if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port          
            return 0xFF;  
 	} // end tr-dos
 
@@ -861,7 +924,7 @@ inline static uint8_t fast(in_z80_cash)(Z80 *cpu,uint16_t port16) {
     #endif 
 
     #if defined(RTC_NOVA)
-    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
+    if (portL == 0x89) return in_GSP(RTC_READ_REG_NOVA); 
     #endif
 
     #ifdef MIDI    
@@ -880,17 +943,18 @@ inline static uint8_t fast(in_z80_cash)(Z80 *cpu,uint16_t port16) {
     }
     #endif
 
+             
+            #if defined RTC_SMUC  // теневой порт
+            if (port16  ==  0xDFBA) { return in_GSP(RTC_READ_IN_DFBA);}//чтение порта часов
+            if (port16  == 0x5FBA) return 0b01101000;//SMUK_VER;
+            #endif
 
 	if (trdos) // если это tr-dos
 	{
           	if (portL == 0xFF)       return Requests;
             //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
             if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port
-             
-            #if defined RTC_SMUC  // теневой порт
-            if (port16  ==  0xDFBA) { return in_GSP(RTC_READ_IN_DFBA);}//чтение порта часов
-            if (port16  == 0x5FBA) return 0b01101000;//SMUK_VER;
-            #endif
+
            return 0xFF;  
 	} // end tr-dos
 
@@ -948,7 +1012,7 @@ inline static uint8_t fast(in_z80_p8)(Z80 *cpu, uint16_t port16) {
     #endif 
 
     #if defined(RTC_NOVA)
-    if (portL == 0x89) return in_GSP(RTC_READ_IN_89); 
+    if (portL == 0x89) return in_GSP(RTC_READ_REG_NOVA); 
     #endif
 
     #ifdef MIDI    
@@ -967,17 +1031,18 @@ inline static uint8_t fast(in_z80_p8)(Z80 *cpu, uint16_t port16) {
     }
     #endif
 
-
-	if (trdos) // если это tr-dos
-	{
-          	if (portL == 0xFF)       return Requests;
-            //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
-            if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port
              
             #if defined RTC_SMUC  // теневой порт
             if (port16  ==  0xDFBA) { return in_GSP(RTC_READ_IN_DFBA);}//чтение порта часов
             if (port16  == 0x5FBA) return 0b01101000;//SMUK_VER;
             #endif
+            
+	if (trdos) // если это tr-dos
+	{
+          	if (portL == 0xFF)       return Requests;
+            //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
+            if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port
+
            return 0xFF;  
 	} // end tr-dos
 
@@ -1052,7 +1117,7 @@ inline void fast (zx_machine_set_7ffd_out)(uint8_t val)// переключени
 	  zx_RAM_bank_active = zx_RAM_bank_7ffd |  zx_RAM_bank_1ffd |  zx_RAM_bank_dffd;
 	   zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
 	 	
-	   if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
+	 //  if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
        rom_select(); // переключение ПЗУ по портам и по сигналу DOS
 
 	return; // выход нафиг
@@ -1065,7 +1130,7 @@ inline void fast (zx_machine_set_7ffd_out)(uint8_t val)// переключени
         zx_RAM_bank_7ffd = (val&0b00000111) ; // d0 d1 d2  7ffd
 	   zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_active];
 	
-	   if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
+	 //  if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
        rom_select(); // переключение ПЗУ по портам и по сигналу DOS
 	return; // выход нафиг	
 #else
@@ -1076,17 +1141,16 @@ inline void fast (zx_machine_set_7ffd_out)(uint8_t val)// переключени
         zx_RAM_bank_7ffd = (val&0b00000111) ; // d0 d1 d2  7ffd
 	   zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
 	
-	   if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
+	  // if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
        rom_select(); // переключение ПЗУ по портам и по сигналу DOS
 	return; // выход нафиг
 #endif    	 
 
 	return; // выход нафиг	
+
 	case QUORUM1024:
         pager7ffd_Quorum1024(val);
     	return; // выход нафиг	
-
-
 
 //--------------------------------------------------------------------------------
 #ifdef RP2350_256K
@@ -1135,14 +1199,18 @@ inline void fast (zx_machine_set_7ffd_out)(uint8_t val)// переключени
        zx_RAM_bank_7ffd = (val&0b00000111) ; // d0 d1 d2  7ffd
 	   zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
         if (val& 0x20) zx_state_48k_MODE_BLOCK=true; // 5bit = 1 48k mode block
-		break;	
-	case PENT1024/* pentagon 1024 */:                  
+		//if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
+        rom_select();
+        return; // выход нафиг	
+	
+    case PENT1024/* pentagon 1024 */:                  
         zx_RAM_bank_active  = (((val&0b11100000)>>2)|(val&0b00000111)); // d0 d1 d2  и d5 d6 d7 7ffd
         zx_RAM_bank_7ffd = (val&0b00000111) ; // d0 d1 d2  7ffd
 	    zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
-	  // zx_RAM_bank_7ffd  = (((val&0b11100000))|(val&0b00000111)); // d0 d1 d2  и d5 d6 d7 7ffd
+	  //  if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
         // 5bit = 1 48k mode block отсутствует в pentagon1024
-		break;	
+        rom_select();
+		return; // выход нафиг	
 
      case SPEC48/* Spectrum 48  */:
         zx_RAM_bank_active = 0x00; 
@@ -1151,19 +1219,22 @@ inline void fast (zx_machine_set_7ffd_out)(uint8_t val)// переключени
         zx_video_ram=zx_ram_bank[5];  
 		rom=ROM_48;
         zx_cpu_ram[0]=zx_rom_bank[1]; 
-		break;
+        rom_select();
+		return; // выход нафиг	
 
 
 	default:
-			zx_RAM_bank_7ffd = (val&0b00000111) ; // d0 d1 d2  7ffd
-	     zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
+		zx_RAM_bank_7ffd = (val&0b00000111) ; // d0 d1 d2  7ffd
+	    zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
         if (val& 0x20) zx_state_48k_MODE_BLOCK=true; // 5bit = 1 48k mode block
-		break;
+      //  if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
+        rom_select();
+		return; // выход нафиг
 	}
 
-	if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];
+	//if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];
 
-              rom_select(); // переключение ПЗУ по портам 
+          //    rom_select(); // переключение ПЗУ по портам 
 
 };
 //------------------------------------------------------------------------------
@@ -1175,7 +1246,7 @@ uint8_t zx_machine_get_rom(){return rom;}
 // OUT!
 //################################################################################
 // ZX Spectrum 48
-inline static void fast(spec48)(Z80 *cpu,uint16_t port16, uint8_t val)
+inline static void fast(out_spec48)(Z80 *cpu,uint16_t port16, uint8_t val)
 {
 	uint8_t portH = port16 >> 8;
 	uint8_t portL = (uint8_t)port16;
@@ -1186,7 +1257,7 @@ inline static void fast(spec48)(Z80 *cpu,uint16_t port16, uint8_t val)
 	if (port16 & 1) 
 	{
 
-	#ifdef GENERAL_SOUND   
+/* 	#ifdef GENERAL_SOUND   
         if (portL == 0xB3) {out_GSP(GS_WRITE_OUT_B3,  val);   return;}// передача данных в GS
         if (portL == 0xBB) {out_GSP(GS_COMMAND_OUT_BB,val);   return;}// передача команды в GS
     #endif
@@ -1195,14 +1266,14 @@ inline static void fast(spec48)(Z80 *cpu,uint16_t port16, uint8_t val)
         if (portL == 0x77) {out_GSP(ZC_WRITE_OUT_77,val);z_controler_cs = val; return;}//управление SD   SD_SPI_CS0_PIN val&0x02
     #endif
     #ifdef  RTC_NOVA
-        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
-        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
+        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
+        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
     #endif
-
+ */
 	}
 	else
 	{
-		//hw_zx_set_snd_out(val  & 0b00010000);					// D4 beep
+		//hw_zx_set_snd_out(val  & 0b00010000);			// D4 beep
 		hw_beep_out(val  & 0b00010000);					// 01000
 		zx_Border_color = ((val & 0x7) << 4) | (val & 0x7); // дублируем для 4 битного видеобуфера
 	}
@@ -1211,9 +1282,8 @@ inline static void fast(spec48)(Z80 *cpu,uint16_t port16, uint8_t val)
 
 //####################################################################################################################
 // ZX Spectrum 128
-inline static void fast(spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
+inline static void fast(out_spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
 {
-   // return;
 //	uint8_t portH = port16 >> 8;
 	uint8_t portL = (uint8_t)port16;
 	uint16_t not_port16 = ~port16;
@@ -1249,26 +1319,20 @@ inline static void fast(spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
     #endif
 
     #ifdef  RTC_GLUK
-        if (port16  ==  0xDFF7 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
-        if (port16  ==  0xBFF7 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
+        if (port16  ==  0xDFF7 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
+        if (port16  ==  0xBFF7 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
     #endif
 
-
-
     #ifdef  RTC_NOVA
-        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
-        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
+        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
+        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
     #else
-       // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
         if ((portL & 0xFE) == 0x88) return;//для работы кое чего
     #endif
 
     #ifdef MIDI    
     if (port16 == 0xa0cf ) 	{out_GSP(MIDI_OUT,val);   return;};  // out 0xa0cf 
     #endif
-
-
-////#######     нужно для демки которая переключает память нестандартно по порту #FC BIN 1111 1100 A0=0
 
  
 	if (((not_port16 & 0x8002) == 0x8002))//7ffd
@@ -1277,21 +1341,19 @@ inline static void fast(spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
 		// A1=0   A15=0	
 		{
 			 if (zx_state_48k_MODE_BLOCK) return; //  48k mode 
-			//zx_machine_set_7ffd_out(val);
-             zx_7ffd_lastOut=val;     	//переключение банка памяти	
 
+        zx_7ffd_lastOut=val;     	//переключение банка памяти	
         zx_RAM_bank_7ffd = (val&0b00000111) ; // d0 d1 d2  7ffd
         if (val& 0x20) zx_state_48k_MODE_BLOCK=true; // 5bit = 1 48k mode block
        // zx_RAM_bank_active = zx_RAM_bank_active |  zx_RAM_bank_1ffd |  zx_RAM_bank_dffd;
 	    zx_RAM_bank_active = zx_RAM_bank_7ffd ;
 	    zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
-	    if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];  
+	  //  if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];  
           
 		  rom=(zx_7ffd_lastOut & 0x10)>>4;  // переключение ПЗУ
 	     zx_cpu_ram[0]=zx_rom_bank[(zx_7ffd_lastOut & 0x10)>>4];  // переключение ПЗУ
 		//return; ////#######     нужно для демки которая переключает память нестандартно по порту #FC BIN 1111 1100 A0=0
         } 
-
 
 ////######
 	if (port16 & 1) // Расширение памяти и экран Spectrum-128 //psram_avaiable = false;
@@ -1321,9 +1383,9 @@ inline static void fast(spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
 }
 // end ZX Spectrum 128
 //#########################################################################
-// extram128
+// out_zx_ext
 //#########################################################################
-inline static void fast(extram128)(Z80 *cpu,uint16_t port16, uint8_t val)
+inline static void fast(out_zx_ext)(Z80 *cpu,uint16_t port16, uint8_t val)
 {
 //	uint8_t portH = port16 >> 8;
 	uint8_t portL = (uint8_t)port16;
@@ -1360,10 +1422,9 @@ inline static void fast(extram128)(Z80 *cpu,uint16_t port16, uint8_t val)
     #endif
 
     #ifdef  RTC_NOVA
-        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
-        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
+        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
+        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
     #else
-       // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
         if ((portL & 0xFE) == 0x88) return;//для работы кое чего
     #endif
 
@@ -1396,7 +1457,6 @@ if (port == 0xFB) {SoundRight_B = val;SoundLeft_B = val;SoundRight_A = val;Sound
 
 	if (port16 & 1) // Расширение памяти и экран Spectrum-128 //psram_avaiable = false;
 	{
-
     #ifdef  TURBOSOUND   
 	// чип AY
     if (((not_port16 & 0x0002) == 0x0002) && ((port16 & 0xc000) == 0xc000)) // 0xFFFD
@@ -1409,27 +1469,28 @@ if (port == 0xFB) {SoundRight_B = val;SoundLeft_B = val;SoundRight_A = val;Sound
 	if (((not_port16 & 0x4002) == 0x4002) && ((port16 & 0x8000) == 0x8000)) // 0xBFFD
 		{AY_out_BFFD(val); return;}
     #endif
-
 	}
 	else
 	{
 		//hw_zx_set_snd_out(val  & 0b00010000);					// D4 beep
 		hw_beep_out(val  & 0b00010000);					// 01000
-
-		
 		zx_Border_color = ((val & 0x7) << 4) | (val & 0x7); // дублируем для 4 битного видеобуфера
 	}
 }
-// end extram128
+// end out_zx_ext
 //###########################################################################
 // SCORPION ZS256
 //###########################################################################
-inline static void fast(extram_1ffd)(Z80 *cpu,uint16_t port16, uint8_t val)
+inline static void fast(out_scorpion_256)(Z80 *cpu,uint16_t port16, uint8_t val)
 {
 	//uint8_t portH = port16 >> 8;
 	uint8_t portL = (uint8_t)port16;
 	uint16_t not_port16 = ~port16;
 
+         #ifdef  RTC_SMUC// теневой порт
+         if (port16  == 0xFFBA) {out_GSP(RTC_WRITE_OUT_FFBA,  val); return;}//rtc_write=(val>>7); return;} // D7 
+         if (port16  == 0xDFBA) {out_GSP(RTC_WRITE_OUT_DFBA,  val); return;}//данные регистра часов
+         #endif
 
         if (trdos) {  trdos_out(portL,val); return;}// если это tr-dos
 
@@ -1462,10 +1523,9 @@ inline static void fast(extram_1ffd)(Z80 *cpu,uint16_t port16, uint8_t val)
     #endif
 
     #ifdef  RTC_NOVA
-        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
-        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
+        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
+        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
     #else
-       // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
         if ((portL & 0xFE) == 0x88) return;//для работы кое чего
     #endif
 
@@ -1502,8 +1562,6 @@ inline static void fast(extram_1ffd)(Z80 *cpu,uint16_t port16, uint8_t val)
             // return;	//	
 		};
 
-
-
 	if (port16 & 1) // Расширение памяти и экран Spectrum-128 //psram_avaiable = false;
 	{
 
@@ -1528,7 +1586,7 @@ inline static void fast(extram_1ffd)(Z80 *cpu,uint16_t port16, uint8_t val)
 	}
 	
 }
-// end extram_1ffd   // SCORPION ZS256
+// end out_scorpion_256   // SCORPION ZS256
 //###############################################################################
 //  GMX 2048
 //###############################################################################
@@ -1537,6 +1595,12 @@ inline static void fast(extram_gmx)(Z80 *cpu,uint16_t port16, uint8_t val)
 	//uint8_t portH = port16 >> 8;
 	uint8_t portL = (uint8_t)port16;
 	uint16_t not_port16 = ~port16;
+
+         #ifdef  RTC_SMUC// теневой порт
+         if (port16  == 0xFFBA) {out_GSP(RTC_WRITE_OUT_FFBA,  val); return;}//rtc_write=(val>>7); return;} // D7 
+         if (port16  == 0xDFBA) {out_GSP(RTC_WRITE_OUT_DFBA,  val); return;}//данные регистра часов
+         #endif
+
 
 	if (trdos) {trdos_out(portL,val); return;}// если это tr-dos
 
@@ -1568,13 +1632,7 @@ inline static void fast(extram_gmx)(Z80 *cpu,uint16_t port16, uint8_t val)
         }
     #endif
 
-    #ifdef  RTC_NOVA
-        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
-        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
-    #else
-       // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
-        if ((portL & 0xFE) == 0x88) return;//для работы кое чего
-    #endif
+    if ((portL & 0xFE) == 0x88) return;//для работы кое чего
 
     #ifdef MIDI    
     if (port16 == 0xa0cf ) 	{out_GSP(MIDI_OUT,val);   return;};  // out 0xa0cf 
@@ -1582,11 +1640,6 @@ inline static void fast(extram_gmx)(Z80 *cpu,uint16_t port16, uint8_t val)
 
 
 		if (port16 == 0x1ffd)
-		// 0001 1111  1111 1101
-		// A1=0  A15 = 0 A14 = 0 A13=0
-		// if (((not_port16 & 0xe002) == 0xe002)&&((port16&0x1000)==0x1000))//   #1ffd
-		//   if (((not_port16 & 0xe002) == 0xe002))//   #1ffd
-
 		{
 			zx_RAM_bank_1ffd = ((val & 0b000010000) >> 1); // d4  1ffd scorpion 0000 1000
 			zx_RAM_bank_active = zx_RAM_bank_7ffd | zx_RAM_bank_1ffd | zx_RAM_bank_dffd;
@@ -1596,18 +1649,12 @@ inline static void fast(extram_gmx)(Z80 *cpu,uint16_t port16, uint8_t val)
 		}
 
 		if (port16 == 0xdffd)
-		// 1101 1111  xxxx 1101
-		// A1=0  A15 = 1 A14 = 1 A13=0
-		//  if (((not_port16 & 0x2002) == 0x2002)&&((port16&0xc000)==0xc000))//   #dffd
-		// if (((not_port16 & 0x2002) == 0x2002))//   #dffd
-
 		{
 			zx_RAM_bank_dffd = ((val & 0b00000111) << 4); // d0 d1 d2   dffd proffi 0xxx 0000
 			zx_RAM_bank_active = zx_RAM_bank_7ffd | zx_RAM_bank_1ffd | zx_RAM_bank_dffd;
 			zx_cpu_ram[3] = zx_ram_bank[zx_RAM_bank_7ffd]; // биты  0111 0000
 			return;
 		}  
-
 
 
 	  	//if (port16==0x7FFD)
@@ -1633,7 +1680,6 @@ inline static void fast(extram_gmx)(Z80 *cpu,uint16_t port16, uint8_t val)
 	    if (((not_port16 & 0x4002) == 0x4002) && ((port16 & 0x8000) == 0x8000)) // 0xBFFD
 		{AY_out_BFFD(val); return;}
         #endif
-
 	}
 
 	else
@@ -1685,8 +1731,8 @@ inline static void fast(extram_p8)(Z80 *cpu, uint16_t port16, uint8_t val)
     #endif
 
     #ifdef  RTC_NOVA
-        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
-        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
+        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
+        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
     #else
        // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
         if ((portL & 0xFE) == 0x88) return;//для работы кое чего
@@ -1732,7 +1778,7 @@ inline static void fast(extram_p8)(Z80 *cpu, uint16_t port16, uint8_t val)
         //  if (zx_RAM_bank_ext8==0)
 	            zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
 
-	      if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
+	    //  if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
  
          //  rom_select(); // переключение ПЗУ по портам и по сигналу DOS  
 		   	rom=(zx_7ffd_lastOut & 0x10)>>4; 
@@ -1770,7 +1816,7 @@ inline static void fast(extram_p8)(Z80 *cpu, uint16_t port16, uint8_t val)
 //===========================================================================
 // NOVA 256
 //===========================================================================
-inline static void fast(nova_256)(Z80 *cpu, uint16_t port16, uint8_t val)
+inline static void fast(out_nova_256)(Z80 *cpu, uint16_t port16, uint8_t val)
 {
 //	uint8_t portH = port16 >> 8;
 	uint8_t portL = (uint8_t)port16;
@@ -1817,8 +1863,8 @@ inline static void fast(nova_256)(Z80 *cpu, uint16_t port16, uint8_t val)
     #endif
 
     #ifdef  RTC_NOVA
-        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_OUT_88,  val); return;}//номер регистра часов
-        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_OUT_89,  val); return;}//данные регистра часов
+        if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
+        if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
     #else
        // if ((portL == 0x88 ) || (portL == 0x89 )) return;//для работы кое чего
         if ((portL & 0xFE) == 0x88) return;//для работы кое чего
@@ -1860,7 +1906,7 @@ inline static void fast(nova_256)(Z80 *cpu, uint16_t port16, uint8_t val)
 	}
 	
 }
-// end nova_256
+// end out_nova_256
 //##############################################################################
 //### Настройки и функции для эмулятора Z80 REDCODE Manuel Sainz 
 Z80 cpu_zx = {0};  // Один экземпляр Z80 для Spectrum
@@ -1927,7 +1973,7 @@ void machine_Spectrum_48(Z80 *cpu)
         cpu->read         = (Z80Read )read_z80;
         cpu->write        = (Z80Write)write_z80;
         cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
-        cpu->out          = (Z80Write)spec48;//machine_cpu_out;
+        cpu->out          = (Z80Write)out_spec48;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = Z_NULL;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
@@ -1957,7 +2003,7 @@ void machine_Pentagon_128(Z80 *cpu)
         cpu->read         = (Z80Read )read_z80;
         cpu->write        = (Z80Write)write_z80;
         cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
-        cpu->out          = (Z80Write)spec128;//machine_cpu_out;
+        cpu->out          = (Z80Write)out_spec128;//machine_cpu_out;
         cpu->halt         = Z_NULL;//= (Z80Halt)halt_z80;
         cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
@@ -1996,7 +2042,7 @@ void machine_Pentagon_512(Z80 *cpu)
         cpu->write        = (Z80Write)_write_z80_ext;
         }
         cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
-        cpu->out          = (Z80Write)extram128;//machine_cpu_out;
+        cpu->out          = (Z80Write)out_zx_ext;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
@@ -2041,7 +2087,7 @@ void machine_Pentagon_512_cash(Z80 *cpu)
         cpu->write        = (Z80Write)_write_z80_cash;
         }
         cpu->in           = (Z80Read )in_z80_cash;//machine_cpu_in;
-        cpu->out          = (Z80Write)extram128;//machine_cpu_out;
+        cpu->out          = (Z80Write)out_zx_ext;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Pentagon_512_cash;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
@@ -2079,7 +2125,7 @@ void machine_Pentagon_1024(Z80 *cpu)
         cpu->write        = (Z80Write)_write_z80_ext;
         }
         cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
-        cpu->out          = (Z80Write)extram128;//machine_cpu_out;
+        cpu->out          = (Z80Write)out_zx_ext;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
@@ -2112,8 +2158,8 @@ void machine_Scorpion_256(Z80 *cpu)
         cpu->read         = (Z80Read )read_z80_256_s;
         cpu->write        = (Z80Write)write_z80_256_s;
 
-        cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
-        cpu->out          = (Z80Write)extram_1ffd;//machine_cpu_out;
+        cpu->in           = (Z80Read )in_scorpion;
+        cpu->out          = (Z80Write)out_scorpion_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Scorpion_256;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
@@ -2151,8 +2197,8 @@ void machine_Scorpion_256(Z80 *cpu)
         cpu->read         = (Z80Read )_read_z80_ext;
         cpu->write        = (Z80Write)_write_z80_ext;
         }
-        cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
-        cpu->out          = (Z80Write)extram_1ffd;//machine_cpu_out;
+        cpu->in           = (Z80Read )in_scorpion;
+        cpu->out          = (Z80Write)out_scorpion_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Scorpion_256;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
@@ -2193,8 +2239,8 @@ void machine_Scorpion_GMX(Z80 *cpu)
         cpu->read         = (Z80Read )_read_z80_ext;
         cpu->write        = (Z80Write)_write_z80_ext;
         }
-        cpu->in           = (Z80Read )in_z80;//machine_cpu_in;
-        cpu->out          = (Z80Write)extram_gmx;//machine_cpu_out;
+        cpu->in           = (Z80Read )in_scorpion;
+        cpu->out          = (Z80Write)extram_gmx;
         cpu->halt         = Z_NULL;
         cpu->nmia         = Z_NULL;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
@@ -2229,7 +2275,7 @@ void machine_NOVA_256(Z80 *cpu)
         cpu->write        = (Z80Write)write_z80_256_n;
         
         cpu->in           = (Z80Read )in_z80;
-        cpu->out          = (Z80Write)nova_256;
+        cpu->out          = (Z80Write)out_nova_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_NOVA_256;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
@@ -2267,7 +2313,7 @@ void machine_NOVA_256(Z80 *cpu)
         cpu->write        = (Z80Write)_write_z80_ext;
         }
         cpu->in           = (Z80Read )in_z80;
-        cpu->out          = (Z80Write)nova_256;
+        cpu->out          = (Z80Write)out_nova_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_NOVA_256;
         cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;

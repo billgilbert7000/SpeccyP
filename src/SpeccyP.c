@@ -720,7 +720,7 @@ static uint inx=0;
 
 void init_and_info()
 {
-/* //#else // RP2040 или RP2350A
+ //#else // RP2040 или RP2350A
    for (int gpio = 6; gpio < 30; gpio++) {
     gpio_init(gpio);          // Сброс в SIO, вход
     gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
@@ -732,7 +732,7 @@ void init_and_info()
     gpio_init(LED_BOARD);
     gpio_set_dir(LED_BOARD, GPIO_OUT);
     gpio_put(LED_BOARD, 1);
-#endif  */
+#endif   
 
 #ifdef PICO_RP2350 
   // определение RP2350 A или B  
@@ -740,11 +740,6 @@ void init_and_info()
       psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
 
 // для корректного запуска с бутербродом PSRAM  
-/*   gpio_init(psram_pin_cs);
-  gpio_set_dir((psram_pin_cs), GPIO_IN);
-  gpio_pull_up(psram_pin_cs);  
-  gpio_put(psram_pin_cs, 1); */
-
     gpio_init(psram_pin_cs);
     gpio_set_dir(psram_pin_cs, GPIO_OUT);
     gpio_put(psram_pin_cs, 1);
@@ -829,7 +824,7 @@ void init_and_info()
          vout_select= VIDEO_HDMI;
          startVIDEO(VIDEO_HDMI);// только HDMI
 #endif 
-
+//sleep_ms(3000);
 #ifdef  SOUND_I2S_ONLY
         conf.type_sound=I2S_TS; // только i2s
 #endif
@@ -848,6 +843,17 @@ void init_and_info()
             conf.type_sound = I2S_TS;
         }
 #endif
+
+        
+        zx_machine_enable_vbuf(false);
+	    init_screen(g_gbuf,SCREEN_W,SCREEN_H);
+        draw_text(0,0,"... SpeccyP ...",CL_LT_CYAN ,CL_BLACK);
+/*            for (int i = 0; i < 16; i++)
+         {       
+             draw_rect(i*40,0,40,240,i,true);//спектр
+         }
+sleep_ms(1000); */
+
 //####################################################################
  // Инициализация USB
 #ifdef USB_SERIAL
@@ -875,8 +881,8 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
 // TODO надо сделать правильно и поумнее
 
 // инициализация с выводом результата на дисплей
-        zx_machine_enable_vbuf(false);
-	    init_screen(g_gbuf,SCREEN_W,SCREEN_H);
+      //  zx_machine_enable_vbuf(false);
+	 //   init_screen(g_gbuf,SCREEN_W,SCREEN_H);
         is_new_screen = true;
         #define YPOS FONT_H*2 
         #define XPOS FONT_W+2
@@ -941,7 +947,6 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
         mouse[3] = 0xff; 
 
 start_PS2_capture(); //
-
 
     y_info += 10;
 switch (type_psram)
@@ -1100,32 +1105,7 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
 		draw_text(228+XPOS,YPOS+110,temp_msg,CL_LT_BLUE ,CL_BLACK);	
         }   
            
-//------------------------------------------------------------------
-// если подключается плата с GS PicoBUS
-	#if defined  GENERAL_SOUND
-    // Первичная инициализация picobus
-     draw_text(12+FONT_W,100+YPOS, "Connect PicoBus ....",CL_LT_BLUE,CL_BLACK);
-      sleep_ms(1000);
-       init_picobus();
-
-       flag_gs=1;
-        sys_GS(GS_INFO);
-        tx_buffer[60]=0;
-       draw_text_len(12+FONT_W,100+YPOS,tx_buffer,CL_GREEN,CL_BLACK,32); 
-       draw_text(12+FONT_W,110+YPOS,tx_buffer+32,CL_LT_BLUE,CL_BLACK); 
-       select_audio(); // переключение режимов вывода звука 
-
-    #if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
-           // дата и время RTC
-           sys_GS(RTC_DATE_TIME);
-           draw_text((320-(18*FONT_W))/2,190+YPOS,tx_buffer,CL_LT_CYAN,CL_BLACK); 
-    #endif
-
-
-
-
-    #endif
-//-----------------------------------------------------------------    
+//------------------------------------------------------------------   
      y_info += 10;
 //  tuh_task(); // tinyusb host task
   switch (usb_device) 
@@ -1146,8 +1126,36 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
     }
     draw_text(10+XPOS,y_info,temp_msg,CL_GREEN,CL_BLACK); 
 
-
 flag_usb_kb = false;
+//---------------------------------------------------------------------------
+// если подключается плата с GS PicoBUS
+	#if defined  GENERAL_SOUND
+    // Первичная инициализация picobus
+     draw_text(12+FONT_W,100+YPOS, "Connect PicoBus ....",CL_LT_BLUE,CL_BLACK);
+     sleep_ms(1000);
+       init_picobus();
+
+       flag_gs=1;
+        sys_GS(GS_INFO);
+        tx_buffer[60]=0;
+       draw_text_len(12+FONT_W,100+YPOS,tx_buffer,CL_GREEN,CL_BLACK,32); 
+       draw_text(12+FONT_W,110+YPOS,tx_buffer+32,CL_LT_BLUE,CL_BLACK); 
+       select_audio(); // переключение режимов вывода звука 
+
+    #if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
+           // дата и время RTC
+        //   sys_GS(RTC_DATE_TIME);
+        //   draw_text((320-(18*FONT_W))/2,190+YPOS,tx_buffer,CL_LT_CYAN,CL_BLACK); 
+        rtc_enable=1;
+    #endif
+
+
+
+
+    #endif
+//----------------------------------------------------------------- 
+
+
 
 // kb_st_ps2.u[2]= 0xff;
     // ожидание клавиши перед запуском
@@ -1159,7 +1167,6 @@ flag_usb_kb = false;
 
 	//while (! ((decode_PS2()) | (decode_key(is_menu_mode)) | (decode_joy()))){}
  //   sleep_ms(9000);
-
 }
 //=========================================================================
 void Message_Print()
@@ -1553,14 +1560,20 @@ int fast(main)(void){
     gpio_set_dir(LED_BOARD, GPIO_OUT);
     gpio_put(LED_BOARD, 1);
 #endif 
-
+#if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
+    rtc_enable=0;
+#endif
     init_fs = disk_initialize(0);// инициализация SD
     DIR fs;
-    init_fs  =init_filesystem();// монтирование и инициализация SD
-    
-    config_init();
+    init_fs = init_filesystem();// монтирование и инициализация SD
+
+   config_init(); // загрузка файла конфигурации если он есть "0:/.config/speccy_p.cnf"
+
+   config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига  если его нет то файл записывается                     
+ 
     init_pico();
     init_and_info();
+  //  gpio_put(LED_BOARD, 0);
 //-----------------------------------------------------------------    
 // если одна плата без GS 
     #ifndef  GENERAL_SOUND     
@@ -1582,7 +1595,7 @@ int fast(main)(void){
 	multicore_launch_core1(ZXThread);
 
     disk_autorun ();
-
+    gpio_put(LED_BOARD, 0);
 //######################
 //   основной цикл
 //######################
@@ -1598,7 +1611,7 @@ int fast(main)(void){
 
 
       } // while(1)
-  //  pico_reset(); // аварийный сброс ;)
+  
 }
 //==========================================================================
 void file_select_trdos(void) // 
@@ -1661,53 +1674,50 @@ void file_select_cpm(void) //
 
 //++++++++++++++++++++++++++++++++++++++++++
 //================================================================
-void  config_init(void)
+void config_init(void)
 {
     enable_tape = false; // tap файл не подключен при запуске
 
-	FIL f;
+    FIL f;
     // Создаём каталог .config (если его нет)
-    FRESULT fr = f_mkdir("0:/.config");
-    if (fr != FR_OK && fr != FR_EXIST) {
-    //    MessageBox("      Error creating .config dir      ", "", CL_LT_YELLOW, CL_RED, 1);
-    config_defain();
+     FRESULT fr = f_mkdir("0:/.config");
+    if (fr != FR_OK && fr != FR_EXIST) // Error creating .config dir
+    {
+        config_defain();
         return;
-    }
+    } 
 
     sprintf(temp_msg, "0:/.config/speccy_p.cnf");
     int fd = f_open(&f, temp_msg, FA_READ);
     if (fd != FR_OK)
     {
         f_close(&f);
-        config_defain();// если нет файла конфигурации       
-        config_ini_load("0:/.config/speccy_p.ini");//текстовый файл конфига
+        config_defain();                            // если нет файла конфигурации
+    //    config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига
         // если его нет то загружается дефолтная конфигурация и файл записывается
         return;
     }
-     UINT bytesRead;
-      fd =  f_read(&f, &conf ,sizeof(conf),&bytesRead);//f_read(&f, *conf ,sizeof(conf) , &bytesRead);
-    if (fd != FR_OK)  // если ошибка то конфиг по умолчанию
-    {
-      f_close(&f);
-      config_defain(); 
-      return ;
-   
-    }  
-    if (conf.version!=CONFIG_VERSION) 
+    UINT bytesRead;
+    fd = f_read(&f, &conf, sizeof(conf), &bytesRead); // f_read(&f, *conf ,sizeof(conf) , &bytesRead);
+    if (fd != FR_OK)                                  // если ошибка то конфиг по умолчанию */
     {
         f_close(&f);
-        config_defain();// если файл конфигурации неправильной версии
-        config_ini_load("0:/.config/speccy_p.ini");//текстовый файл конфига
+        config_defain();
+        return;
+    }
+    if (conf.version != CONFIG_VERSION)
+    {
+        f_close(&f);
+        config_defain();                            // если файл конфигурации неправильной версии
+    //    config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига
         // если его нет то загружается дефолтная конфигурация и файл записывается
         return;
     }
- 
 
     f_close(&f);
-
-    config_ini_load("0:/.config/speccy_p.ini");//текстовый файл конфига
-    conf.turbo=0; // при включении TURBO OFF!
-    return ;
+   // config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига
+    conf.turbo = 0;                             // при включении TURBO OFF!
+    return;
 }
 //----------------------------------------------------
 /*
@@ -2002,9 +2012,18 @@ void setup_zx(void)
 
 	if (psram_avaiable)
     {
-         snprintf(temp_msg, sizeof temp_msg, "%dMb", size_psram);
-		draw_text(x1 + 206+12, y1 + 3, temp_msg, CL_BLACK, CL_GRAY);
+        if (type_psram==2)
+        {
+         snprintf(temp_msg, sizeof temp_msg, "QSPI %dMb", size_psram);
+         draw_text(x1 + 200-24+12, y1 + 3, temp_msg, CL_BLACK, CL_GRAY);
+         }
+         else 
+         {
+         snprintf(temp_msg, sizeof temp_msg,"SPI %dMb", size_psram); 
+		 draw_text(x1 + 200-18+12, y1 + 3, temp_msg, CL_BLACK, CL_GRAY);
+         }
     }
+
     else
     
     #ifdef RP2350_256K
@@ -2592,7 +2611,7 @@ void led_trdos(void)
     {    
       //  static uint8_t x =0;
         uint8_t color_fon = zx_Border_color & 0x07; // дублируем для 4 битного видеобуфера
-        draw_symbol(0, 240-16,0,CL_LT_GREEN, color_fon);
+        draw_symbol(0, 240-16,0,CL_BLUE, color_fon);
     }
 
 #ifdef Z_CONTROLER
@@ -2601,7 +2620,7 @@ if ((z_controler_cs & 0x02) == 0)
         static uint8_t x =0;
          uint8_t color_fon = zx_Border_color & 0x07; // дублируем для 4 битного видеобуфера
         //if (x&0x80) 
-         draw_symbol(0, 240-16,0,CL_LT_GREEN, color_fon);
+         draw_symbol(0, 240-16,0,CL_GREEN, color_fon);
     }
 #else
 if ((z_controler_cs & 0x02) == 0)
@@ -2609,7 +2628,7 @@ if ((z_controler_cs & 0x02) == 0)
         static uint8_t x =0;
          uint8_t color_fon = zx_Border_color & 0x07; // дублируем для 4 битного видеобуфера
         //if (x&0x80) 
-         draw_symbol(0, 240-16,0,CL_LT_BLUE, color_fon);
+         draw_symbol(0, 240-16,0,CL_GREEN, color_fon);
     }
 #endif
 }
@@ -2848,7 +2867,7 @@ void  fast(init_psram_board_all_version)(void)
       {
           psram_avaiable = 1;
           type_psram = BUTTER_PSRAM; // тип psram бутерброд или на плате murm1
-          return;                    // test отключенна QSPI PSRAM
+        return;                    // test отключенна QSPI PSRAM
       }
 
       deinit_psram_butter(psram_pin_cs);

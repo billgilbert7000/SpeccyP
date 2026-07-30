@@ -16,15 +16,15 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
-set(DEBUG ON)
+set(DEBUG OFF)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 7)
-set(VERSION_PATCH 1)
+set(VERSION_PATCH 2)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
-math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 3")
+math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 0")
 
 # == Конфигурация SpeccyP ==
 
@@ -43,7 +43,7 @@ endif()
 
 # Список плат
 set(M_BOARD_VALUES MURM1 MURM2 PI_CARD WS_ZERO1 WS_ZERO2 PICO_DV PICO_PC GSP_M2)
-set(M_BOARD "MURM1" CACHE STRING "Тип платы: ${M_BOARD_VALUES}")
+set(M_BOARD "MURM2" CACHE STRING "Тип платы: ${M_BOARD_VALUES}")
 set_property(CACHE M_BOARD PROPERTY STRINGS ${M_BOARD_VALUES})
 
 # Проверка валидности M_BOARD
@@ -84,8 +84,9 @@ if(SPECCY_CONFIG STREQUAL "GSP_FULL")
         TURBOSOUND
         Z_CONTROLER
         MIDI
-      ##  RTC_NOVA
+        RTC_NOVA
         RTC_GLUK
+        RTC_SMUC
     )
       set(GENERAL_SOUND ON)
 #
@@ -115,8 +116,9 @@ else()
     # По умолчанию используем SPECCY
     set(SPECCY_CONFIG "SPECCY")
     set(SPECCY_CONFIG_DEFINITIONS 
-        CPU_MHZ=378
-        FLASH_MAX_FREQ_MHZ=166  
+
+        CPU_MHZ=378###378
+        FLASH_MAX_FREQ_MHZ=166  ## для Winbond 133 
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
     )

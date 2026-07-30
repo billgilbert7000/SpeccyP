@@ -720,12 +720,13 @@ static uint inx=0;
 
 void init_and_info()
 {
- //#else // RP2040 или RP2350A
-   for (int gpio = 6; gpio < 30; gpio++) {
+ //#else // RP2040 или RP2350A  
+ // какой то проблем при хард резет тут и инициализации SD
+/*     for (int gpio = 6; gpio < 30; gpio++) {
     gpio_init(gpio);          // Сброс в SIO, вход
     gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
     gpio_set_dir(gpio, GPIO_IN); // Направление: вход
-    }
+    }  */
 //#endif   
 
 #if LED_BOARD != 255

@@ -16,15 +16,15 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
-set(DEBUG OFF)
+set(DEBUG ON)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 7)
-set(VERSION_PATCH 2)
+set(VERSION_PATCH 3)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
-math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 0")
+math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 7")
 
 # == Конфигурация SpeccyP ==
 
@@ -106,7 +106,7 @@ elseif(SPECCY_CONFIG STREQUAL "SPECCY_WSZERO")
     set(SPECCY_CONFIG_DEFINITIONS  
         CPU_MHZ=252
         FLASH_MAX_FREQ_MHZ=66
-        PSRAM_MAX_FREQ_MHZ=66
+        PSRAM_MAX_FREQ_MHZ=100
         TEST_DEBUG #
     )
       set(GENERAL_SOUND OFF)

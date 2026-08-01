@@ -686,7 +686,7 @@ void fast(init_pico)(void) // настройка и разгон для RP2350
     else if (conf.cpu_freq == 378)
         conf.hdmi_fdiv = 1.5; // 60Hz
     else if (conf.cpu_freq == 252)
-        conf.hdmi_fdiv = 2.0; // 60Hz
+        conf.hdmi_fdiv = 1.0; // 60Hz
 
 #if (FLASH_MAX_FREQ_MHZ == 166)
     real_flash_freq = CPU_MHZ / 3;
@@ -713,6 +713,21 @@ void fast(init_pico)(void) // настройка и разгон для RP2040
     conf.hdmi_fdiv = 1.5;
 }
 #endif
+//========================================================================
+ // Инициализация USB
+void init_usb(void)
+{
+   init_usb_hid(); // USB HID
+    for(int i = 0; i < 320; i++)// время на определение USB устройств 320 * 10ms
+{
+     tuh_task(); // tinyusb host task
+    //  tuh_task_ext(0, false);
+     g_delay_ms(10);
+     draw_symbol(i, 240-48,0,CL_WHITE, 0);
+     draw_symbol(320-i+1, 240-48,0x20,CL_WHITE, 0);
+     draw_symbol(320-i, 240-48,0,CL_WHITE, 0);
+  }
+}
 //========================================================================
 static bool  rp2350a;
 static uint inx=0;		
@@ -750,11 +765,11 @@ void init_and_info()
 // Weact RP2350A v20 GPIO 23 
 // MODE=0 (PFM — Pulse Frequency Modulation)
 // MODE=1 (PWM — Pulse Width Modulation)
-#if POWER_MODE != 255
+#if POWER_MODE != 255//255
     gpio_init(23);
     gpio_set_dir(23, GPIO_OUT);
     gpio_put(23, POWER_MODE);
-#endif 
+#endif  
 //--------------------------------------
 #endif
 
@@ -793,12 +808,11 @@ void init_and_info()
  //пин ввода звука
  gpio_in_init(PIN_ZX_LOAD);
    
- init_psram_board_all_version();// инициализация всех видов psram
+ //init_psram_board_all_version();// инициализация всех видов psram
 //   psram_avaiable =0;
 //    type_psram=NOT_PSRAM;
 
-//---------------------------------------------------------------------------
- gpio_put(LED_BOARD, 0);
+
 //------------------------------------------------------------------
     turbo_switch(); // переключение режима turbo
  
@@ -848,15 +862,28 @@ void init_and_info()
         
         zx_machine_enable_vbuf(false);
 	    init_screen(g_gbuf,SCREEN_W,SCREEN_H);
-        draw_text(0,0,"... SpeccyP ...",CL_LT_CYAN ,CL_BLACK);
+        draw_text(160-21,240-64,"SpeccyP",CL_WHITE ,CL_BLACK);
+          
+//---------------------------------------------------------------------
+#if LED_BOARD != 255
+    gpio_put(LED_BOARD, 0);
+#endif  
+
+   if (conf.autorun == 0)  sleep_ms(300); 
 /*            for (int i = 0; i < 16; i++)
          {       
              draw_rect(i*40,0,40,240,i,true);//спектр
          }
 sleep_ms(1000); */
+//sleep_ms(300); 
+// Защита от автозапуска пустого или некорректного диска в CP/M Кворума
+// после включения и при Hard Reset 
+if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;  
+// TODO надо сделать правильно и поумнее
+
+
 
 //####################################################################
- // Инициализация USB
 #ifdef USB_SERIAL
    // Режим USB CDC консоли: USB HID хост отключаем, вместо него
    // используем CDC-ACM для отладочного вывода. Даём 5 секунд на
@@ -864,22 +891,17 @@ sleep_ms(1000); */
    stdio_init_all();
    for (int i = 0; i < 50; i++) { g_delay_ms(100); }
 #else
-   init_usb_hid(); // USB HID
-    for(int i = 0; i < 500; i++)// время на определение USB устройств
-{
-     tuh_task(); // tinyusb host task
-    //  tuh_task_ext(0, false);
-     g_delay_ms(1);
-  }
-// tuh_task(); // tinyusb host task
+
+  if (conf.autorun == 0) {sleep_ms(300); init_usb();} // Инициализация USB
+  else  init_usb_hid(); // USB HID
 #endif
+
+ init_psram_board_all_version();// инициализация всех видов psram
+
 //#####################################################################	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
 //#####################################################################  
-// Защита от автозапуска пустого или некорректного диска в CP/M Кворума
-// после включения и при Hard Reset 
-if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;  
-// TODO надо сделать правильно и поумнее
+
 
 // инициализация с выводом результата на дисплей
       //  zx_machine_enable_vbuf(false);
@@ -939,7 +961,7 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
      #endif  
 ////////////////////////////////////////////////////////////////
 
-
+        
 	  //  это инициализация мыши ;)
 
 	    mouse[0] = 0x00;
@@ -1108,7 +1130,6 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
            
 //------------------------------------------------------------------   
      y_info += 10;
-//  tuh_task(); // tinyusb host task
   switch (usb_device) 
     {
               case 0:
@@ -1133,7 +1154,7 @@ flag_usb_kb = false;
 	#if defined  GENERAL_SOUND
     // Первичная инициализация picobus
      draw_text(12+FONT_W,100+YPOS, "Connect PicoBus ....",CL_LT_BLUE,CL_BLACK);
-     sleep_ms(1000);
+  //   sleep_ms(1500);
        init_picobus();
 
        flag_gs=1;

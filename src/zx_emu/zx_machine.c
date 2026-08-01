@@ -728,9 +728,9 @@ inline static void fast(_write_z80_cash)(Z80 *cpu, uint16_t addr, uint8_t val)
 	zx_cpu_ram[x][masked_addr] = val;
 }
 //---------------------------------------------------------------------------------
-//#########################################################
+//###############################
 //функции ввода звука спектрума
-
+//###############################
 static uint64_t loadLastCycle = 0;
 static uint16_t loadFastCount = 0; // счётчик быстрых вызовов подряд
 
@@ -758,10 +758,19 @@ bool fast (hw_zx_get_bit_LOAD)()
 //###############################################
 // IN
 //###############################################
-
 inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
 	uint8_t portH = port16 >> 8;
 	uint8_t portL = (uint8_t)port16&0x00ff;
+
+
+	if (trdos) // если это tr-dos
+	{
+          	if (portL == 0xFF)       return Requests;
+            //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
+            if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port          
+           return 0xFF;        
+	} // end tr-dos
+
 
     #if defined(GENERAL_SOUND)
     if (portL == 0xB3) return in_GSP(GS_READ_IN_B3); 
@@ -775,8 +784,6 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
     #if defined(RTC_GLUK)
     if (port16 == 0xBFF7) return in_GSP(RTC_READ_REG); 
     #endif
-
-
 
     #ifdef MIDI    
     if (port16 == 0xa1cf ) 	return in_GSP(MIDI_IN); 
@@ -794,13 +801,7 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
     }
     #endif
 
-	if (trdos) // если это tr-dos
-	{
-          	if (portL == 0xFF)       return Requests;
-            //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
-            if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port          
-           return 0xFF;  
-	} // end tr-dos
+
 
 	if (port16&1)
 	{
@@ -829,7 +830,6 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
 	return 0xFF;
 }
 //###################################################################
-
 inline static uint8_t fast(in_scorpion)(Z80 *cpu, uint16_t port16) {
 	uint8_t portH = port16 >> 8;
 	uint8_t portL = (uint8_t)port16&0x00ff;
@@ -864,8 +864,7 @@ inline static uint8_t fast(in_scorpion)(Z80 *cpu, uint16_t port16) {
 
 	if (trdos) // если это tr-dos
 	{
-          	if (portL == 0xFF)       return Requests;
-            //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
+          	if (portL == 0xFF) return Requests;
             if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port          
            return 0xFF;  
 	} // end tr-dos
@@ -1352,7 +1351,7 @@ inline static void fast(out_spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
           
 		  rom=(zx_7ffd_lastOut & 0x10)>>4;  // переключение ПЗУ
 	     zx_cpu_ram[0]=zx_rom_bank[(zx_7ffd_lastOut & 0x10)>>4];  // переключение ПЗУ
-		//return; ////#######     нужно для демки которая переключает память нестандартно по порту #FC BIN 1111 1100 A0=0
+		return; ////#######     нужно для демки которая переключает память нестандартно по порту #FC BIN 1111 1100 A0=0
         } 
 
 ////######

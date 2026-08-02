@@ -5,9 +5,9 @@ if(WIN32)
 else()
     set(USERHOME $ENV{HOME})
 endif()
-set(sdkVersion 2.3.0)
-set(toolchainVersion 15_2_Rel1)
-set(picotoolVersion 2.3.0)
+set(sdkVersion 2.2.0)
+set(toolchainVersion 14_3_Rel1)
+set(picotoolVersion 2.2.0-a4)
 set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
     include(${picoVscode})
@@ -16,7 +16,7 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
-set(DEBUG ON)
+set(DEBUG OFF)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 7)
@@ -117,7 +117,7 @@ else()
     set(SPECCY_CONFIG "SPECCY")
     set(SPECCY_CONFIG_DEFINITIONS 
 
-        CPU_MHZ=378###378
+        CPU_MHZ=378
         FLASH_MAX_FREQ_MHZ=166  ## для Winbond 133 
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #

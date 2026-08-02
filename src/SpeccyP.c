@@ -722,7 +722,7 @@ void init_usb(void)
 {
      tuh_task(); // tinyusb host task
     //  tuh_task_ext(0, false);
-     g_delay_ms(10);
+     g_delay_ms(5);
      draw_symbol(i, 240-48,0,CL_WHITE, 0);
      draw_symbol(320-i+1, 240-48,0x20,CL_WHITE, 0);
      draw_symbol(320-i, 240-48,0,CL_WHITE, 0);
@@ -732,12 +732,11 @@ void init_usb(void)
 static bool  rp2350a;
 static uint inx=0;		
 
-
 void init_and_info()
 {
  //#else // RP2040 или RP2350A  
  // какой то проблем при хард резет тут и инициализации SD
-/*     for (int gpio = 6; gpio < 30; gpio++) {
+/*     for (int gpio = 8; gpio < 30; gpio++) {
     gpio_init(gpio);          // Сброс в SIO, вход
     gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
     gpio_set_dir(gpio, GPIO_IN); // Направление: вход
@@ -760,12 +759,10 @@ void init_and_info()
     gpio_set_dir(psram_pin_cs, GPIO_OUT);
     gpio_put(psram_pin_cs, 1);
 
-
-
-// Weact RP2350A v20 GPIO 23 
+//  GPIO 23 // Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
 // MODE=0 (PFM — Pulse Frequency Modulation)
 // MODE=1 (PWM — Pulse Width Modulation)
-#if POWER_MODE != 255//255
+#if POWER_MODE != 255
     gpio_init(23);
     gpio_set_dir(23, GPIO_OUT);
     gpio_put(23, POWER_MODE);
@@ -807,11 +804,6 @@ void init_and_info()
 
  //пин ввода звука
  gpio_in_init(PIN_ZX_LOAD);
-   
- //init_psram_board_all_version();// инициализация всех видов psram
-//   psram_avaiable =0;
-//    type_psram=NOT_PSRAM;
-
 
 //------------------------------------------------------------------
     turbo_switch(); // переключение режима turbo
@@ -868,21 +860,17 @@ void init_and_info()
 #if LED_BOARD != 255
     gpio_put(LED_BOARD, 0);
 #endif  
-
-   if (conf.autorun == 0)  sleep_ms(300); 
 /*            for (int i = 0; i < 16; i++)
          {       
              draw_rect(i*40,0,40,240,i,true);//спектр
          }
 sleep_ms(1000); */
 //sleep_ms(300); 
+//---------------------------------------------------------------------
 // Защита от автозапуска пустого или некорректного диска в CP/M Кворума
 // после включения и при Hard Reset 
 if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;  
 // TODO надо сделать правильно и поумнее
-
-
-
 //####################################################################
 #ifdef USB_SERIAL
    // Режим USB CDC консоли: USB HID хост отключаем, вместо него
@@ -892,20 +880,19 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
    for (int i = 0; i < 50; i++) { g_delay_ms(100); }
 #else
 
-  if (conf.autorun == 0) {sleep_ms(300); init_usb();} // Инициализация USB
+  if (conf.autorun == 0) {sleep_ms(100); init_usb();} // Инициализация USB
   else  init_usb_hid(); // USB HID
 #endif
 
  init_psram_board_all_version();// инициализация всех видов psram
-
+//    psram_avaiable =0;
+//    type_psram=NOT_PSRAM;
 //#####################################################################	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
 //#####################################################################  
 
 
 // инициализация с выводом результата на дисплей
-      //  zx_machine_enable_vbuf(false);
-	 //   init_screen(g_gbuf,SCREEN_W,SCREEN_H);
         is_new_screen = true;
         #define YPOS FONT_H*2 
         #define XPOS FONT_W+2

@@ -743,12 +743,6 @@ void init_and_info()
     }  */
 //#endif   
 
-#if LED_BOARD != 255
-    gpio_init(LED_BOARD);
-    gpio_set_dir(LED_BOARD, GPIO_OUT);
-    gpio_put(LED_BOARD, 1);
-#endif   
-
 #ifdef PICO_RP2350 
   // определение RP2350 A или B  
      rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
@@ -757,7 +751,16 @@ void init_and_info()
 // для корректного запуска с бутербродом PSRAM  
     gpio_init(psram_pin_cs);
     gpio_set_dir(psram_pin_cs, GPIO_OUT);
+    gpio_pull_up(psram_pin_cs); // gpio_disable_pulls(psram_pin_cs);//
     gpio_put(psram_pin_cs, 1);
+
+#if DEBUG == ON
+    gpio_init(24);
+    gpio_set_dir(24, GPIO_OUT);
+    gpio_pull_up(24);
+    gpio_put(24, 1);
+#endif
+
 
 //  GPIO 23 // Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
 // MODE=0 (PFM — Pulse Frequency Modulation)
@@ -864,8 +867,7 @@ void init_and_info()
          {       
              draw_rect(i*40,0,40,240,i,true);//спектр
          }
-sleep_ms(1000); */
-//sleep_ms(300); 
+         sleep_ms(1000); */
 //---------------------------------------------------------------------
 // Защита от автозапуска пустого или некорректного диска в CP/M Кворума
 // после включения и при Hard Reset 
@@ -880,7 +882,7 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
    for (int i = 0; i < 50; i++) { g_delay_ms(100); }
 #else
 
-  if (conf.autorun == 0) {sleep_ms(100); init_usb();} // Инициализация USB
+  if (conf.autorun == 0) {sleep_ms(120); init_usb();} // Инициализация USB
   else  init_usb_hid(); // USB HID
 #endif
 
@@ -890,7 +892,6 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
 //#####################################################################	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
 //#####################################################################  
-
 
 // инициализация с выводом результата на дисплей
         is_new_screen = true;
@@ -947,10 +948,7 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
          #endif          
      #endif  
 ////////////////////////////////////////////////////////////////
-
-        
 	  //  это инициализация мыши ;)
-
 	    mouse[0] = 0x00;
         mouse[1] = 0xff; 
         mouse[2] = 0xff; 
@@ -964,19 +962,12 @@ switch (type_psram)
 case NOT_PSRAM:
     draw_text_len(10+XPOS,y_info,"PSRAM not found",CL_RED,CL_BLACK,16); 
      #ifdef RP2350_256K
-	{
-	//	if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
-     //   else conf.mashine = SCORP256; 
-        
+	{    
         if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 1)  conf.mashine = PENT128;
-
-
 	}
     #else
 	{
-	//	if (conf.mashine > 1) conf.mashine = 0;
         if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 0)  conf.mashine = PENT128;
-
 	}
     #endif  
     psram_avaiable =0;
@@ -1021,10 +1012,7 @@ case BOARD_PSRAM_NOSUPORT:
     filterZxMachines(psram_avaiable);
  //   if (getZxMachineVariant(conf.mashine)->NeedPSRAM && !psram_avaiable) conf.mashine = PENT128; // TODO ИСПРАВИТЬ 
 
-
-
-
-        #ifdef TEST_DEBUG
+    #ifdef TEST_DEBUG
 
 #ifdef GENERAL_SOUND
 snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq); 
@@ -1569,6 +1557,14 @@ int fast(main)(void){
     gpio_set_dir(LED_BOARD, GPIO_OUT);
     gpio_put(LED_BOARD, 1);
 #endif 
+
+#if DEBUG == ON
+    gpio_init(24);
+    gpio_set_dir(24, GPIO_OUT);
+    gpio_put(24, 1);
+#endif
+
+
 #if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
     rtc_enable=0;
 #endif

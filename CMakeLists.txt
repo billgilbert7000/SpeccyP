@@ -6,7 +6,7 @@ else()
     set(USERHOME $ENV{HOME})
 endif()
 set(sdkVersion 2.2.0)
-set(toolchainVersion 14_3_Rel1)
+set(toolchainVersion 14_2_Rel1)
 set(picotoolVersion 2.2.0-a4)
 set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
@@ -24,7 +24,7 @@ set(VERSION_PATCH 3)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
-math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 7")
+math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 0")
 
 # == Конфигурация SpeccyP ==
 

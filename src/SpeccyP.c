@@ -678,7 +678,7 @@ void fast(init_pico)(void) // настройка и разгон для RP2350
     volatile uint32_t *qmi_m0_timing = (uint32_t *)0x400d000c;
     vreg_disable_voltage_limit();
     vreg_set_voltage(conf.voltage);
-
+    sleep_ms(50);
     cpu_pico_khz = conf.cpu_freq * 1000;
     conf.hdmi_fdiv = 1.0; // 1.0->60Hz cpu=252MHz
     if (conf.cpu_freq == 504)
@@ -718,11 +718,11 @@ void fast(init_pico)(void) // настройка и разгон для RP2040
 void init_usb(void)
 {
    init_usb_hid(); // USB HID
-    for(int i = 0; i < 320; i++)// время на определение USB устройств 320 * 10ms
+    for(int i = 0; i < 320; i++)// время на определение USB устройств 320 * 5ms
 {
      tuh_task(); // tinyusb host task
     //  tuh_task_ext(0, false);
-     g_delay_ms(5);
+     g_delay_ms(10);
      draw_symbol(i, 240-48,0,CL_WHITE, 0);
      draw_symbol(320-i+1, 240-48,0x20,CL_WHITE, 0);
      draw_symbol(320-i, 240-48,0,CL_WHITE, 0);
@@ -746,21 +746,7 @@ void init_and_info()
 #ifdef PICO_RP2350 
   // определение RP2350 A или B  
      rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
-      psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
-
-// для корректного запуска с бутербродом PSRAM  
-    gpio_init(psram_pin_cs);
-    gpio_set_dir(psram_pin_cs, GPIO_OUT);
-    gpio_pull_up(psram_pin_cs); // gpio_disable_pulls(psram_pin_cs);//
-    gpio_put(psram_pin_cs, 1);
-
-#if DEBUG == ON
-    gpio_init(24);
-    gpio_set_dir(24, GPIO_OUT);
-    gpio_pull_up(24);
-    gpio_put(24, 1);
-#endif
-
+     psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
 
 //  GPIO 23 // Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
 // MODE=0 (PFM — Pulse Frequency Modulation)
@@ -772,6 +758,13 @@ void init_and_info()
 #endif  
 //--------------------------------------
 #endif
+
+     gpio_put(LED_BOARD, 0);
+     sleep_ms(50); 
+     init_psram_board_all_version();// инициализация всех видов psram
+    //    psram_avaiable =0;        // тест без psram
+    //    type_psram=NOT_PSRAM;     // тест без psram
+     gpio_put(LED_BOARD, 1);
 
   #if PI_CARD // ???? это для того чтобы настроить выходы для PICARD 1 ИНАЧЕ МИКРОСХЕМЫ ОБВЯЗКИ ГРЕЮТСЯ
         pio_set_gpio_base(PIO_PS2, 0x10);//использование на pio0 GPIO 16...48
@@ -808,11 +801,7 @@ void init_and_info()
  //пин ввода звука
  gpio_in_init(PIN_ZX_LOAD);
 
-//------------------------------------------------------------------
-    turbo_switch(); // переключение режима turbo
- 
-    joy_redirecting();// установка режима работы kempston joy
-//--------------------------------------------------------------
+
  
 #ifdef  HDMI_ONLY
          vout_select= VIDEO_HDMI;
@@ -834,7 +823,7 @@ void init_and_info()
          vout_select= VIDEO_HDMI;
          startVIDEO(VIDEO_HDMI);// только HDMI
 #endif 
-//sleep_ms(3000);
+
 #ifdef  SOUND_I2S_ONLY
         conf.type_sound=I2S_TS; // только i2s
 #endif
@@ -853,12 +842,15 @@ void init_and_info()
             conf.type_sound = I2S_TS;
         }
 #endif
-
-        
+ 
         zx_machine_enable_vbuf(false);
 	    init_screen(g_gbuf,SCREEN_W,SCREEN_H);
         draw_text(160-21,240-64,"SpeccyP",CL_WHITE ,CL_BLACK);
-          
+ //------------------------------------------------------------------
+    turbo_switch(); // переключение режима turbo
+ 
+    joy_redirecting();// установка режима работы kempston joy
+//--------------------------------------------------------------         
 //---------------------------------------------------------------------
 #if LED_BOARD != 255
     gpio_put(LED_BOARD, 0);
@@ -886,9 +878,6 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
   else  init_usb_hid(); // USB HID
 #endif
 
- init_psram_board_all_version();// инициализация всех видов psram
-//    psram_avaiable =0;
-//    type_psram=NOT_PSRAM;
 //#####################################################################	
 	    convert_kb_u_to_kb_zx(&kb_st_ps2,zx_input.kb_data);
 //#####################################################################  
@@ -954,7 +943,7 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
         mouse[2] = 0xff; 
         mouse[3] = 0xff; 
 
-start_PS2_capture(); //
+       start_PS2_capture(); //
 
     y_info += 10;
 switch (type_psram)
@@ -1126,30 +1115,27 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
 flag_usb_kb = false;
 //---------------------------------------------------------------------------
 // если подключается плата с GS PicoBUS
-	#if defined  GENERAL_SOUND
-    // Первичная инициализация picobus
-     draw_text(12+FONT_W,100+YPOS, "Connect PicoBus ....",CL_LT_BLUE,CL_BLACK);
-  //   sleep_ms(1500);
-       init_picobus();
+#if defined GENERAL_SOUND
+// Первичная инициализация picobus
+draw_text(12 + FONT_W, 100 + YPOS, "Connect PicoBus ....", CL_LT_BLUE, CL_BLACK);
+sleep_ms(1500);
+init_picobus();
 
-       flag_gs=1;
-        sys_GS(GS_INFO);
-        tx_buffer[60]=0;
-       draw_text_len(12+FONT_W,100+YPOS,tx_buffer,CL_GREEN,CL_BLACK,32); 
-       draw_text(12+FONT_W,110+YPOS,tx_buffer+32,CL_LT_BLUE,CL_BLACK); 
-       select_audio(); // переключение режимов вывода звука 
+flag_gs = 1;
+sys_GS(GS_INFO);
+tx_buffer[60] = 0;
+draw_text_len(12 + FONT_W, 100 + YPOS, tx_buffer, CL_GREEN, CL_BLACK, 32);
+draw_text(12 + FONT_W, 110 + YPOS, tx_buffer + 32, CL_LT_BLUE, CL_BLACK);
+select_audio(); // переключение режимов вывода звука
 
-    #if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
-           // дата и время RTC
-        //   sys_GS(RTC_DATE_TIME);
-        //   draw_text((320-(18*FONT_W))/2,190+YPOS,tx_buffer,CL_LT_CYAN,CL_BLACK); 
-        rtc_enable=1;
-    #endif
+#if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
+//   дата и время RTC
+//   sys_GS(RTC_DATE_TIME);
+//   draw_text((320-(18*FONT_W))/2,190+YPOS,tx_buffer,CL_LT_CYAN,CL_BLACK);
+rtc_enable = 1;
+#endif
 
-
-
-
-    #endif
+#endif
 //----------------------------------------------------------------- 
 
 
@@ -1550,35 +1536,37 @@ int fast(main)(void){
     vreg_disable_voltage_limit();
     vreg_set_voltage(VREG_VOLTAGE_1_30);
 
-    set_sys_clock_khz(252*1000, 0);// стартовая частота pico
+   set_sys_clock_khz(120*1000, 0);// стартовая частота pico
    
+// для корректного запуска с бутербродом PSRAM  GPIO 0,8,19,47 для всех вариантов ))
+    gpio_init(PSRAM_BUTTER_PIN_CS);
+    gpio_set_dir(PSRAM_BUTTER_PIN_CS, GPIO_OUT);
+    gpio_pull_up(PSRAM_BUTTER_PIN_CS); // gpio_disable_pulls(psram_pin_cs);//
+    gpio_put(PSRAM_BUTTER_PIN_CS, 1); 
+    gpio_init(47);
+    gpio_set_dir(47, GPIO_OUT);
+    gpio_pull_up(47);
+    gpio_put(47, 1); 
+
+
 #if LED_BOARD != 255
     gpio_init(LED_BOARD);
     gpio_set_dir(LED_BOARD, GPIO_OUT);
     gpio_put(LED_BOARD, 1);
 #endif 
 
-#if DEBUG == ON
-    gpio_init(24);
-    gpio_set_dir(24, GPIO_OUT);
-    gpio_put(24, 1);
-#endif
-
-
 #if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
     rtc_enable=0;
 #endif
+
     init_fs = disk_initialize(0);// инициализация SD
     DIR fs;
     init_fs = init_filesystem();// монтирование и инициализация SD
+    config_init(); // загрузка файла конфигурации если он есть "0:/.config/speccy_p.cnf"
+    config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига  если его нет то файл записывается                     
 
-   config_init(); // загрузка файла конфигурации если он есть "0:/.config/speccy_p.cnf"
-
-   config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига  если его нет то файл записывается                     
- 
     init_pico();
     init_and_info();
-  //  gpio_put(LED_BOARD, 0);
 //-----------------------------------------------------------------    
 // если одна плата без GS 
     #ifndef  GENERAL_SOUND     

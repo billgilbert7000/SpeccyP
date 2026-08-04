@@ -428,7 +428,7 @@ DSTATUS disk_initialize (
 )
 {
     BYTE n, cmd, ty, ocr[4];
-    const uint32_t timeout = 100; /* Увеличиваем таймаут до 2 секунд 2000*/
+    const uint32_t timeout = 2000; /* Увеличиваем таймаут до 2 секунд 2000*/
     uint32_t t;
     DSTATUS response;
 

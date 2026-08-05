@@ -763,15 +763,6 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
 	uint8_t portL = (uint8_t)port16&0x00ff;
 
 
-	if (trdos) // если это tr-dos
-	{
-          	if (portL == 0xFF)       return Requests;
-            //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
-            if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port          
-           return 0xFF;        
-	} // end tr-dos
-
-
     #if defined(GENERAL_SOUND)
     if (portL == 0xB3) return in_GSP(GS_READ_IN_B3); 
     if (portL == 0xBB) return in_GSP(GS_STATUS_IN_BB); 
@@ -788,7 +779,7 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
     #ifdef MIDI    
     if (port16 == 0xa1cf ) 	return in_GSP(MIDI_IN); 
     #endif
-
+ 
     #if defined(Z_CONTROLER)
     if (portL == 0x57) return in_GSP(ZC_READ_IN_57); 
     if (portL == 0x77) return in_GSP(ZC_READ_IN_77); 
@@ -801,6 +792,15 @@ inline static uint8_t fast(in_z80)(Z80 *cpu, uint16_t port16) {
     }
     #endif
 
+ 
+
+	if (trdos) // если это tr-dos
+	{
+          	if (portL == 0xFF)       return Requests;
+            //((port == 0x7F) || (port == 0x5F) || (port == 0x3F) || (port == 0x1F))
+            if ((portL & 0x7F) == portL) return WD1793_Read((portL>>5) & 0b11); // Read from 0x7F to 0x1F port          
+           return 0xFF;        
+	} // end tr-dos
 
 
 	if (port16&1)
@@ -1116,7 +1116,7 @@ inline void fast (zx_machine_set_7ffd_out)(uint8_t val)// переключени
 	  zx_RAM_bank_active = zx_RAM_bank_7ffd |  zx_RAM_bank_1ffd |  zx_RAM_bank_dffd;
 	   zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
 	 	
-	 //  if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
+	//   if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];	
        rom_select(); // переключение ПЗУ по портам и по сигналу DOS
 
 	return; // выход нафиг
@@ -1231,10 +1231,6 @@ inline void fast (zx_machine_set_7ffd_out)(uint8_t val)// переключени
 		return; // выход нафиг
 	}
 
-	//if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];
-
-          //    rom_select(); // переключение ПЗУ по портам 
-
 };
 //------------------------------------------------------------------------------
 uint8_t zx_machine_get_7ffd_lastOut(){return zx_7ffd_lastOut;}
@@ -1256,7 +1252,7 @@ inline static void fast(out_spec48)(Z80 *cpu,uint16_t port16, uint8_t val)
 	if (port16 & 1) 
 	{
 
-/* 	#ifdef GENERAL_SOUND   
+/* 	#ifdef GENERAL_SOUND   // отключенно для 48 режима 
         if (portL == 0xB3) {out_GSP(GS_WRITE_OUT_B3,  val);   return;}// передача данных в GS
         if (portL == 0xBB) {out_GSP(GS_COMMAND_OUT_BB,val);   return;}// передача команды в GS
     #endif
@@ -1297,7 +1293,7 @@ inline static void fast(out_spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
 		if(port16 == 0x01FF){saa1099_write(1,val);return;}					
 		if(port16 == 0x00FF){saa1099_write(0,val);return;}
     #endif
-
+ 
     #ifdef Z_CONTROLER 
         if (portL == 0x57) {out_GSP(ZC_WRITE_OUT_57,  val); return;}// передача данных в SD карту
         if (portL == 0x77) {out_GSP(ZC_WRITE_OUT_77,val);z_controler_cs = val; return;}//управление SD   SD_SPI_CS0_PIN val&0x02
@@ -1316,7 +1312,7 @@ inline static void fast(out_spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
          return;
         }
     #endif
-
+ 
     #ifdef  RTC_GLUK
         if (port16  ==  0xDFF7 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
         if (port16  ==  0xBFF7 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
@@ -1334,7 +1330,7 @@ inline static void fast(out_spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
     #endif
 
  
-	if (((not_port16 & 0x8002) == 0x8002))//7ffd
+/* 	if (((not_port16 & 0x8002) == 0x8002))//7ffd
     //  if (port16  == 0x7ffd)//7ffd
 		// 0111 1111  1101
 		// A1=0   A15=0	
@@ -1347,12 +1343,19 @@ inline static void fast(out_spec128)(Z80 *cpu, uint16_t port16, uint8_t val)
        // zx_RAM_bank_active = zx_RAM_bank_active |  zx_RAM_bank_1ffd |  zx_RAM_bank_dffd;
 	    zx_RAM_bank_active = zx_RAM_bank_7ffd ;
 	    zx_cpu_ram[3]=zx_ram_bank[zx_RAM_bank_7ffd];
-	  //  if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];  
+	    if (val&8) zx_video_ram=zx_ram_bank[7];   else zx_video_ram=zx_ram_bank[5];  
           
 		  rom=(zx_7ffd_lastOut & 0x10)>>4;  // переключение ПЗУ
 	     zx_cpu_ram[0]=zx_rom_bank[(zx_7ffd_lastOut & 0x10)>>4];  // переключение ПЗУ
-		return; ////#######     нужно для демки которая переключает память нестандартно по порту #FC BIN 1111 1100 A0=0
-        } 
+		//return; ////#######     нужно для демки которая переключает память нестандартно по порту #FC BIN 1111 1100 A0=0
+        }  */
+
+		if (((not_port16 & 0x8002) == 0x8002))//7ffd
+		{
+            zx_machine_set_7ffd_out(val); 
+			//return;	 ////#######     нужно для демки которая переключает память нестандартно по порту #FC BIN 1111 1100 A0=0
+		}; 
+
 
 ////######
 	if (port16 & 1) // Расширение памяти и экран Spectrum-128 //psram_avaiable = false;
@@ -2868,13 +2871,13 @@ void fast(zx_machine_main_loop_start)()
 	
 	while(1){
 		
-	 	while (im_z80_stop){
+	  	while (im_z80_stop) // останов Z80 
+        {   
 			sleep_ms(1);
 			if (!im_ready_loading) im_ready_loading = true;
-	
-		//	cpu.Int_pending = false; НОВЫЙ ЭМУЛЯТОР 
+		   //	cpu.Int_pending = false; НОВЫЙ ЭМУЛЯТОР 
 		}
- 
+  
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // tape load

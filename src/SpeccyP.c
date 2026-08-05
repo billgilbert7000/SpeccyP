@@ -1355,14 +1355,11 @@ void keyboard_and_other(void)
                 }
             // кнопка перехода в меню SETUP
            if (((MENU_SETUP) | (joy_key_ext  == 0x88)) )  setup_zx();  // START+ [B] SetUp
-
-
            //
            if (F1)  help_zx();
            if (F4)  help_keyboard();
            if (F9)  nmi_zx();
            if (PAUSE) pause_zx(); //  [Pause Break]
-
            if (F6) // палитра
            {
                if (vout_select != VIDEO_TFT)
@@ -1511,10 +1508,11 @@ void keyboard_and_other(void)
             if (!is_menu_mode)
             { // Emulation mode
                 zx_machine_enable_vbuf(true);
-                if (im_z80_stop)
+/*                 if (im_z80_stop)
                 {
-                    im_z80_stop = false;
-                }
+                    im_z80_stop = false; ///????
+                } */
+              im_z80_stop = false;
                 // zx_machine_set_vbuf(g_gbuf);
                 if (need_reset_after_menu)
                 {
@@ -1576,12 +1574,15 @@ int fast(main)(void){
 	// negative timeout means exact delay (rather than delay between callbacks)
     // f = 1 / T = 1 / 9 μs = 111111 Гц
     // f = 1 / T = 1 / -21 μs = 47619Гц	-0,79% Гц
- 	if (!add_repeating_timer_us(AY_SAMPLE_RATE, AY_timer_callback, NULL, &timer_audio)) return 1;// -10  частота ноты До 237Гц  нужно 240,0058 Гц
+ 	if (!add_repeating_timer_us(AY_SAMPLE_RATE, AY_timer_callback, NULL, &timer_audio)) // -10  частота ноты До 237Гц  нужно 240,0058 Гц
+    {
+    return 1;
+    }
     #endif
 
 	repeating_timer_t zx_flash_timer;
 	if (!add_repeating_timer_us(-1000000 / 2/*Hz*/, zx_flash_callback, NULL, &zx_flash_timer)) {
-		return 1;
+        return 1;
 	}
 //---------------------------------------------------------------
 

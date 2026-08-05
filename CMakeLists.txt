@@ -6,7 +6,7 @@ else()
     set(USERHOME $ENV{HOME})
 endif()
 set(sdkVersion 2.2.0)
-set(toolchainVersion 15_2_Rel1)
+set(toolchainVersion 14_2_Rel1)
 set(picotoolVersion 2.2.0)
 set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
@@ -77,7 +77,7 @@ option(USB_SERIAL "USB CDC console (USB HID Host отключается)" OFF)
 if(SPECCY_CONFIG STREQUAL "GSP_FULL")
     set(SPECCY_CONFIG_DEFINITIONS       
         CPU_MHZ=378 
-        FLASH_MAX_FREQ_MHZ=166
+        FLASH_MAX_FREQ_MHZ=66
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
         GENERAL_SOUND 
@@ -94,7 +94,7 @@ if(SPECCY_CONFIG STREQUAL "GSP_FULL")
 elseif(SPECCY_CONFIG STREQUAL "GSP_LITE")
     set(SPECCY_CONFIG_DEFINITIONS  
         CPU_MHZ=378 
-        FLASH_MAX_FREQ_MHZ=166
+        FLASH_MAX_FREQ_MHZ=66
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
         GENERAL_SOUND 
@@ -118,7 +118,7 @@ else()
     set(SPECCY_CONFIG_DEFINITIONS 
 
         CPU_MHZ=378
-        FLASH_MAX_FREQ_MHZ=166  ## для Winbond 133 
+        FLASH_MAX_FREQ_MHZ=66  
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
     )

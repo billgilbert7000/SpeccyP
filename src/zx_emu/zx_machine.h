@@ -46,6 +46,7 @@ void zx_machine_input_set(ZX_Input_t *input_data);
 void zx_machine_reset(uint8_t rom_x);
 void zx_machine_init();
 void fast(zx_machine_main_loop_start)(); // функция содержит бесконечный цикл
+//void copy_imge_reset();
 
 void fast(zx_machine_flashATTR)(void);
 

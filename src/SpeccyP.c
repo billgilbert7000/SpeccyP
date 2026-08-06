@@ -850,8 +850,7 @@ void init_and_info()
     turbo_switch(); // переключение режима turbo
  
     joy_redirecting();// установка режима работы kempston joy
-//--------------------------------------------------------------         
-//---------------------------------------------------------------------
+       
 #if LED_BOARD != 255
     gpio_put(LED_BOARD, 0);
 #endif  
@@ -874,7 +873,7 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
    for (int i = 0; i < 50; i++) { g_delay_ms(100); }
 #else
 
-  if (conf.autorun == 0) {sleep_ms(120); init_usb();} // Инициализация USB
+  if (conf.autorun == 0) {sleep_ms(100); init_usb();} // Инициализация USB
   else  init_usb_hid(); // USB HID
 #endif
 
@@ -905,7 +904,6 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
         draw_text(210+XPOS,YPOS,temp_msg,CL_GRAY ,CL_BLACK);
 
 
-
         draw_text((320-(34*FONT_W))/2,180+YPOS,"[F12]-Setup [F11]-Files [F1]-Help",CL_GREEN,CL_BLACK);
       //  draw_text((320-(20*FONT_W))/2,140+YPOS,"Forward to the past",CL_GRAY,CL_BLACK);
 
@@ -921,7 +919,6 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
         #if D_JOY_CLK_PIN!=255      
         d_joy_init();
 	    decode_joy(); //????????
-
 
          #if !DEVICE_HDMI90_I2S
 	      if(gpio_get(D_JOY_DATA_PIN))
@@ -943,7 +940,7 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
         mouse[2] = 0xff; 
         mouse[3] = 0xff; 
 
-       start_PS2_capture(); //
+      start_PS2_capture(); //
 
     y_info += 10;
 switch (type_psram)
@@ -1029,12 +1026,7 @@ snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq);
       // snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %d mV ",conf.voltage );
         draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
     #endif
-#if POWER_MODE == 0
-      //  draw_text(210+XPOS,YPOS+30,"MODE    PFM",CL_GRAY ,CL_BLACK); 
-#endif 
-#if POWER_MODE == 1
-     //   draw_text(210+XPOS,YPOS+30,"MODE    PWM",CL_GRAY ,CL_BLACK); 
-#endif 
+
 
         #endif
         #endif
@@ -1058,13 +1050,9 @@ draw_text(11+FONT_W,85+YPOS,"HDMI Audio TurboSound",CL_GRAY,CL_BLACK);
 #endif
 
 
-
 // дата и время компиляции
-//printf("%s ", BUILD_DATE);
 snprintf(temp_msg, sizeof temp_msg, "%s %s",BUILD_DATE, BUILD_TIME); 
 draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK); 
-
-
 
         if (vout_select==VIDEO_VGA)
         {
@@ -1091,7 +1079,8 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
         if (conf.tft== TFT_7789) snprintf(temp_msg, sizeof temp_msg,  "ST7789");
 		draw_text(228+XPOS,YPOS+110,temp_msg,CL_LT_BLUE ,CL_BLACK);	
         }   
-           
+
+
 //------------------------------------------------------------------   
      y_info += 10;
   switch (usb_device) 
@@ -1113,6 +1102,7 @@ draw_text(12+FONT_W,110+YPOS,temp_msg,CL_LT_CYAN,CL_BLACK);
     draw_text(10+XPOS,y_info,temp_msg,CL_GREEN,CL_BLACK); 
 
 flag_usb_kb = false;
+
 //---------------------------------------------------------------------------
 // если подключается плата с GS PicoBUS
 #if defined GENERAL_SOUND
@@ -1136,20 +1126,7 @@ rtc_enable = 1;
 #endif
 
 #endif
-//----------------------------------------------------------------- 
 
-
-
-// kb_st_ps2.u[2]= 0xff;
-    // ожидание клавиши перед запуском
- /*     while (!((kb_st_ps2.u[3] == 0) & (kb_st_ps2.u[2] == 0) & (kb_st_ps2.u[1] == 0) & (kb_st_ps2.u[0] == 0)))
-    {
-        decode_key();
-    } */
- 
-
-	//while (! ((decode_PS2()) | (decode_key(is_menu_mode)) | (decode_joy()))){}
- //   sleep_ms(9000);
 }
 //=========================================================================
 void Message_Print()
@@ -1586,8 +1563,9 @@ int fast(main)(void){
 	}
 //---------------------------------------------------------------
 
-	multicore_launch_core1(ZXThread);
-
+multicore_launch_core1(ZXThread);// запуск эмулятора
+ 
+//sleep_ms(3000);
     disk_autorun ();
     gpio_put(LED_BOARD, 0);
 //######################

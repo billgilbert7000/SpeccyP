@@ -45,9 +45,6 @@
 
 //###
 #include <stddef.h>
-#ifndef Z_NULL
-#define Z_NULL NULL
-#endif
 #include "Z80.h"
 //###
 
@@ -88,8 +85,7 @@ uint8_t *zx_cpu_ram[4];  // Адреса 4х областей памяти CPU �
 
 // tr-dos
 extern uint8_t wd1793_PortFF;
-//bool trdos=0;
-//uint8_t VG_PortFF = 0x00;
+
 ////////////////////////////////
 
 uint32_t zx_img_ptr ;
@@ -104,7 +100,6 @@ int inx_tick_int;
 bool int_enable;
 ///////////////////////////////
 uint8_t port_ff =0xff;
-//uint8_t zx_machine_last_out_7ffd;
 uint8_t zx_machine_last_out_fffd;
 uint8_t zx_7ffd_lastOut=0;
 uint8_t zx_1ffd_lastOut=0;
@@ -128,12 +123,7 @@ bool zx_state_48k_MODE_BLOCK=false;
 
 static uint32_t zx_colors_2_pix32[384];//предпосчитанные сочетания 2 цветов
 static uint8_t* zx_colors_2_pix=(uint8_t*)&zx_colors_2_pix32;//предпосчитанные сочетания 2 цветов
-
-
-//uint8_t* zx_cpu_ram[4];//Адреса 4х областей памяти CPU при использовании страниц
 uint8_t* zx_video_ram;
-
- //uint8_t* zx_ram_bank[8];//Хранит адреса 8ми банков памяти
 uint8_t* zx_rom_bank[4];//Адреса 4х областей ПЗУ (48к 128к TRDOS и резерв для какого либо режима(типа тест))
 
 typedef struct zx_vbuf_t
@@ -147,11 +137,6 @@ zx_vbuf_t* zx_vbuf_active;
 
 uint8_t atr0;
 uint8_t atr1;
-//выделение памяти может быть изменено в зависимости от платформы
-//uint8_t RAM[16384*8]; //Реальная память куском 128Кб
-//uint8_t RAM[16384*8]; //Реальная память куском 32Кб
-//zx_cpu_ram_5 [16384];
-//zx_cpu_ram_7 [16384];
 
 //uint8_t VBUFS[ZX_SCREENW*ZX_SCREENH*ZX_NUM_GBUF*ZX_BPP/8];
 //=================================================
@@ -163,10 +148,10 @@ uint8_t atr1;
 	uint8_t* p_zx_video_ram7=NULL;
 	uint8_t* p_zx_video_ramATTR7=NULL;
     uint64_t inx_tick_screen_ff;// счетчик тактов экрана для порта FF
-//###############################################
 //######################################################################
+// Z-Controller
 bool is_SD_active=false;
-//--------------------------------------------------
+
 static inline uint8_t READ_SD_BYTE()
 {
     uint8_t dataSPI=spi_get_hw(SDCARD_SPI_BUS)->dr;
@@ -180,7 +165,6 @@ static inline void  WRITE_SD_BYTE(uint8_t data)
     spi_get_hw(SDCARD_SPI_BUS)->dr=data; 
 
 }
-//============================================================
 //######################################################################
 
 
@@ -237,7 +221,7 @@ uint8_t fast(zx_keyboardDecode)(uint8_t addrH)
 	
 	return ~dataOut;//инверсия, т.к. для спектрума нажатая клавиша = 0;
 };
-//=================================================================================
+//====================
 // TR-DOS
 //====================
 void fast (trdos_out)(uint8_t port, uint8_t val)
@@ -277,7 +261,6 @@ void fast(rom_select)(void)
 
 switch (conf.mashine)
 {
-//	u_int8_t  dsg;
 case NOVA256:
 	//	rom_n =  ((zx_7ffd_lastOut & 0x10)>>4) | ((zx_0000_lastOut & 0x20)>>5) ;// 0001.0000 0000.1000 0000.0100 0000.0010 0000.0001
 	//	zx_cpu_ram[0] =  zx_rom_bank[ table_nova256 [rom_n] ];
@@ -292,17 +275,12 @@ if ((zx_0000_lastOut&0b00100000) == 0)
 		zx_cpu_ram[0]=zx_rom_bank[(zx_7ffd_lastOut & 0x10)>>4]; 
 	} 
 	return;
-	break;
 
 case QUORUM1024:
     rom_select_Quorum1024();
 	return;
-	break;
 
-
-    
 case SCORP256:
-
 if ((zx_1ffd_lastOut & 0x02) == 0x02)
 {
 	rom=ROM_SM;  zx_cpu_ram[0] = zx_rom_bank[3]; 
@@ -313,16 +291,12 @@ if ((zx_1ffd_lastOut & 0x02) == 0x02)
 	    zx_cpu_ram[0]=zx_rom_bank[(zx_7ffd_lastOut & 0x10)>>4]; 
 	}
 	return;
-	break;
-
 
 default:
          rom=(zx_7ffd_lastOut & 0x10)>>4;
          zx_cpu_ram[0]=zx_rom_bank[(zx_7ffd_lastOut & 0x10)>>4]; 
 
 	return;
-	break;
-
 } 
 }
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2375,6 +2349,11 @@ void machine_MurmoZavr(Z80 *cpu)
 #include "image.h"
 #include "util_z80.h"
 //==============================================================================
+void copy_imge_reset()
+{
+    memcpy(zx_ram_bank[5], cat_img, 6144+768); // TODO
+}
+
 void init_rom_ram(uint8_t rom_x)
 {
 		// настройка ОЗУ 
@@ -2384,22 +2363,11 @@ void init_rom_ram(uint8_t rom_x)
 	    zx_video_ram = zx_ram_bank[5];
 
 /*         Фон (биты 5–3): 111 (белый).
-
         Текст (биты 2–0): 000 (чёрный).
-        
         Яркость (бит 6): 0 (обычная яркость).
-        
         Мигание (бит 7): 0 (выключено).
-
  */
 
-     memcpy(zx_ram_bank[5], cat_img, 6144+768);
-
-    // Копируем пиксельные данные (первые 6144 байта)
-   // memcpy(zx_ram_bank[5], cat_img, 6144);
-
-    // Копируем атрибуты (следующие 768 байт)
-  //  memcpy(zx_ram_bank[5] + 0x1800, cat_img+ 6144, 768);
 
  switch (conf.mashine)
  {
@@ -2481,7 +2449,7 @@ break;
 		break;
 
 		case 1     /*TR-DOS */:
-			if (conf.Disks[0][0] ==0 )
+  			if (conf.Disks[0][0] ==0 )
 			  zx_cpu_ram[0]=zx_rom_bank[1]; // диска нет 48 BASIC 
 			else 
 			{
@@ -2501,7 +2469,7 @@ break;
 			break;
 		}
 		}
-
+         copy_imge_reset();
         if (rom_x ==1) // загрузка с вставленной дискетой по SPACE
 		{
 		 rom=ROM_DOS;
@@ -2587,8 +2555,10 @@ break;
 			break;
 		}
 		}
+        
         if (rom_x ==1) // загрузка с вставленной дискетой по SPACE
 		{
+            copy_imge_reset();
 		 rom=ROM_DOS;
 		 zx_cpu_ram[0]=zx_rom_bank[2]; // 0x0000 - 0x3FFF TR-DOS    запуск trd по   SPACE
 		 zx_7ffd_lastOut=0x10;//0x10
@@ -2598,6 +2568,7 @@ break;
 
 		if (rom_x ==3) // просто reset в  128 BASIC
 		{
+            copy_imge_reset();
 		 rom=ROM_128;
 		 zx_cpu_ram[0]=zx_rom_bank[0]; //  128 BASIC
 		 zx_7ffd_lastOut=0x00;
@@ -2619,83 +2590,72 @@ break;
 }
 //==============================================================================
 void zx_machine_init()
-{    
-	//привязка реальной RAM памяти к банкам
-    #ifdef RP2350_256K
-  	for(int i=0;i<16;i++)
-	{
-		zx_ram_bank[i]=&RAM[i*0x4000];
-	} 
-       memset(&RAM,0x00, 16*0x4000);	// стирание памяти 256kB
-	#else
-    for(int i=0;i<8;i++)
-	{
-		zx_ram_bank[i]=&RAM[i*0x4000];
-	} 
-       memset(&RAM,0x00, 8*0x4000);	// стирание памяти 128kB 
-    #endif
-
-	
-     init_mashine_and_extram(conf.mashine);// <= это уже тут   machine_Pentagon_128(&cpu_zx);  // инициализация процессора
-   
-      z80_power(&cpu_zx, Z_TRUE);// Включаем питание машины
-      z80_instant_reset(&cpu_zx);  // Включаем питание машины
-      zx_machine_reset(0);// 0-первый запуск  1- запуск trd по SPACE  3-просто reset в BASIC128
-
-  
+{
+// привязка реальной RAM памяти к банкам
+#ifdef RP2350_256K
+    for (int i = 0; i < 16; i++)
+    {
+        zx_ram_bank[i] = &RAM[i * 0x4000];
+    }
+//   memset(&RAM,0x00, 16*0x4000);	// стирание памяти 256kB
+#else
+    for (int i = 0; i < 8; i++)
+    {
+        zx_ram_bank[i] = &RAM[i * 0x4000];
+    }
+    //  memset(&RAM,0x00, 8*0x4000);	// стирание памяти 128kB
+#endif
+    init_mashine_and_extram(conf.mashine); // <= это уже тут   machine_Pentagon_128(&cpu_zx);  // инициализация машины
+    z80_power(&cpu_zx, Z_TRUE); // Включаем питание машины
+    z80_instant_reset(&cpu_zx); // reset z80
+    zx_machine_reset(0);        // 0-первый запуск  1- запуск trd по SPACE  3-просто reset в BASIC128
 };
-
 
 void fast(zx_machine_input_set)(ZX_Input_t* input_data){memcpy(&zx_input,input_data,sizeof(ZX_Input_t));};
 
 void zx_machine_reset(uint8_t rom_x)
 {
-	AY_reset();
-
+    AY_reset();
     init_rom_ram(rom_x);
+    zx_RAM_bank_active = 0x00;
+    zx_RAM_bank_7ffd = 0x00;
+    zx_RAM_bank_1ffd = 0x00;
+    zx_RAM_bank_dffd = 0x00;
+    zx_RAM_bank_ext8 = 0x00;
+    zx_aff7_lastOut = 0;
+    zx_1ffd_lastOut = 0x00;
+    zx_0000_lastOut = 0x00; // QUORUM
 
-   //  machine_reset(&cpu_zx);// Используем  для сброса регистров
-     
+    zx_cpu_ram[3] == zx_ram_bank[zx_RAM_bank_active];
 
-	zx_RAM_bank_active =0x00;
-	zx_RAM_bank_7ffd =0x00;
-    zx_RAM_bank_1ffd =0x00;
-    zx_RAM_bank_dffd =0x00;
-    zx_RAM_bank_ext8 =0x00;
-    zx_aff7_lastOut=0;
-    zx_1ffd_lastOut=0x00;
-    zx_0000_lastOut = 0x00;// QUORUM
-    
-    zx_cpu_ram[3]==zx_ram_bank[zx_RAM_bank_active];
-
- //   strcpy(conf.activefilename, conf.Disks[0]);// disk A   
+    strcpy(conf.activefilename, conf.Disks[0]); // disk A
     WD1793_Init();
 
-   //memset(&RAM,0x00, 131072);	// стирание памяти 128kB
-    cash_f = 0;// отключение кеш для Пентагон 512 CASH
+    // memset(&RAM,0x00, 131072);	// стирание памяти 128kB
+    cash_f = 0;  // отключение кеш для Пентагон 512 CASH
+    seekbuf = 0; // обнуление счетчика tape при сбросе
+                 // в Кворум в режиме CP/M при роковом стечении обстоятельств
+                 // и в  Nova 256  При тесте памяти
+                 // может быть ошибка связанная с перехватом точек входа TAPE LOADER
+                 // используемых для работы FAST загрузки !!!  TODO
+    if (conf.mashine == QUORUM1024)
+        conf.tape_mode = 1; // проверить
+                            //  if (conf.mashine==NOVA256)    conf.tape_mode = 1; // добавленна проверка в tape loader
 
-    seekbuf =0;// обнуление счетчика tape при сбросе
-    // в Кворум в режиме CP/M при роковом стечении обстоятельств 
-    // и в  Nova 256  При тесте памяти
-    // может быть ошибка связанная с перехватом точек входа TAPE LOADER
-    // используемых для работы FAST загрузки !!!  TODO
- 	if (conf.mashine==QUORUM1024) conf.tape_mode = 1; // проверить 
-  //  if (conf.mashine==NOVA256)    conf.tape_mode = 1; // добавленна проверка в tape loader
-
-    if (conf.tape_mode == 0) {
-	   	enable_tape = true;
-		tap_loader_active = false;
-	} else {
-		enable_tape = false;
-		tap_loader_active = true;
-	} 
+    if (conf.tape_mode == 0)
+    {
+        enable_tape = true;
+        tap_loader_active = false;
+    }
+    else
+    {
+        enable_tape = false;
+        tap_loader_active = true;
+    }
     TapeStatus = TAPE_STOPPED;
-    init_vol_ay(); 
-
-  // Используем  для сброса регистров
-
-        z80_instant_reset(&cpu_zx);
-
+    init_vol_ay();
+    // Используем  для сброса регистров
+    z80_instant_reset(&cpu_zx);
 };
 //-------------------------------------------------------------------------
 uint8_t* fast(zx_machine_screen_get)(uint8_t* current_screen)
@@ -3058,8 +3018,6 @@ if (   (inx_tick_screen<32) &&  (int_enable))
 					p_zx_video_ram = p_zx_video_ram5;
 				 }
 
-          
-
 
 			if (x>=(SCREEN_W)||y>=(SCREEN_H))
 			{
@@ -3138,12 +3096,6 @@ void zx_machine_enable_vbuf(bool en_vbuf){
 };
 
 //====================================================================
-//
-//void (*out_z80)(); // определение указателя на функцию записи в порт IN Z80
-//void (*in_z80)(); // определение указателя на функцию чтения из порта OUT Z80
-
-//byte (*RdZ80)(uint8_t);// определение указателя на функцию чтения памяти
-
 void init_mashine_and_extram(uint8_t config_mashine) // инициализация кофигурации портов переключения памяти
 {
 //shift_img=(16+40)*224+48;////8888;////Пентагон=(16+40)*224+48;
@@ -3211,7 +3163,6 @@ void init_mashine_and_extram(uint8_t config_mashine) // инициализаци
 		break; //
 
 	case PENT_512CASH :// Пентагон 512 с кеш
-    //    main_nmi_key = true;
         machine_Pentagon_512_cash(&cpu_zx);
 		break; //
 

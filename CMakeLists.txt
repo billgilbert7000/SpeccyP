@@ -16,7 +16,7 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
-set(DEBUG ON)
+set(DEBUG OFF)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 7)
@@ -453,6 +453,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_clocks
         hardware_pwm
         hardware_flash
+        hardware_adc
        tinyusb_host 
        tinyusb_board
        pico_fatfs

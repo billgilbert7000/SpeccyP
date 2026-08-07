@@ -6,7 +6,7 @@
 #include "SpeccyP.h"
 
 #include "hardware/gpio.h"
-//#include "hardware/adc.h"
+#include "hardware/adc.h"
 
 #include <pico/stdlib.h>
 #include "pico/multicore.h"
@@ -106,18 +106,22 @@ void save_slot(void);
 void disk_autorun (void);
 void disasm(void);
 void  fast (init_psram_board_all_version)(void);
-
+uint8_t psram_pin_cs; // переопределение пина PSRAM  
+bool  rp2350a; // RP2350A & RP2350B
 #if PICO_RP2350
 void __no_inline_not_in_flash_func(init_psram_butter)(uint cs_pin);
 void __no_inline_not_in_flash_func(deinit_psram_butter)(uint cs_pin);
 static uint32_t __no_inline_not_in_flash_func(psram_b_size)(void);
 uint32_t get_psram_size();
-//bool is_psram_enabled();
+
+// Прототип функции обнаружения PSRAM
+static bool __no_inline_not_in_flash_func(psram_detect)(void);
+
 #endif
-uint8_t psram_pin_cs; // переопределение пина PSRAM для пиморони 
+
 //---------------------------------------------------------------
 // переменные
-char afilename[LENF];
+char auto_start_filename[LENF];
 //===============================================================
 void nmi_zx()
 {
@@ -729,7 +733,6 @@ void init_usb(void)
   }
 }
 //========================================================================
-static bool  rp2350a;
 static uint inx=0;		
 
 void init_and_info()
@@ -743,28 +746,14 @@ void init_and_info()
     }  */
 //#endif   
 
-#ifdef PICO_RP2350 
-  // определение RP2350 A или B  
-     rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
-     psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
-
-//  GPIO 23 // Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
-// MODE=0 (PFM — Pulse Frequency Modulation)
-// MODE=1 (PWM — Pulse Width Modulation)
-#if POWER_MODE != 255
-    gpio_init(23);
-    gpio_set_dir(23, GPIO_OUT);
-    gpio_put(23, POWER_MODE);
-#endif  
-//--------------------------------------
-#endif
-
-     gpio_put(LED_BOARD, 0);
-     sleep_ms(50); 
+  //   gpio_put(LED_BOARD, 0);
+  // sleep_ms(150); 
      init_psram_board_all_version();// инициализация всех видов psram
     //    psram_avaiable =0;        // тест без psram
     //    type_psram=NOT_PSRAM;     // тест без psram
-     gpio_put(LED_BOARD, 1);
+    #if LED_BOARD != 255
+    gpio_put(LED_BOARD, 0);
+    #endif 
 
   #if PI_CARD // ???? это для того чтобы настроить выходы для PICARD 1 ИНАЧЕ МИКРОСХЕМЫ ОБВЯЗКИ ГРЕЮТСЯ
         pio_set_gpio_base(PIO_PS2, 0x10);//использование на pio0 GPIO 16...48
@@ -802,7 +791,6 @@ void init_and_info()
  gpio_in_init(PIN_ZX_LOAD);
 
 
- 
 #ifdef  HDMI_ONLY
          vout_select= VIDEO_HDMI;
          startVIDEO(VIDEO_HDMI);// только HDMI
@@ -1024,9 +1012,23 @@ snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq);
     #ifdef PICO_RP2350 
         snprintf(temp_msg, sizeof temp_msg, "  Ucpu   %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
       // snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %d mV ",conf.voltage );
-        draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
+        draw_text(200+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
     #endif
+#ifdef PSRAM_BUTTER // если rp2350 и psram бутерброд
 
+      if  (type_psram == BUTTER_PSRAM)  
+      {
+        snprintf(temp_msg, sizeof temp_msg, "  PSRAM %d MHz ",real_psram_freq );
+        draw_text(200+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK); 
+      }
+    
+  
+#endif
+
+
+
+
+//++++++++++++++++++++++++++++++++++++++
 
         #endif
         #endif
@@ -1127,6 +1129,10 @@ rtc_enable = 1;
 
 #endif
 
+//++++++++++++++++++++++++++++++++++++++
+    // Инициализация АЦП
+    adc_init();
+adc_set_temp_sensor_enabled(true);
 }
 //=========================================================================
 void Message_Print()
@@ -1507,22 +1513,33 @@ void keyboard_and_other(void)
 //=========================================================================
 // MAIN
 int fast(main)(void){  
-    volatile uint32_t *qmi_m0_timing = (uint32_t *)0x400d000c;
-    vreg_disable_voltage_limit();
-    vreg_set_voltage(VREG_VOLTAGE_1_30);
-
+   // volatile uint32_t *qmi_m0_timing = (uint32_t *)0x400d000c;
+   // vreg_disable_voltage_limit();
+  //  vreg_set_voltage(VREG_VOLTAGE_1_30);
+   // sleep_ms(50);
    set_sys_clock_khz(120*1000, 0);// стартовая частота pico
-   
-// для корректного запуска с бутербродом PSRAM  GPIO 0,8,19,47 для всех вариантов ))
-    gpio_init(PSRAM_BUTTER_PIN_CS);
-    gpio_set_dir(PSRAM_BUTTER_PIN_CS, GPIO_OUT);
-    gpio_pull_up(PSRAM_BUTTER_PIN_CS); // gpio_disable_pulls(psram_pin_cs);//
-    gpio_put(PSRAM_BUTTER_PIN_CS, 1); 
-    gpio_init(47);
-    gpio_set_dir(47, GPIO_OUT);
-    gpio_pull_up(47);
-    gpio_put(47, 1); 
 
+#ifdef PICO_RP2350 
+  // определение RP2350 A или B  
+     rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
+     psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
+//--------------------------------------------------------------------------------------------------
+//  GPIO 23 // Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
+// MODE=0 (PFM — Pulse Frequency Modulation)
+// MODE=1 (PWM — Pulse Width Modulation)
+#if POWER_MODE != 255
+    gpio_init(23);
+    gpio_set_dir(23, GPIO_OUT);
+    gpio_put(23, POWER_MODE);
+#endif  
+//--------------------------------------------------------------------------------------------------
+#endif
+
+// для корректного запуска с бутербродом PSRAM  GPIO 0,8,19,47 для всех вариантов ))
+    gpio_init(psram_pin_cs);
+    gpio_set_dir(psram_pin_cs, GPIO_OUT);
+    gpio_pull_up(psram_pin_cs); // gpio_disable_pulls(psram_pin_cs);//
+    gpio_put(psram_pin_cs, 1); 
 
 #if LED_BOARD != 255
     gpio_init(LED_BOARD);
@@ -2649,82 +2666,175 @@ static int BUTTER_PSRAM_SIZE = 0;
 }
  */
 
+//=============================================================================
+// Улучшенная инициализация PSRAM для SpeccyP
+//=============================================================================
 
 /**
- * @brief Инициализация PSRAM (APS6404) на Raspberry Pi Pico
+ * @brief Проверка наличия PSRAM чипа через чтение ID
+ * @return true если чип обнаружен, false если нет
+ */
+static bool __no_inline_not_in_flash_func(psram_detect)(void) {
+    // Выход из QPI режима (если чип остался в нем после перезагрузки)
+    const uint8_t CMD_EXIT_QPI = 0xF5;
+    qmi_hw->direct_csr |= QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
+    qmi_hw->direct_tx = QMI_DIRECT_TX_OE_BITS |
+                        (QMI_DIRECT_TX_IWIDTH_VALUE_Q << QMI_DIRECT_TX_IWIDTH_LSB) |
+                        CMD_EXIT_QPI;
+    while (qmi_hw->direct_csr & QMI_DIRECT_CSR_BUSY_BITS);
+    (void)qmi_hw->direct_rx;
+    qmi_hw->direct_csr &= ~QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
+    
+    // Небольшая задержка для стабилизации
+    for (volatile int d = 0; d < 64; ++d);
+
+    // Чтение ID: команда 0x9F + 3 байта адреса (0xFF), затем MF ID и KGD
+    qmi_hw->direct_csr |= QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
+    uint8_t mfid = 0, kgd = 0;
+    
+    for (int i = 0; i < 6; ++i) {
+        qmi_hw->direct_tx = (i == 0) ? 0x9F : 0xFF;
+        while (!(qmi_hw->direct_csr & QMI_DIRECT_CSR_TXEMPTY_BITS));
+        while (qmi_hw->direct_csr & QMI_DIRECT_CSR_BUSY_BITS);
+        uint8_t b = (uint8_t)qmi_hw->direct_rx;
+        if (i == 4) mfid = b;      // 5-й байт = Manufacturer ID
+        else if (i == 5) kgd = b;  // 6-й байт = Device ID (KGD)
+    }
+    
+    qmi_hw->direct_csr &= ~QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
+    
+    // Проверка: APS6404 имеет KGD = 0x5D или MFID = 0x0D
+    // Если чипа нет, шина "плавает" и возвращает 0x00 или 0xFF
+    if (kgd == 0x5D || mfid == 0x5D || mfid == 0x0D) {
+        return true;
+    }
+    
+    // Повторная попытка (иногда первый доступ после сброса возвращает мусор)
+    // Делаем вторую попытку
+    for (volatile int d = 0; d < 256; ++d);
+    
+    qmi_hw->direct_csr |= QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
+    mfid = 0;
+    kgd = 0;
+    
+    for (int i = 0; i < 6; ++i) {
+        qmi_hw->direct_tx = (i == 0) ? 0x9F : 0xFF;
+        while (!(qmi_hw->direct_csr & QMI_DIRECT_CSR_TXEMPTY_BITS));
+        while (qmi_hw->direct_csr & QMI_DIRECT_CSR_BUSY_BITS);
+        uint8_t b = (uint8_t)qmi_hw->direct_rx;
+        if (i == 4) mfid = b;
+        else if (i == 5) kgd = b;
+    }
+    
+    qmi_hw->direct_csr &= ~QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
+    
+    return (kgd == 0x5D || mfid == 0x5D || mfid == 0x0D);
+}
+
+/**
+ * @brief Инициализация PSRAM (APS6404) на RP2350
  * @param cs_pin Номер пина Chip Select для PSRAM
  * 
  * @note Функция размещается в RAM (не во flash) для корректной работы с XIP
  */
 void __no_inline_not_in_flash_func(init_psram_butter)(uint cs_pin) {
+    // Отключаем прерывания на ВЕСЬ период работы с прямым режимом QMI
+    const uint32_t ints = save_and_disable_interrupts();
+    
     // 1. Настройка пина Chip Select
     gpio_set_function(cs_pin, GPIO_FUNC_XIP_CS1);
-
-    // 2. Включение прямого режима (Direct Mode) QSPI
-    // - Делитель частоты 10 (для 125 МГц: 12.5 МГц)
-    // - Автоматическое управление CS1
-    qmi_hw->direct_csr = 10 << QMI_DIRECT_CSR_CLKDIV_LSB | 
-                        QMI_DIRECT_CSR_EN_BITS | 
-                        QMI_DIRECT_CSR_AUTO_CS1N_BITS;
-    // Ожидание завершения операции
+    
+    // 2. Включение прямого режима (Direct Mode) QMI
+    // Используем делитель 30 для безопасного чтения ID
+    qmi_hw->direct_csr = 30 << QMI_DIRECT_CSR_CLKDIV_LSB | 
+                         QMI_DIRECT_CSR_EN_BITS |
+                         QMI_DIRECT_CSR_AUTO_CS1N_BITS;
     while (qmi_hw->direct_csr & QMI_DIRECT_CSR_BUSY_BITS);
-
-    // 3. Включение QPI-режима (4-битный интерфейс)
-    const uint CMD_QPI_EN = 0x35; // Команда перехода в QPI режим
+    
+    // 3. Проверка наличия чипа PSRAM
+    if (!psram_detect()) {
+        // Чип не обнаружен - выключаем прямой режим и выходим
+        qmi_hw->direct_csr = 0;
+        restore_interrupts(ints);
+        type_psram = NOT_PSRAM;
+        psram_avaiable = 0;
+        return;
+    }
+    
+    // 4. Переход в QPI-режим (4-битный интерфейс)
+    // Сначала выходим из QPI на всякий случай (если чип остался в QPI)
+    const uint8_t CMD_EXIT_QPI = 0xF5;
+    qmi_hw->direct_csr |= QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
+    qmi_hw->direct_tx = QMI_DIRECT_TX_OE_BITS |
+                        (QMI_DIRECT_TX_IWIDTH_VALUE_Q << QMI_DIRECT_TX_IWIDTH_LSB) |
+                        CMD_EXIT_QPI;
+    while (qmi_hw->direct_csr & QMI_DIRECT_CSR_BUSY_BITS);
+    (void)qmi_hw->direct_rx;
+    qmi_hw->direct_csr &= ~QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
+    for (volatile int d = 0; d < 64; ++d);
+    
+    // Теперь включаем QPI
+    const uint8_t CMD_QPI_EN = 0x35;
+    qmi_hw->direct_csr |= QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
     qmi_hw->direct_tx = QMI_DIRECT_TX_NOPUSH_BITS | CMD_QPI_EN;
     while (qmi_hw->direct_csr & QMI_DIRECT_CSR_BUSY_BITS);
-
-    // 4. Расчет временных параметров для PSRAM APS6404
-    const int max_psram_freq = PSRAM_MAX_FREQ_MHZ * 1000000; // Макс. частота PSRAM (166 МГц)
-  //  const int max_psram_freq = 166000000; // Макс. частота PSRAM (166 МГц)
-    const int clock_hz = clock_get_hz(clk_sys); // Текущая частота ядра
+    qmi_hw->direct_csr &= ~QMI_DIRECT_CSR_ASSERT_CS1N_BITS;
+    
+    // 5. ВЫКЛЮЧАЕМ ПРЯМОЙ РЕЖИМ - критически важно!
+    // Все дальнейшие вычисления и настройки выполняются БЕЗ прямого режима
+    qmi_hw->direct_csr = 0;
+    
+    // Теперь можно включить прерывания - прямой режим выключен
+    restore_interrupts(ints);
+    
+    // 6. Расчет временных параметров для PSRAM APS6404
+    const int max_psram_freq = PSRAM_MAX_FREQ_MHZ * 1000000;
+    const int clock_hz = clock_get_hz(clk_sys);
     
     // Расчет делителя частоты
     int divisor = (clock_hz + max_psram_freq - 1) / max_psram_freq;
     if (divisor == 1 && clock_hz > 100000000) {
-        divisor = 2; // Ограничение для высоких частот
+        divisor = 2;
     }
-   
-    real_psram_freq = CPU_MHZ/divisor;
-
+    
+    real_psram_freq = CPU_MHZ / divisor;
+    
     // Расчет задержки чтения
     int rxdelay = divisor;
     if (clock_hz / divisor > 100000000) {
-        rxdelay += 1; // Доп. задержка для частот >100 МГц
+        rxdelay += 1;
     }
-
-    // 5. Настройка таймингов доступа
+    
     // Расчет периода системного такта (в фемтосекундах)
     const int clock_period_fs = 1000000000000000ll / clock_hz;
     
     // Макс. время удержания CS (<=8 мкс)
-    const int max_select = (125 * 1000000) / clock_period_fs; // 8000нс/64
-    
+    const int max_select = (125 * 1000000) / clock_period_fs;
     // Мин. время между транзакциями (>=18 нс)
     const int min_deselect = (18 * 1000000 + (clock_period_fs - 1)) / clock_period_fs - (divisor + 1) / 2;
-
-    // Запись параметров в регистр таймингов
+    
+    // 7. Запись параметров в регистр таймингов
     qmi_hw->m[1].timing = 
-        1 << QMI_M1_TIMING_COOLDOWN_LSB | // Время охлаждения
-        QMI_M1_TIMING_PAGEBREAK_VALUE_1024 << QMI_M1_TIMING_PAGEBREAK_LSB | // Граница страницы
-        max_select << QMI_M1_TIMING_MAX_SELECT_LSB | // Макс. время CS
-        min_deselect << QMI_M1_TIMING_MIN_DESELECT_LSB | // Мин. время между CS
-        rxdelay << QMI_M1_TIMING_RXDELAY_LSB | // Задержка чтения
-        divisor << QMI_M1_TIMING_CLKDIV_LSB; // Делитель частоты
-
-    // 6. Настройка форматов команд
+        1 << QMI_M1_TIMING_COOLDOWN_LSB |
+        QMI_M1_TIMING_PAGEBREAK_VALUE_1024 << QMI_M1_TIMING_PAGEBREAK_LSB |
+        max_select << QMI_M1_TIMING_MAX_SELECT_LSB |
+        min_deselect << QMI_M1_TIMING_MIN_DESELECT_LSB |
+        rxdelay << QMI_M1_TIMING_RXDELAY_LSB |
+        divisor << QMI_M1_TIMING_CLKDIV_LSB;
+    
+    // 8. Настройка форматов команд
     // Формат чтения (Quad I/O Fast Read)
     qmi_hw->m[1].rfmt =
-        QMI_M0_RFMT_PREFIX_WIDTH_VALUE_Q << QMI_M0_RFMT_PREFIX_WIDTH_LSB | // 4-битный префикс
-        QMI_M0_RFMT_ADDR_WIDTH_VALUE_Q << QMI_M0_RFMT_ADDR_WIDTH_LSB | // 4-битный адрес
-        QMI_M0_RFMT_SUFFIX_WIDTH_VALUE_Q << QMI_M0_RFMT_SUFFIX_WIDTH_LSB | // 4-битный суффикс
-        QMI_M0_RFMT_DUMMY_WIDTH_VALUE_Q << QMI_M0_RFMT_DUMMY_WIDTH_LSB | // 4-битные dummy-циклы
-        QMI_M0_RFMT_DATA_WIDTH_VALUE_Q << QMI_M0_RFMT_DATA_WIDTH_LSB | // 4-битные данные
-        QMI_M0_RFMT_PREFIX_LEN_VALUE_8 << QMI_M0_RFMT_PREFIX_LEN_LSB | // 8 бит префикса
-        6 << QMI_M0_RFMT_DUMMY_LEN_LSB; // 6 dummy-циклов
+        QMI_M0_RFMT_PREFIX_WIDTH_VALUE_Q << QMI_M0_RFMT_PREFIX_WIDTH_LSB |
+        QMI_M0_RFMT_ADDR_WIDTH_VALUE_Q << QMI_M0_RFMT_ADDR_WIDTH_LSB |
+        QMI_M0_RFMT_SUFFIX_WIDTH_VALUE_Q << QMI_M0_RFMT_SUFFIX_WIDTH_LSB |
+        QMI_M0_RFMT_DUMMY_WIDTH_VALUE_Q << QMI_M0_RFMT_DUMMY_WIDTH_LSB |
+        QMI_M0_RFMT_DATA_WIDTH_VALUE_Q << QMI_M0_RFMT_DATA_WIDTH_LSB |
+        QMI_M0_RFMT_PREFIX_LEN_VALUE_8 << QMI_M0_RFMT_PREFIX_LEN_LSB |
+        6 << QMI_M0_RFMT_DUMMY_LEN_LSB;
     
     qmi_hw->m[1].rcmd = 0xEB; // Команда чтения (Quad I/O Fast Read)
-
+    
     // Формат записи (Quad Page Program)
     qmi_hw->m[1].wfmt =
         QMI_M0_WFMT_PREFIX_WIDTH_VALUE_Q << QMI_M0_WFMT_PREFIX_WIDTH_LSB |
@@ -2735,12 +2845,16 @@ void __no_inline_not_in_flash_func(init_psram_butter)(uint cs_pin) {
         QMI_M0_WFMT_PREFIX_LEN_VALUE_8 << QMI_M0_WFMT_PREFIX_LEN_LSB;
     
     qmi_hw->m[1].wcmd = 0x38; // Команда записи (Quad Page Program)
-
-    // 7. Завершение инициализации
-    qmi_hw->direct_csr = 0; // Отключение прямого режима
     
-    // Разрешение записи в PSRAM через XIP
+    // 9. Разрешение записи в PSRAM через XIP
     hw_set_bits(&xip_ctrl_hw->ctrl, XIP_CTRL_WRITABLE_M1_BITS);
+    
+    // 10. Устанавливаем флаги успешной инициализации
+    type_psram = BUTTER_PSRAM;
+    psram_avaiable = 1;
+    
+    // 11. Определяем размер PSRAM
+    size_psram = get_psram_size();
 }
 //-------------------------------------------------------------------------------
 /**
@@ -2856,12 +2970,12 @@ void  fast(init_psram_board_all_version)(void)
   //----------------------------------------------------------------
 #ifdef PSRAM_BUTTER // если rp2350 и psram бутерброд
   {
-      init_psram_butter(psram_pin_cs);
+     init_psram_butter(psram_pin_cs);
       size_psram = get_psram_size();
       if (size_psram == 0)
       {
           type_psram = NOT_PSRAM; // PSRAM not found
-          deinit_psram_butter(psram_pin_cs);
+         deinit_psram_butter(psram_pin_cs);
       }
       else
       {
@@ -2916,8 +3030,8 @@ void pico_reset()
     // #define AIRCR_Register (*((volatile uint32_t*)(PPB_BASE + 0x0ED0C)))
     // AIRCR_Register = 0x5FA0004;
     close_all();
-   // watchdog_enable(1, true); // Включение watchdog на 1ms
-   watchdog_enable(1, 0);//
+    watchdog_enable(1, true); // Включение watchdog на 1ms
+//   watchdog_enable(1, 0);//
     while (1);
 }
 //###########################################
@@ -2985,8 +3099,8 @@ void file_manager (void)
                         strcat(conf.activefilename, "/");
                         strcat(conf.activefilename, files[cur_file_index]);
 
-                        afilename[0] = 0;
-                        strcat(afilename, files[cur_file_index]);
+                        auto_start_filename[0] = 0;
+                        strcat(auto_start_filename, files[cur_file_index]);
 
                         const char *ext = get_file_extension(conf.activefilename);
                         if (strcasecmp(ext, "trd") == 0) //   запуск после сброса
@@ -3081,8 +3195,8 @@ void file_manager (void)
                             strcat(conf.activefilename, "/");
                             strcat(conf.activefilename, files[cur_file_index]);
 
-                            afilename[0] = 0;
-                            strcat(afilename, files[cur_file_index]);
+                            auto_start_filename[0] = 0;
+                            strcat(auto_start_filename, files[cur_file_index]);
                             const char *ext = get_file_extension(conf.activefilename);
 
                             if (strcasecmp(ext, "z80") == 0)
@@ -3102,7 +3216,7 @@ void file_manager (void)
                                         if (load_image_z80(conf.activefilename))
                                         {
                                             memset(temp_msg, 0, sizeof(temp_msg));
-                                            sprintf(temp_msg, " Loading file:%s", afilename);
+                                            sprintf(temp_msg, " Loading file:%s", auto_start_filename);
                                             MessageBox("Z80", temp_msg, CL_WHITE, CL_BLUE, 2);
                                             conf.activefilename[0] = 0;
                                             im_z80_stop = false;
@@ -3112,7 +3226,7 @@ void file_manager (void)
                                         }
                                         else
                                         {
-                                            MessageBox("Error loading snapshot!!!", afilename, CL_YELLOW, CL_LT_RED, 1);
+                                            MessageBox("Error loading snapshot!!!", auto_start_filename, CL_YELLOW, CL_LT_RED, 1);
                                             last_action = time_us_32();
                                             draw_file_window();
                                             im_z80_stop = false;
@@ -3138,7 +3252,7 @@ void file_manager (void)
                                         if (load_image_sna(conf.activefilename))
                                         {
                                             memset(temp_msg, 0, sizeof(temp_msg));
-                                            sprintf(temp_msg, " Loading file:%s", afilename);
+                                            sprintf(temp_msg, " Loading file:%s", auto_start_filename);
                                             MessageBox("SNA", temp_msg, CL_WHITE, CL_BLUE, 2);
                                             conf.activefilename[0] = 0;
                                             im_z80_stop = false;
@@ -3148,7 +3262,7 @@ void file_manager (void)
                                         }
                                         else
                                         {
-                                            MessageBox("Error loading snapshot!!!", afilename, CL_YELLOW, CL_LT_RED, 1);
+                                            MessageBox("Error loading snapshot!!!", auto_start_filename, CL_YELLOW, CL_LT_RED, 1);
                                             // printf("load_image_sna - ERROR\n");
                                             last_action = time_us_32();
                                             draw_file_window();
@@ -3169,7 +3283,7 @@ void file_manager (void)
                                 }
                                 else
                                 {
-                                    MessageBox("Error loading screen!!!", afilename, CL_YELLOW, CL_LT_RED, 1);
+                                    MessageBox("Error loading screen!!!", auto_start_filename, CL_YELLOW, CL_LT_RED, 1);
                                    // break;
                                 }
                             }

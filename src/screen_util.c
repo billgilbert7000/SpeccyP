@@ -2,6 +2,7 @@
 #include "config.h"  
 #include "hardware/vreg.h"
 
+#include "hardware/adc.h"
 
 #include "screen_util.h"
 #include "tft_driver.h"
@@ -408,6 +409,130 @@ uint8_t MenuBox_bw(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos,  char
            sys_GS(RTC_TIME);
            draw_text(140,23,tx_buffer,CL_BLACK,CL_GRAY); 
     #endif
+
+#if PICO_RP2350    
+#define TEMP0
+
+#ifdef TEMP3
+// On-chip temperature sensor via ADC
+   // Правильные адреса для RP2350 (из datasheet)
+//#define RESETS_BASE     0x4000c000
+//#define ADC_BASE        0x400b0000
+
+volatile uint32_t *resets_reset = (volatile uint32_t *) (RESETS_BASE + 0x0000);
+volatile uint32_t *resets_done  = (volatile uint32_t *) (RESETS_BASE + 0x0008);
+volatile uint32_t *adc_cs       = (volatile uint32_t *) (ADC_BASE + 0x0000);
+volatile uint32_t *adc_result   = (volatile uint32_t *) (ADC_BASE + 0x0004);
+
+uint32_t ts_ch = 4; // RP2350: канал 4 для температуры
+
+// 1. Сброс ADC
+*resets_reset &= ~(1u << 0);  // Сброс ADC (бит 0)
+while (!(*resets_done & (1u << 0))) {} // Ожидание готовности
+
+// 2. Включение ADC
+*adc_cs = 1; // EN=1
+while (!(*adc_cs & (1 << 8))) {} // Ожидание READY
+
+// 3. Настройка на температурный датчик
+*adc_cs = (ts_ch << 12) | (1 << 2) | 1; // AINSEL=4, TS_EN=1, EN=1
+sleep_ms(1); // Стабилизация датчика
+
+// 4. Запуск измерения
+*adc_cs = (ts_ch << 12) | (1 << 2) | (1 << 1) | 1; // + START_ONCE
+while (!(*adc_cs & (1 << 8))) {} // Ожидание READY
+
+// 5. Чтение результата
+uint16_t raw = *adc_result & 0xFFF;
+
+// 6. Отключение ADC (опционально)
+*adc_cs = 0;
+
+// 7. Преобразование в температуру
+float voltage = raw * 3.3f / 4096.0f;
+float temp = 27.0f - (voltage - 0.706f) / 0.001721f;
+
+// 8. Вывод (целая часть)
+//snprintf(temp_msg, sizeof(temp_msg), "Tcpu  %d C ", (int)temp);
+// или
+snprintf(temp_msg, sizeof(temp_msg), "Tcpu  %.0f C ", temp);
+
+#endif
+
+
+#ifdef TEMP2
+// On-chip temperature sensor via ADC
+    {
+        // Register bases differ between chips
+        volatile uint32_t *resets     = (volatile uint32_t *)0x40020000;
+        volatile uint32_t *adc_cs     = (volatile uint32_t *)0x400a0000;
+        volatile uint32_t *adc_result = (volatile uint32_t *)0x400a0004;
+        uint32_t ts_ch = 4;//chip_is_rp2350a() ? 4 : 8;
+
+        // Unreset ADC block: clear bit 0 in RESETS_RESET, wait bit 0 in RESET_DONE
+        resets[0] &= ~1u;                      // RESET: clear ADC bit
+        while (!(resets[2] & 1u)) {}            // RESET_DONE: wait ADC ready
+
+        *adc_cs = 1; // EN=1
+        while (!(*adc_cs & (1 << 8))) {} // wait READY
+        *adc_cs = (ts_ch << 12) | (1 << 1) | 1; // AINSEL=ch, TS_EN=1, EN=1
+        sleep_ms(1); // let temp sensor stabilize
+        *adc_cs = (ts_ch << 12) | (1 << 2) | (1 << 1) | 1; // + START_ONCE
+        while (!(*adc_cs & (1 << 8))) {} // wait READY
+        uint16_t raw = *adc_result & 0xFFF;
+        *adc_cs = 0; // disable ADC
+
+        // T = 27 - (V - 0.706) / 0.001721, V = raw * 3.3 / 4096
+        // Integer: T*10 = 270 - (raw*33000/4096 - 7060) * 100 / 1721
+        int uv10 = (int)raw * 33000 / 4096; // voltage * 10000 (0..33000)
+        int temp_x10 = 270 - (uv10 - 7060) * 100 / 1721;
+        int t_int = temp_x10 / 10;
+        int t_frac = (temp_x10 < 0 ? -temp_x10 : temp_x10) % 10;
+         snprintf(temp_msg, sizeof temp_msg, "Tcpu  %.0f C ",t_int ); 
+         draw_text(220,180,temp_msg,CL_GRAY ,CL_BLACK); 
+    }
+
+#endif
+
+#ifdef TEMP1
+ //   uint16_t temp_value = adc_read();
+ //if (rp2350a)
+adc_select_input(4); // Выбор внутреннего датчика температуры TODO RP2350B adc_select_input(8); 
+// Усредненное чтение
+uint32_t sum = 0;
+for (int i = 0; i < 10; i++) {
+    sum += adc_read();
+}
+float temp_value = sum / 10.0f;
+
+
+
+    float voltage = temp_value * 3.3f / 4096; // Преобразование в напряжение
+    float Tcpu = 27.0f - (voltage - 0.706f) / 0.001721f; // Преобразование в температуру
+            snprintf(temp_msg, sizeof temp_msg, "Tcpu  %.0f C ",Tcpu); 
+   draw_text(220,180,temp_msg,CL_GRAY ,CL_BLACK); 
+   #endif
+
+#ifdef TEMP0
+static uint16_t t = 0;
+if (t==0)
+{
+  t = 3000;
+ //   uint16_t temp_value = adc_read();
+ adc_select_input(rp2350a ? 4 : 8); // Выбор внутреннего датчика температуры TODO RP2350B adc_select_input(8); 
+
+    float voltage = adc_read() * 3.3f / 4096; // Преобразование в напряжение
+    float Tcpu = 27.0f - (voltage - 0.706f) / 0.001721f; // Преобразование в температуру
+            snprintf(temp_msg, sizeof temp_msg, "Tcpu: %.1f C ",Tcpu); 
+            draw_text(220,180,temp_msg,CL_GRAY ,CL_BLACK); 
+}
+t--;   
+   #endif
+
+#endif //
+
+
+
 if (!decode_key_joy()) continue; // если нажата кнопка на клавиатуре или джой
 
     if (kb_st_ps2.u[2] & KB_U2_DOWN)

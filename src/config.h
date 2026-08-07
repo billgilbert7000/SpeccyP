@@ -283,6 +283,7 @@ extern uint8_t g_gbuf[];
 extern uint8_t color_zx[16];
 extern bool vbuf_en;// экран эмуляции
 extern bool is_menu_mode;
+extern bool  rp2350a; // RP2350A & RP2350B
 //**********************************************
 extern uint8_t RAM[]; //Реальная память RAM
 //------------------------------------------------

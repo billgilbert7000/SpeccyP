@@ -657,7 +657,7 @@ bool zx_flash_callback(repeating_timer_t *rt) {zx_machine_flashATTR();return tru
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #ifdef PICO_RP2350 
 
-#if (FLASH_MAX_FREQ_MHZ!=166)
+/*  #if (FLASH_MAX_FREQ_MHZ!=166)
 static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
     const int clock_hz = CPU_MHZ * 1000000;
     const int max_flash_freq = FLASH_MAX_FREQ_MHZ * 1000000;//FLASH_MAX_FREQ_MHZ
@@ -675,7 +675,32 @@ static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
                         rxdelay << QMI_M0_TIMING_RXDELAY_LSB |
                         divisor << QMI_M0_TIMING_CLKDIV_LSB;
 }
-#endif
+#endif  */
+// ================================================================
+//  функция таймингов Flash
+// ================================================================
+static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
+        const uint32_t clock_hz = conf.cpu_freq * 1000000;  
+        const int max_flash_freq = FLASH_MAX_FREQ_MHZ * 1000000;
+        const uint32_t ints = save_and_disable_interrupts();
+
+        int divisor = (clock_hz + max_flash_freq - 1) / max_flash_freq;
+        if (divisor == 1 && clock_hz > 100000000) {
+            divisor = 2;
+        }
+        int rxdelay = divisor;
+        if (clock_hz / divisor > 100000000) {
+            rxdelay += 1;
+        }
+        qmi_hw->m[0].timing = 0x60007000 |
+                            rxdelay << QMI_M0_TIMING_RXDELAY_LSB |
+                            divisor << QMI_M0_TIMING_CLKDIV_LSB;
+   
+    // ✅ Сохраняем РЕАЛЬНУЮ частоту Flash ✅ 
+      real_flash_freq = clock_hz / divisor / 1000000;
+
+      restore_interrupts(ints);                      
+}
 //############################################################
 void fast(init_pico)(void) // настройка и разгон для RP2350
 {
@@ -692,17 +717,10 @@ void fast(init_pico)(void) // настройка и разгон для RP2350
     else if (conf.cpu_freq == 252)
         conf.hdmi_fdiv = 1.0; // 60Hz
 
-#if (FLASH_MAX_FREQ_MHZ == 166)
-    real_flash_freq = CPU_MHZ / 3;
-
-    *qmi_m0_timing = 0x60007204; //  ???
     set_sys_clock_khz(conf.cpu_freq * 1000, 0);
-    *qmi_m0_timing = 0x60007303; // ???
-#else
+    //   sleep_ms(50);
     set_flash_timings();
-    set_sys_clock_khz(conf.cpu_freq * 1000, 0);
-#endif
-}
+ }
 
 #else
 void fast(init_pico)(void) // настройка и разгон для RP2040
@@ -737,20 +755,11 @@ static uint inx=0;
 
 void init_and_info()
 {
- //#else // RP2040 или RP2350A  
- // какой то проблем при хард резет тут и инициализации SD
-/*     for (int gpio = 8; gpio < 30; gpio++) {
-    gpio_init(gpio);          // Сброс в SIO, вход
-    gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
-    gpio_set_dir(gpio, GPIO_IN); // Направление: вход
-    }  */
-//#endif   
-
   //   gpio_put(LED_BOARD, 0);
   // sleep_ms(150); 
      init_psram_board_all_version();// инициализация всех видов psram
-    //    psram_avaiable =0;        // тест без psram
-    //    type_psram=NOT_PSRAM;     // тест без psram
+     //psram_avaiable =0;         // ❌тест без psram
+     //type_psram=NOT_PSRAM;      // ❌тест без psram
     #if LED_BOARD != 255
     gpio_put(LED_BOARD, 0);
     #endif 
@@ -997,7 +1006,7 @@ snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq);
       
         draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK);  */
 
-          snprintf(temp_msg, sizeof temp_msg, " Ucpu    %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
+          snprintf(temp_msg, sizeof temp_msg, " Ucpu   %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
         draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
      //   snprintf(temp_msg, sizeof temp_msg, "PicoBus %dMbps",PICOBUS_SPEED); 
      //   draw_text(210+XPOS,YPOS+40,temp_msg,CL_GRAY ,CL_BLACK); 
@@ -1010,29 +1019,22 @@ snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq);
         else snprintf(temp_msg, sizeof temp_msg, " ");
         draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK);  */
     #ifdef PICO_RP2350 
-        snprintf(temp_msg, sizeof temp_msg, "  Ucpu   %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
+        snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
       // snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %d mV ",conf.voltage );
         draw_text(200+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
+        snprintf(temp_msg, sizeof temp_msg, "  FLASH %d MHz ",real_flash_freq );
+        draw_text(200+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK); 
     #endif
 #ifdef PSRAM_BUTTER // если rp2350 и psram бутерброд
-
       if  (type_psram == BUTTER_PSRAM)  
       {
         snprintf(temp_msg, sizeof temp_msg, "  PSRAM %d MHz ",real_psram_freq );
-        draw_text(200+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK); 
+        draw_text(200+XPOS,YPOS+30,temp_msg,CL_GRAY ,CL_BLACK); 
       }
-    
-  
 #endif
-
-
-
-
+        #endif
 //++++++++++++++++++++++++++++++++++++++
-
         #endif
-        #endif
-        
 // информация из setup
 
 draw_text(6+FONT_W,75+YPOS, getZxMachineVariant(conf.mashine)->name, CL_GRAY, CL_BLACK);
@@ -1533,13 +1535,12 @@ int fast(main)(void){
     gpio_put(23, POWER_MODE);
 #endif  
 //--------------------------------------------------------------------------------------------------
-#endif
-
 // для корректного запуска с бутербродом PSRAM  GPIO 0,8,19,47 для всех вариантов ))
     gpio_init(psram_pin_cs);
     gpio_set_dir(psram_pin_cs, GPIO_OUT);
     gpio_pull_up(psram_pin_cs); // gpio_disable_pulls(psram_pin_cs);//
     gpio_put(psram_pin_cs, 1); 
+#endif
 
 #if LED_BOARD != 255
     gpio_init(LED_BOARD);
@@ -2043,7 +2044,22 @@ void setup_zx(void)
         draw_text(x1 + 120, y1 + 20+ M_PALLETE*10, menu_pallete[conf.pallete], CL_GRAY, CL_BLACK);
 
         draw_text(x1 + 120, y1 + 20+M_AUTORUN*10, menu_autorun[conf.autorun], CL_GRAY, CL_BLACK); 
-
+////////////////////
+    #ifdef PICO_RP2350 
+        snprintf(temp_msg, sizeof temp_msg, "Ucpu %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
+      // snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %d mV ",conf.voltage );
+        draw_text(220,150,temp_msg,CL_GRAY ,CL_BLACK); 
+        snprintf(temp_msg, sizeof temp_msg, "FLASH %d MHz ",real_flash_freq );
+        draw_text(220,160,temp_msg,CL_GRAY ,CL_BLACK); 
+    #endif
+#ifdef PSRAM_BUTTER // если rp2350 и psram бутерброд
+      if  (type_psram == BUTTER_PSRAM)  
+      {
+        snprintf(temp_msg, sizeof temp_msg, "PSRAM %d MHz ",real_psram_freq );
+        draw_text(220,170,temp_msg,CL_GRAY ,CL_BLACK); 
+      }
+#endif
+////////////////////
        
      static  uint8_t numsetup = 14;
      if (vout_select == VIDEO_TFT)
@@ -2797,8 +2813,8 @@ void __no_inline_not_in_flash_func(init_psram_butter)(uint cs_pin) {
         divisor = 2;
     }
     
-    real_psram_freq = CPU_MHZ / divisor;
-    
+    real_psram_freq = clock_hz / divisor /1000000 ;
+   
     // Расчет задержки чтения
     int rxdelay = divisor;
     if (clock_hz / divisor > 100000000) {

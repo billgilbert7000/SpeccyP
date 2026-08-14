@@ -42,6 +42,52 @@ bitloop0:
 public entry_point:
     set x, 14         side 0b11
 
+; ---------------------------------------------------------------------------
+; TDA1545A support
+; Copyright (c) 2026 Mikhail Matveev <xtreme@rh1.tech>
+; SPDX-License-Identifier: GPL-3.0-or-later
+;
+; TDA1545A (плата S2) — не I2S, а старый «японский» формат (EIAJ).
+;
+; ЦАП защёлкивает слово ПО ПЕРЕКЛЮЧЕНИЮ WS: в регистр уходят те 16 бит,
+; которые вошли ДО этого фронта (datasheet Fig.4, метка SAMPLE OUT стоит
+; ровно на переключении WS). Значит слово должно кончаться LSB'ом прямо
+; перед фронтом WS, а начинаться MSB'ом сразу после него — без задержки
+; на один такт BCK, которую предписывает I2S.
+;
+; Если кормить его обычной программой audio_i2s, то на фронте WS в защёлку
+; попадает [бит16 предыдущего слова][биты 1..15 текущего]: отсчёт сдвинут
+; на разряд, а его знаковый бит — это младший бит соседнего канала. На
+; синусе в один канал (второй в нуле) это всего лишь -6 дБ и незаметно,
+; а на настоящем стерео AY знак скачет по соседнему каналу — то самое
+; хрипящее жужжание.
+;
+; Раскладка каналов при этом та же, что у audio_i2s (WS=0 — старшая
+; половина, WS=1 — младшая), потому что у TDA1545A WS=HIGH это левый
+; канал, а в I2S — правый. Два отличия компенсируют друг друга, и
+; i2s_out() трогать не нужно:
+;
+; | 31   :   16 | 15   :    0 |
+; |    RIGHT    |     LEFT    |
+;
+.program audio_i2s_tda1545a
+.side_set 2
+
+                    ;        /--- WS (LRCLK)
+                    ;        |/-- BCK
+bitloop1:           ;        ||
+    out pins, 1       side 0b00   ; MSB правого слова, WS падает вместе с ним
+    jmp x-- bitloop1  side 0b01
+    out pins, 1       side 0b00   ; LSB правого слова, WS ещё LOW
+    set x, 14         side 0b01
+
+bitloop0:                          ; WS поднимается здесь — ЦАП защёлкивает правое
+    out pins, 1       side 0b10   ; MSB левого слова, WS поднимается вместе с ним
+    jmp x-- bitloop0  side 0b11
+    out pins, 1       side 0b10   ; LSB левого слова, WS ещё HIGH
+public entry_point:
+    set x, 14         side 0b11   ; на обороте WS падает — ЦАП защёлкивает левое
+
 .program audio_i2s_cs4334
 .side_set 2
 public entry_point:
@@ -88,6 +134,23 @@ static inline void audio_i2s_program_init(PIO pio, uint sm, uint offset, uint da
     pio_sm_set_pins(pio, sm, 0); // clear pins
 
     pio_sm_exec(pio, sm, pio_encode_jmp(offset + audio_i2s_offset_entry_point));
+}
+
+
+static inline void audio_i2s_tda1545a_program_init(PIO pio, uint sm, uint offset, uint data_pin, uint clock_pin_base) {
+    pio_sm_config sm_config = audio_i2s_tda1545a_program_get_default_config(offset);
+
+    sm_config_set_out_pins(&sm_config, data_pin, 1);
+    sm_config_set_sideset_pins(&sm_config, clock_pin_base);
+    sm_config_set_out_shift(&sm_config, false, true, 32);
+
+    pio_sm_init(pio, sm, offset, &sm_config);
+
+    uint pin_mask = (1u << data_pin) | (3u << clock_pin_base);
+    pio_sm_set_pindirs_with_mask(pio, sm, pin_mask, pin_mask);
+    pio_sm_set_pins(pio, sm, 0); // clear pins
+
+    pio_sm_exec(pio, sm, pio_encode_jmp(offset + audio_i2s_tda1545a_offset_entry_point));
 }
 
 

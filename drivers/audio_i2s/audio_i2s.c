@@ -25,6 +25,22 @@
  */
 #include "audio_i2s.h"
 
+// TDA1545A support
+// Copyright (c) 2026 Mikhail Matveev <xtreme@rh1.tech>
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// Плата с ЦАП TDA1545A (S2) вместо TDA1387: у него старый «японский»
+// (EIAJ) формат вместо I2S, поэтому берём другую программу PIO. Раскладка
+// каналов и упаковка FIFO-слова при этом не меняются — подробности в
+// audio_i2s.pio.
+#ifdef I2S_DAC_TDA1545A
+#define I2S_PIO_PROGRAM      audio_i2s_tda1545a_program
+#define I2S_PIO_PROGRAM_INIT audio_i2s_tda1545a_program_init
+#else
+#define I2S_PIO_PROGRAM      audio_i2s_program
+#define I2S_PIO_PROGRAM_INIT audio_i2s_program_init
+#endif
+
 // Статические переменные только для состояния DMA
 static int dma_i2s_channel;
 static uint32_t i2s_data;
@@ -47,7 +63,7 @@ void i2s_init(void)
     uint32_t divider = system_clock_frequency * 4 / I2S_FREQ;
 
     // Добавление программы в PIO
-    int pio_offset = pio_add_program(PIO_I2S, &audio_i2s_program);
+    int pio_offset = pio_add_program(PIO_I2S, &I2S_PIO_PROGRAM);
     if (pio_offset < 0) {
         // Обработка ошибки
       //  gpio_put(25, 1);
@@ -55,7 +71,7 @@ void i2s_init(void)
     }
 
     // Инициализация PIO программы
-    audio_i2s_program_init(PIO_I2S, SM_I2S, pio_offset, I2S_DATA_PIN, I2S_CLK_BASE_PIN);
+    I2S_PIO_PROGRAM_INIT(PIO_I2S, SM_I2S, pio_offset, I2S_DATA_PIN, I2S_CLK_BASE_PIN);
     pio_sm_set_clkdiv_int_frac(PIO_I2S, SM_I2S, divider >> 8u, divider & 0xffu);
     pio_sm_set_enabled(PIO_I2S, SM_I2S, false);
 
@@ -100,9 +116,9 @@ void i2s_deinit(void)
     pio_sm_unclaim(PIO_I2S, SM_I2S);
     
     // Удаление программы из PIO (нужно сохранить offset, но для простоты пересчитаем)
-    int pio_offset = pio_add_program(PIO_I2S, &audio_i2s_program);
+    int pio_offset = pio_add_program(PIO_I2S, &I2S_PIO_PROGRAM);
     if (pio_offset >= 0) {
-        pio_remove_program(PIO_I2S, &audio_i2s_program, pio_offset);
+        pio_remove_program(PIO_I2S, &I2S_PIO_PROGRAM, pio_offset);
     }
     
     // Сброс GPIO

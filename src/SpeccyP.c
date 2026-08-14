@@ -682,7 +682,6 @@ static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
 static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
         const uint32_t clock_hz = conf.cpu_freq * 1000000;  
         const int max_flash_freq = FLASH_MAX_FREQ_MHZ * 1000000;
-        const uint32_t ints = save_and_disable_interrupts();
 
         int divisor = (clock_hz + max_flash_freq - 1) / max_flash_freq;
         if (divisor == 1 && clock_hz > 100000000) {
@@ -698,8 +697,7 @@ static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
    
     // ✅ Сохраняем РЕАЛЬНУЮ частоту Flash ✅ 
       real_flash_freq = clock_hz / divisor / 1000000;
-
-      restore_interrupts(ints);                      
+           
 }
 //############################################################
 void fast(init_pico)(void) // настройка и разгон для RP2350
@@ -707,8 +705,9 @@ void fast(init_pico)(void) // настройка и разгон для RP2350
     volatile uint32_t *qmi_m0_timing = (uint32_t *)0x400d000c;
     vreg_disable_voltage_limit();
     vreg_set_voltage(conf.voltage);
-    sleep_ms(50);
+  //  sleep_ms(50);
     cpu_pico_khz = conf.cpu_freq * 1000;
+    // Настройка делителя для HDMI в зависимости от частоты pico 
     conf.hdmi_fdiv = 1.0; // 1.0->60Hz cpu=252MHz
     if (conf.cpu_freq == 504)
         conf.hdmi_fdiv = 2.0; // 60Hz
@@ -716,10 +715,10 @@ void fast(init_pico)(void) // настройка и разгон для RP2350
         conf.hdmi_fdiv = 1.5; // 60Hz
     else if (conf.cpu_freq == 252)
         conf.hdmi_fdiv = 1.0; // 60Hz
-
+    const uint32_t ints = save_and_disable_interrupts();        
     set_sys_clock_khz(conf.cpu_freq * 1000, 0);
-    //   sleep_ms(50);
-    set_flash_timings();
+    set_flash_timings();  // Настройка таймингов для новой частоты
+    restore_interrupts(ints);   
  }
 
 #else
@@ -976,18 +975,14 @@ case BOARD_PSRAM_NOSUPORT:
 	draw_text(10+XPOS,y_info,temp_msg,CL_BLUE,CL_BLACK);
     #ifdef RP2350_256K
 	{
-	//	if (conf.mashine==PENT128||conf.mashine==SPEC48||conf.mashine==SCORP256||conf.mashine==NOVA256) conf.mashine = conf.mashine;
-     //   else conf.mashine = SCORP256; 
-        
-        if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 1)  conf.mashine = PENT128;
+         if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 1)  conf.mashine = PENT128;
 	}
     #else
 	{
-		//	if (conf.mashine > 1) conf.mashine = 0;
         if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 0)  conf.mashine = PENT128;
 	}
     #endif
-    psram_avaiable =0;
+    psram_avaiable = 0;
     break;
 }
 
@@ -995,46 +990,7 @@ case BOARD_PSRAM_NOSUPORT:
     filterZxMachines(psram_avaiable);
  //   if (getZxMachineVariant(conf.mashine)->NeedPSRAM && !psram_avaiable) conf.mashine = PENT128; // TODO ИСПРАВИТЬ 
 
-    #ifdef TEST_DEBUG
-
-#ifdef GENERAL_SOUND
-snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz", real_flash_freq); 
-/*         draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
-        snprintf(temp_msg, sizeof temp_msg, "PSRAM   N/A",real_psram_freq);
-        if (type_psram==BUTTER_PSRAM) snprintf(temp_msg, sizeof temp_msg, "PSRAM   %dMHz",real_psram_freq); 
-        else snprintf(temp_msg, sizeof temp_msg, "PSRAM   SPI");
-      
-        draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK);  */
-
-          snprintf(temp_msg, sizeof temp_msg, " Ucpu   %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
-        draw_text(210+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
-     //   snprintf(temp_msg, sizeof temp_msg, "PicoBus %dMbps",PICOBUS_SPEED); 
-     //   draw_text(210+XPOS,YPOS+40,temp_msg,CL_GRAY ,CL_BLACK); 
-
-        #else
-//snprintf(temp_msg, sizeof temp_msg, " FLASH   %dMHz", real_flash_freq); 
-    //    draw_text(204+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
-   //     snprintf(temp_msg, sizeof temp_msg, "PSRAM   N/A",real_psram_freq);
-/*         if (type_psram==BUTTER_PSRAM) snprintf(temp_msg, sizeof temp_msg, "PSRAM   %dMHz",real_psram_freq); 
-        else snprintf(temp_msg, sizeof temp_msg, " ");
-        draw_text(210+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK);  */
-    #ifdef PICO_RP2350 
-        snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
-      // snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %d mV ",conf.voltage );
-        draw_text(200+XPOS,YPOS+10,temp_msg,CL_GRAY ,CL_BLACK); 
-        snprintf(temp_msg, sizeof temp_msg, "  FLASH %d MHz ",real_flash_freq );
-        draw_text(200+XPOS,YPOS+20,temp_msg,CL_GRAY ,CL_BLACK); 
-    #endif
-#ifdef PSRAM_BUTTER // если rp2350 и psram бутерброд
-      if  (type_psram == BUTTER_PSRAM)  
-      {
-        snprintf(temp_msg, sizeof temp_msg, "  PSRAM %d MHz ",real_psram_freq );
-        draw_text(200+XPOS,YPOS+30,temp_msg,CL_GRAY ,CL_BLACK); 
-      }
-#endif
-        #endif
 //++++++++++++++++++++++++++++++++++++++
-        #endif
 // информация из setup
 
 draw_text(6+FONT_W,75+YPOS, getZxMachineVariant(conf.mashine)->name, CL_GRAY, CL_BLACK);
@@ -1345,7 +1301,7 @@ void keyboard_and_other(void)
            if (F4)  help_keyboard();
            if (F9)  nmi_zx();
            if (PAUSE) pause_zx(); //  [Pause Break]
-           if (F6) // палитра
+/*            if (F6) // палитра
            {
                if (vout_select != VIDEO_TFT)
                {
@@ -1356,7 +1312,7 @@ void keyboard_and_other(void)
                        conf.pallete = 0;
                    set_palette(conf.pallete);
                }
-           }
+           } */
 
             if (KEY_RESET_PICO) pico_reset();  
 
@@ -1519,7 +1475,7 @@ int fast(main)(void){
    // vreg_disable_voltage_limit();
   //  vreg_set_voltage(VREG_VOLTAGE_1_30);
    // sleep_ms(50);
-   set_sys_clock_khz(120*1000, 0);// стартовая частота pico
+   set_sys_clock_khz(252*1000, 0);// стартовая частота pico
 
 #ifdef PICO_RP2350 
   // определение RP2350 A или B  
@@ -1552,16 +1508,21 @@ int fast(main)(void){
     rtc_enable=0;
 #endif
 
-    init_fs = disk_initialize(0);// инициализация SD
+    init_fs = disk_initialize(0); // инициализация SD
     DIR fs;
-    init_fs = init_filesystem();// монтирование и инициализация SD
-    config_init(); // загрузка файла конфигурации если он есть "0:/.config/speccy_p.cnf"
-    config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига  если его нет то файл записывается                     
+    init_fs = init_filesystem();                // монтирование и инициализация SD
+    config_init();                              // загрузка файла конфигурации если он есть "0:/.config/speccy_p.cnf"
+    config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига  если его нет то файл записывается
 
     init_pico();
+
+    pico_fatfs_reboot_spi();      // Переинициализировать SPI
+    init_fs = disk_initialize(0); // инициализация SD
+    init_fs = init_filesystem();
+
     init_and_info();
-//-----------------------------------------------------------------    
-// если одна плата без GS 
+    //-----------------------------------------------------------------
+    // если одна плата без GS 
     #ifndef  GENERAL_SOUND     
     select_audio(); // переключение режимов вывода звука 
  	//int hz = 96000;	//44000 //44100 //96000 //22050
@@ -1582,7 +1543,6 @@ int fast(main)(void){
 //---------------------------------------------------------------
 
 multicore_launch_core1(ZXThread);// запуск эмулятора
- 
 //sleep_ms(3000);
     disk_autorun ();
     gpio_put(LED_BOARD, 0);
@@ -1989,39 +1949,15 @@ void setup_zx(void)
 	draw_rect(x1 + 3, y1 + 3, w1 - 6, 8, CL_GRAY, true);	   // шапка меню
     draw_text(x1 + 10, y1 + 3, FW_VERSION, CL_BLACK, CL_GRAY); // шапка меню
     
-/*          if (vout_select==VIDEO_VGA)
-		draw_text(x1 +200, y1 + 3,"VGA",CL_BLACK, CL_GRAY);	
-        if (vout_select==VIDEO_HDMI)
-		draw_text(x1 + 200, y1 + 3,"HDMI",CL_BLACK, CL_GRAY);	
-        if (vout_select==VIDEO_TFT)
-		draw_text(x1 + 200, y1 + 3,"TFT",CL_BLACK, CL_GRAY);	   */
 
-	char str[10];
-	snprintf(str, sizeof str, "%dMHz", (int)(clock_get_hz(clk_sys) / 1000000));
-	draw_text(x1 + 240, y1 + 3, str, CL_BLACK, CL_GRAY); // CPU
-
-	if (psram_avaiable)
+	if (!psram_avaiable)
     {
-        if (type_psram==2)
-        {
-         snprintf(temp_msg, sizeof temp_msg, "QSPI %dMb", size_psram);
-         draw_text(x1 + 200-24+12, y1 + 3, temp_msg, CL_BLACK, CL_GRAY);
-         }
-         else 
-         {
-         snprintf(temp_msg, sizeof temp_msg,"SPI %dMb", size_psram); 
-		 draw_text(x1 + 200-18+12, y1 + 3, temp_msg, CL_BLACK, CL_GRAY);
-         }
-    }
-
-    else
-    
     #ifdef RP2350_256K
         if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 1)  conf.mashine = PENT128;
     #else
         if (getZxMachineVariant(conf.mashine)->NeedPSRAM != 0)  conf.mashine = PENT128;
     #endif
-
+    }
 
 	// меню выбора setup
     while (1)
@@ -2044,21 +1980,43 @@ void setup_zx(void)
         draw_text(x1 + 120, y1 + 20+ M_PALLETE*10, menu_pallete[conf.pallete], CL_GRAY, CL_BLACK);
 
         draw_text(x1 + 120, y1 + 20+M_AUTORUN*10, menu_autorun[conf.autorun], CL_GRAY, CL_BLACK); 
+
+
+
 ////////////////////
+        #ifndef PICO_RP2040
+        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A %dMHz %.2fV ",conf.cpu_freq, table_voltage[conf.voltage]/ 100.0);
+        else snprintf(temp_msg, sizeof temp_msg, "RP2350B %dMHz",conf.cpu_freq);
+        #else
+        snprintf(temp_msg, sizeof temp_msg, "RP2040  %dMHz",CPU_MHZ);    
+        #endif
+        draw_text(180,150,temp_msg, CL_GREEN, CL_BLACK);
+
     #ifdef PICO_RP2350 
-        snprintf(temp_msg, sizeof temp_msg, "Ucpu %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
+       // snprintf(temp_msg, sizeof temp_msg, "Ucpu %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
       // snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %d mV ",conf.voltage );
-        draw_text(220,150,temp_msg,CL_GRAY ,CL_BLACK); 
+      //  draw_text(200,150,temp_msg,CL_GRAY ,CL_BLACK); 
         snprintf(temp_msg, sizeof temp_msg, "FLASH %d MHz ",real_flash_freq );
-        draw_text(220,160,temp_msg,CL_GRAY ,CL_BLACK); 
+        draw_text(180,160,temp_msg,CL_GREEN, CL_BLACK); 
     #endif
-#ifdef PSRAM_BUTTER // если rp2350 и psram бутерброд
+/* #ifdef PSRAM_BUTTER // если rp2350 и psram бутерброд
       if  (type_psram == BUTTER_PSRAM)  
       {
         snprintf(temp_msg, sizeof temp_msg, "PSRAM %d MHz ",real_psram_freq );
-        draw_text(220,170,temp_msg,CL_GRAY ,CL_BLACK); 
+        draw_text(200,170,temp_msg,CL_GRAY ,CL_BLACK); 
       }
-#endif
+#endif */
+/////////////////////
+	if (psram_avaiable)
+    {
+        if (type_psram==2)
+         snprintf(temp_msg, sizeof temp_msg,"Q-PSRAM %dMb %dMHz", size_psram , real_psram_freq );
+         else 
+         snprintf(temp_msg, sizeof temp_msg,"PSRAM   %dMb %dMHz", size_psram ,real_psram_freq ); 
+         draw_text(180, 170, temp_msg, CL_GREEN, CL_BLACK);
+    }
+
+ 
 ////////////////////
        
      static  uint8_t numsetup = 14;

@@ -388,17 +388,17 @@ uint8_t MenuBox_bw(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos,  char
   {
     if (i >= Pos)
     {
-      draw_text(xPos + 1, yPos + 8 + 10 * i, m_text[i], CL_BLUE, CL_INK);
+      draw_text(xPos + 1, yPos + 8+ 10 * i, m_text[i], CL_BLUE, CL_INK);
       continue;
     }
     if (i == cPos)
     {
-      draw_text(xPos + 1, yPos + 8 + 10 * i, m_text[i], CL_PAPER, CL_INK);
+      draw_text(xPos + 1, yPos + 8 +10 * i, m_text[i], CL_PAPER, CL_INK);
       continue;
     } // курсор
     else
     {
-      draw_text(xPos + 1, yPos + 8 + 10 * i, m_text[i], CL_INK, CL_PAPER);
+      draw_text(xPos + 1, yPos + 8+10 * i, m_text[i], CL_INK, CL_PAPER);
       continue;
     }
   }
@@ -523,8 +523,9 @@ if (t==0)
 
     float voltage = adc_read() * 3.3f / 4096; // Преобразование в напряжение
     float Tcpu = 27.0f - (voltage - 0.706f) / 0.001721f; // Преобразование в температуру
-            snprintf(temp_msg, sizeof temp_msg, "Tcpu: %.1f C ",Tcpu); 
-            draw_text(220,180,temp_msg,CL_GRAY ,CL_BLACK); 
+           // snprintf(temp_msg, sizeof temp_msg, "Tcpu: %.1f C ",Tcpu); 
+           snprintf(temp_msg, sizeof temp_msg, "%.1f\xF8\x43", Tcpu);
+            draw_text(264,180,temp_msg,CL_PINK,CL_BLACK); 
 }
 t--;   
    #endif

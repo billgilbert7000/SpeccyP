@@ -702,7 +702,6 @@ static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
 //############################################################
 void fast(init_pico)(void) // настройка и разгон для RP2350
 {
-    volatile uint32_t *qmi_m0_timing = (uint32_t *)0x400d000c;
     vreg_disable_voltage_limit();
     vreg_set_voltage(conf.voltage);
   //  sleep_ms(50);

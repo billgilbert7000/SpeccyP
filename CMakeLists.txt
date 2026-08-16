@@ -42,7 +42,7 @@ if(NOT SPECCY_CONFIG IN_LIST SPECCY_CONFIG_VALUES)
 endif()
 
 # Список плат
-set(M_BOARD_VALUES MURM1 MURM2 PI_CARD WS_ZERO1 WS_ZERO2 PICO_DV PICO_PC GSP_M2)
+set(M_BOARD_VALUES MURM1 MURM2 PI_CARD WS_ZERO1 WS_ZERO2 PICO_DV PICO_PC GSP_M2 S2)
 set(M_BOARD "MURM2" CACHE STRING "Тип платы: ${M_BOARD_VALUES}")
 set_property(CACHE M_BOARD PROPERTY STRINGS ${M_BOARD_VALUES})
 
@@ -58,9 +58,9 @@ option(PCM5122 "PCM5122 DAC для WS_ZERO2 (I2S 21/18/19 + I2C 2/3, PS/2 на 1
 # Data Islands, если соберётесь его включать). Полностью заменяет
 # легаси-драйвер на PIO и путь I2S-аудио.
 # Аппаратные ограничения: HSTX занимает GPIO 12-19, поэтому работает
-# только на плате M2. clk_sys должен быть целым кратным 126 МГц
-# (домен пиксельклока).
-option(HDMI_HSTX "Драйвер HDMI на HSTX RP2350 (только M2)" OFF)
+# только на платах с распиновкой M2 (MURM2 и S2). clk_sys должен быть
+# целым кратным 126 МГц (домен пиксельклока).
+option(HDMI_HSTX "Драйвер HDMI на HSTX RP2350 (только M2/S2)" OFF)
 
 # USB CDC-консоль вместо USB HID Host. С ней нельзя пользоваться
 # USB-клавиатурой/джойстиком, зато появляется CDC-ACM stdio: можно
@@ -122,7 +122,7 @@ else()
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
     )
-     set(GENERAL_SOUND OFF) 
+     set(GENERAL_SOUND OFF)
 endif()
 
 ###
@@ -191,9 +191,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 
-if(HDMI_HSTX AND NOT M_BOARD STREQUAL "MURM2")
+set(HSTX_BOARDS MURM2 S2)
+if(HDMI_HSTX AND NOT M_BOARD IN_LIST HSTX_BOARDS)
     message(FATAL_ERROR
-        "HDMI_HSTX требует M_BOARD=MURM2 (HSTX выводится на GPIO 12-19). "
+        "HDMI_HSTX требует M_BOARD из ${HSTX_BOARDS} (HSTX выводится на GPIO 12-19). "
         "У M_BOARD=${M_BOARD} HDMI разведён на других пинах.")
 endif()
 
@@ -422,6 +423,12 @@ if( ${M_BOARD} MATCHES "MURM2")
 endif()
 
 if( ${M_BOARD} MATCHES "GSP_M2")
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    FW_VERSION="${PORT_VERSION} [${M_VERSION}${P_VERSION}]"
+)
+endif()
+
+if( ${M_BOARD} STREQUAL "S2")
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     FW_VERSION="${PORT_VERSION} [${M_VERSION}${P_VERSION}]"
 )

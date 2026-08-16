@@ -333,9 +333,6 @@ uint8_t MenuBox_help(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, cha
 {
   if (over_emul)
     zx_machine_enable_vbuf(false);
-  //uint16_t lFrame = (lPos * FONT_W) + 10;
- // uint16_t hFrame = ((1 + hPos) * FONT_H) + 20;
-
   yPos = yPos + 10;
 
   for (uint8_t i = 0; i < hPos; i++)
@@ -343,11 +340,6 @@ uint8_t MenuBox_help(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, cha
 
     draw_text(xPos + 1, yPos + 8 + 10 * i, m_text[i], CL_INK, CL_PAPER);
   }
-/*  kb_st_ps2.u[0] = 0x0;
- kb_st_ps2.u[1] = 0x0;
- kb_st_ps2.u[2] = 0x0;
- kb_st_ps2.u[3] = 0x0; */
-
 
   while (1)
   {
@@ -514,10 +506,11 @@ float temp_value = sum / 10.0f;
    #endif
 
 #ifdef TEMP0
+
 static uint16_t t = 0;
 if (t==0)
 {
-  t = 3000;
+  t = 6000;
  //   uint16_t temp_value = adc_read();
  adc_select_input(rp2350a ? 4 : 8); // Выбор внутреннего датчика температуры TODO RP2350B adc_select_input(8); 
 
@@ -525,7 +518,7 @@ if (t==0)
     float Tcpu = 27.0f - (voltage - 0.706f) / 0.001721f; // Преобразование в температуру
            // snprintf(temp_msg, sizeof temp_msg, "Tcpu: %.1f C ",Tcpu); 
            snprintf(temp_msg, sizeof temp_msg, "%.1f\xF8\x43", Tcpu);
-            draw_text(264,180,temp_msg,CL_PINK,CL_BLACK); 
+            draw_text(264,22,temp_msg,CL_BLACK, CL_GRAY); 
 }
 t--;   
    #endif

@@ -792,18 +792,17 @@ void init_and_info()
 
   #ifdef WS_ZERO2
         pio_set_gpio_base(PIO_VIDEO, 0x10);//использование на pio0 GPIO 16...48
-        gpio_init(46);//DVI_CEC
-        gpio_set_dir(46, GPIO_OUT);
-        gpio_put(46,1);
 
-        gpio_init(45);//DVI_SCL
-        gpio_set_dir(45, GPIO_OUT);
-        gpio_put(45,1);
+    for (uint8_t p = 44; p <= 46; p++) {
+        gpio_init(p);                       // SIO func, output latch 0
+        gpio_set_dir(p, GPIO_OUT);          // drive low
+    }
 
-        gpio_init(44);//DVI_SDA
-        gpio_set_dir(44, GPIO_OUT);
-        gpio_put(44,1); 
+    for (uint8_t p = 44; p <= 46; p++)
+        gpio_deinit(p);                     // release to the external pull-ups
 
+
+        
 #endif  
 
 
@@ -1488,10 +1487,10 @@ void keyboard_and_other(void)
 // MAIN
 int fast(main)(void){  
    // volatile uint32_t *qmi_m0_timing = (uint32_t *)0x400d000c;
-   // vreg_disable_voltage_limit();
-  //  vreg_set_voltage(VREG_VOLTAGE_1_30);
-   // sleep_ms(50);
-   set_sys_clock_khz(252*1000, 0);// стартовая частота pico
+    vreg_disable_voltage_limit();
+    vreg_set_voltage(VREG_VOLTAGE_1_30);
+    sleep_ms(50);
+    set_sys_clock_khz(120*1000, 0);// стартовая частота pico
 
 #ifdef PICO_RP2350 
   // определение RP2350 A или B  
@@ -1530,7 +1529,7 @@ int fast(main)(void){
     config_init();                              // загрузка файла конфигурации если он есть "0:/.config/speccy_p.cnf"
     config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига  если его нет то файл записывается
 
-    init_pico();
+    init_pico(); // инициализация частоты cpu pico и частоты флеш
 
     pico_fatfs_reboot_spi();      // Переинициализировать SPI
     init_fs = disk_initialize(0); // инициализация SD
@@ -2001,27 +2000,18 @@ void setup_zx(void)
 
 ////////////////////
         #ifndef PICO_RP2040
-        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A %dMHz %.2fV ",conf.cpu_freq, table_voltage[conf.voltage]/ 100.0);
-        else snprintf(temp_msg, sizeof temp_msg, "RP2350B %dMHz",conf.cpu_freq);
+        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A %dMHz %.2fV ",clock_get_hz(clk_sys)/MHZ, table_voltage[conf.voltage]/ 100.0);
+        else snprintf(temp_msg, sizeof temp_msg, "RP2350B %dMHz",clock_get_hz(clk_sys)/MHZ);//conf.cpu_freq);
         #else
         snprintf(temp_msg, sizeof temp_msg, "RP2040  %dMHz",CPU_MHZ);    
         #endif
-        draw_text(180,150,temp_msg, CL_GREEN, CL_BLACK);
+        draw_text(138,150,temp_msg, CL_GRAY, CL_BLACK);
 
     #ifdef PICO_RP2350 
-       // snprintf(temp_msg, sizeof temp_msg, "Ucpu %.2fV ",table_voltage[conf.voltage]/ 100.0 ); 
-      // snprintf(temp_msg, sizeof temp_msg, "  Ucpu  %d mV ",conf.voltage );
-      //  draw_text(200,150,temp_msg,CL_GRAY ,CL_BLACK); 
         snprintf(temp_msg, sizeof temp_msg, "FLASH %d MHz ",real_flash_freq );
-        draw_text(180,160,temp_msg,CL_GREEN, CL_BLACK); 
+        draw_text(138,160,temp_msg,CL_GRAY, CL_BLACK); 
     #endif
-/* #ifdef PSRAM_BUTTER // если rp2350 и psram бутерброд
-      if  (type_psram == BUTTER_PSRAM)  
-      {
-        snprintf(temp_msg, sizeof temp_msg, "PSRAM %d MHz ",real_psram_freq );
-        draw_text(200,170,temp_msg,CL_GRAY ,CL_BLACK); 
-      }
-#endif */
+
 /////////////////////
 	if (psram_avaiable)
     {
@@ -2029,10 +2019,9 @@ void setup_zx(void)
          snprintf(temp_msg, sizeof temp_msg,"Q-PSRAM %dMb %dMHz", size_psram , real_psram_freq );
          else 
          snprintf(temp_msg, sizeof temp_msg,"PSRAM   %dMb %dMHz", size_psram ,real_psram_freq ); 
-         draw_text(180, 170, temp_msg, CL_GREEN, CL_BLACK);
+         draw_text(138, 170, temp_msg, CL_GRAY, CL_BLACK);
     }
 
- 
 ////////////////////
        
      static  uint8_t numsetup = 14;
@@ -3008,6 +2997,16 @@ void close_all(void) {
     gpio_init(psram_pin_cs);
     gpio_set_dir(psram_pin_cs, GPIO_OUT);
     gpio_put(psram_pin_cs, true);  // Сброс CS пина
+  }
+#endif
+
+#ifdef PSRAM_BUTTER
+  if (type_psram=BUTTER_PSRAM) {
+    memset((void *)PSRAM_DATA, 0, size_psram);  // Очистка PSRAM
+    qmi_hw->direct_csr = 0;
+    gpio_set_function(psram_pin_cs, GPIO_FUNC_NULL);
+    gpio_set_dir(psram_pin_cs, GPIO_IN);
+    return;
   }
 #endif
 }

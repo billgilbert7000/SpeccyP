@@ -26,7 +26,7 @@ You are free to use, modify, and distribute this software under the terms of the
 
 ## 📦 Firmware Contents
 
-- **Supported boards**: m1p1, m1p2, m2p1, m2p2, z0p2 (RP2350B PiZero2), s2p2 (OldSkoolFRANK).
+- **Supported boards**: m1p1, m1p2, m2p1, m2p2, z0p2 (RP2350B PiZero2).
 - **Details about supported boards** are available at [murmulator.ru](https://murmulator.ru).
 
 ---
@@ -101,38 +101,6 @@ Firmware is adapted for various boards:
 | m1p1 (RP2040) | SPI PSRAM GPIO 18-21 |
 | m2p2 (RP2350) | Sandwich PSRAM CS GPIO 8 (A) or GPIO 47 (B) |
 | m2p1 (RP2040) | Works without PSRAM (Spectrum 48/128 only) |
-| s2p2 (RP2350B) | PSRAM on the PGA2350 module, CS GPIO 47 |
-
----
-
-## 🛠️ S2 board (OldSkoolFRANK)
-
-The [OldSkoolFRANK](https://github.com/rh1tech/frank-lab) board, built around a
-**Pimoroni PGA2350** module (RP2350B). Its pinout matches M2 (`m2p2`) exactly, so the
-`S2` build is `MURM2` plus the following:
-
-- **TDA1545A DAC instead of the TDA1387.** The TDA1545A keeps to the older
-  simultaneous/EIAJ convention, where `WS = HIGH` is the left channel — I2S calls it the
-  right — and, more importantly, it latches the word **at the WS transition** with no
-  one-bit-clock delay, so a plain I2S stream arrives shifted by a bit with its sign bit taken
-  from the other channel. It gets a dedicated PIO program, `audio_i2s_tda1545a` in
-  `audio_i2s.pio` (`I2S_DAC_TDA1545A`), which holds WS steady across all 16 bits and flips it
-  exactly on the MSB. Channel order and `i2s_out()` need no change: the inverted WS polarity
-  cancels the reversed half-order. The board's own path from DAC to jack is conventional and
-  is not the cause.
-- **Built exactly like m2p2** (`PICO_BOARD=pico2`); no dedicated board header is needed. The
-  module's PSRAM on GPIO 47 still works: SpeccyP detects the RP2350B at run time
-  (`SYSINFO_PACKAGE_SEL`) and picks CS 47 itself, and `gpio_set_function()` addresses the pin's
-  register directly, so the `pico2` header's `NUM_BANK0_GPIOS=30` does not get in its way.
-  Do **not** build with `pimoroni_pga2350` (`PICO_RP2350A=0`) — the board then boot-loops,
-  confirmed on hardware.
-- **VGA/HDMI is chosen by solder jumpers JP3/JP4/JP5** and is invisible to the firmware:
-  closed is VGA on J11, open is HDMI on J10.
-
-```bash
-cmake -B build -DM_BOARD=S2                  # SpeccyP_<version>_s2p2.uf2
-cmake -B build -DM_BOARD=S2 -DHDMI_HSTX=ON   # HSTX HDMI + HDMI audio variant
-```
 
 ---
 
@@ -233,7 +201,6 @@ v1.5.8 20.04.2026
 Pre-compiled firmware for different boards:
 - `m1p1`, `m1p2`, `m2p1`, `m2p2`
 - `z0p2` (RP2350B PiZero2)
-- `s2p2` (OldSkoolFRANK, RP2350B)
 
 ---
 

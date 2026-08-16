@@ -518,7 +518,7 @@ if (t==0)
     float Tcpu = 27.0f - (voltage - 0.706f) / 0.001721f; // Преобразование в температуру
            // snprintf(temp_msg, sizeof temp_msg, "Tcpu: %.1f C ",Tcpu); 
            snprintf(temp_msg, sizeof temp_msg, "%.1f\xF8\x43", Tcpu);
-            draw_text(264,22,temp_msg,CL_BLACK, CL_GRAY); 
+            draw_text(264,23,temp_msg,CL_BLACK, CL_GRAY); 
 }
 t--;   
    #endif

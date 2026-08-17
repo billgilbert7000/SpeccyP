@@ -1131,7 +1131,7 @@ wait_enter(); // ожидание отпускания enter
 
            #ifdef PICO_RP2350 
           case 5:// voltage
-          if (conf.voltage==19) conf.voltage=19;
+          if (conf.voltage==21) conf.voltage=21;
              else conf.voltage++;
            init_menu_advanced();
            draw_text(xPos,yPos+10*5,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 

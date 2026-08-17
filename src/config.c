@@ -3,7 +3,7 @@
 #include "hardware/gpio.h"
 #include "hardware/vreg.h"
 
-uint8_t __in_flash() table_voltage[] = {55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,150,160,165};
+uint8_t __in_flash() table_voltage[] = {55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,150,160,165,170};
 uint32_t cpu_pico_khz=378000; 
 uint8_t z_controler_cs = 0xff;
 
@@ -455,6 +455,8 @@ bool config_ini_save(const char *filename) {
     else if (conf.voltage==17) u=140;
     else if (conf.voltage==18) u=150;
     else if (conf.voltage==19) u=160;
+    else if (conf.voltage==20) u=165;
+    else if (conf.voltage==21) u=170;
     //CPU 
     uint8_t freq = 1;
     if (conf.cpu_freq == 252) freq=0;
@@ -466,7 +468,7 @@ bool config_ini_save(const char *filename) {
         "; =====================\n"
         "; Version (do not modify)\n"
         "version = %lu\n\n"
-        ";Voltage 1.30V=130 ,1.35V=135, 1.40V=140, 1.50V=150, 1.60V=160 \n"
+        ";Voltage 1.30V=130 ,1.35V=135, 1.40V=140, 1.50V=150, 1.60V=160 , 1.65V=165, 1.70V=170\n"
         "voltage = %u\n\n"
         ";CPU freq 0=252 1=378, 2=504\n"
         "cpu_freq = %u\n"
@@ -570,6 +572,8 @@ bool config_ini_load(const char *filename) {
                else if (u==140) conf.voltage=17;
                else if (u==150) conf.voltage=18;
                else if (u==160) conf.voltage=19;
+               else if (u==165) conf.voltage=20;
+               else if (u==170) conf.voltage=21;
             }
             else if (strcmp(key, "cpu_freq") == 0)
             //cpu freq

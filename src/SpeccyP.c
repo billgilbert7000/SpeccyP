@@ -755,7 +755,7 @@ void fast(init_pico)(void) // настройка и разгон для RP2040
 void init_usb(void)
 {
    init_usb_hid(); // USB HID
-    for(int i = 0; i < 320; i++)// время на определение USB устройств 320 * 5ms
+    for(int i = 0; i < 320; i++)// время на определение USB устройств 320 * 10ms
 {
      tuh_task(); // tinyusb host task
     //  tuh_task_ext(0, false);
@@ -1504,13 +1504,15 @@ int fast(main)(void){
     gpio_init(23);
     gpio_set_dir(23, GPIO_OUT);
     gpio_put(23, POWER_MODE);
-#endif  
-//--------------------------------------------------------------------------------------------------
-// для корректного запуска с бутербродом PSRAM  GPIO 0,8,19,47 для всех вариантов ))
+#endif
+    //--------------------------------------------------------------------------------------------------
+    // для корректного запуска с бутербродом PSRAM  GPIO 0,8,19,47 для всех вариантов ))
     gpio_init(psram_pin_cs);
-    gpio_set_dir(psram_pin_cs, GPIO_OUT);
-    gpio_pull_up(psram_pin_cs); // gpio_disable_pulls(psram_pin_cs);//
-    gpio_put(psram_pin_cs, 1); 
+   // gpio_set_dir(psram_pin_cs, GPIO_OUT);// Не загружается если psram_pin_cs притянут физически к +3.3В через R= 10 KOм
+    gpio_set_dir(psram_pin_cs, GPIO_IN); //Так работает
+    gpio_pull_up(psram_pin_cs); 
+    //gpio_disable_pulls(psram_pin_cs); // 
+    
 #endif
 
 #if LED_BOARD != 255

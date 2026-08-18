@@ -50,15 +50,12 @@ void fast(zx_machine_main_loop_start)(); // функция содержит бе
 
 void fast(zx_machine_flashATTR)(void);
 
-// void zx_machine_set_vbuf(uint8_t* vbuf);
 void zx_machine_enable_vbuf(bool en_vbuf);
 
 void fast(zx_machine_set_7ffd_out)(uint8_t val);
 uint8_t zx_machine_get_7ffd_lastOut();
 
 void init_mashine_and_extram(uint8_t conf);
-
-void zx_machine_enable_vbuf(bool en_vbuf);
 
 void fast(rom_select)(void);
 

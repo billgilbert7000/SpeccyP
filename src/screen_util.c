@@ -16,8 +16,7 @@
 #include "tusb.h"
 #endif
 #include "aySoft.h"
-//#include <string.h> /* memset */
-//#include <unistd.h> /* close */
+
 
 //#include "math.h"
 #define ABS(x) (((x)<0)?(-(x)):(x))

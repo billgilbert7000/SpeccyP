@@ -7,3 +7,4 @@ build
 .vscode/settings.json
 .vscode/tasks.json
 build*
+!build_all_boards.ps1

@@ -63,16 +63,10 @@
 #include "../config.h"
 
 //##########################################################
-
 unsigned long prev_ticks, cur_ticks;
-
-
-//bool z80_gen_nmi_from_main = false;
 bool im_z80_stop = false;
 bool im_ready_loading = false;
 uint64_t tape_cycle_count = 0; // глобальный счётчик тактов Z80 для ленты
-//bool vbuf_en=true;
-
 ////////////////////////////////
 #ifdef RP2350_256K
 uint8_t *zx_ram_bank[16]; // Хранит адреса 16 и банков памяти
@@ -80,8 +74,6 @@ uint8_t *zx_ram_bank[16]; // Хранит адреса 16 и банков пам
 uint8_t *zx_ram_bank[8]; // Хранит адреса 8ми банков памяти
 #endif
 uint8_t *zx_cpu_ram[4];  // Адреса 4х областей памяти CPU при использовании страниц uint8_t* zx_rom_bank[4];//Адреса 4х областей ПЗУ (48к 128к TRDOS и резерв для какого либо режима(типа тест))
-
-
 
 // tr-dos
 extern uint8_t wd1793_PortFF;
@@ -3092,7 +3084,7 @@ if (wait_msg !=0)
 
 
 void zx_machine_enable_vbuf(bool en_vbuf){
-	vbuf_en=en_vbuf;
+	vbuf_en=en_vbuf;   
 };
 
 //====================================================================

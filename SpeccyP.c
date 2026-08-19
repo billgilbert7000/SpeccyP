@@ -1502,12 +1502,12 @@ int fast(main)(void){
 #endif
     //--------------------------------------------------------------------------------------------------
     // для корректного запуска с бутербродом PSRAM  GPIO 0,8,19,47 для всех вариантов ))
-     gpio_init(psram_pin_cs);
+ /*    gpio_init(psram_pin_cs);
    // gpio_set_dir(psram_pin_cs, GPIO_OUT);// Не загружается если psram_pin_cs притянут физически к +3.3В через R= 10 KOм
     gpio_set_dir(psram_pin_cs, GPIO_IN); //Так работает
     gpio_pull_up(psram_pin_cs); 
     //gpio_disable_pulls(psram_pin_cs); // 
-     
+     */
 #endif
 
 #if LED_BOARD != 255

@@ -1,7 +1,6 @@
 #include "config.h"
 #include "zx_emu/zx_machine.h"
 #include "joy.h"
-#include "SpeccyP.h"
 #ifndef USB_SERIAL
 #include "tusb.h"
 #endif
@@ -74,7 +73,7 @@ uint8_t d_joy_get_data()
 
 // sleep_ms(200);
 
-if (emu_state) sleep_ms(DELAY_JOY);//Эмуляция остановлена//todo
+if (is_menu_mode) sleep_ms(DELAY_JOY);
 
         return data | joy_k;
     }

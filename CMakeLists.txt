@@ -5,9 +5,9 @@ if(WIN32)
 else()
     set(USERHOME $ENV{HOME})
 endif()
-set(sdkVersion 2.2.0)
-set(toolchainVersion 14_2_Rel1)
-set(picotoolVersion 2.2.0)
+set(sdkVersion 2.3.0)
+set(toolchainVersion 15_2_Rel1)
+set(picotoolVersion 2.3.0)
 set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
     include(${picoVscode})
@@ -19,8 +19,8 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 set(DEBUG OFF)
 
 set(VERSION_MAJOR 1)
-set(VERSION_MINOR 7)
-set(VERSION_PATCH 44)
+set(VERSION_MINOR 8)
+set(VERSION_PATCH 0)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
@@ -77,7 +77,7 @@ option(USB_SERIAL "USB CDC console (USB HID Host отключается)" OFF)
 if(SPECCY_CONFIG STREQUAL "GSP_FULL")
     set(SPECCY_CONFIG_DEFINITIONS       
         CPU_MHZ=378 
-        FLASH_MAX_FREQ_MHZ=66
+        FLASH_MAX_FREQ_MHZ=166
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
         GENERAL_SOUND 

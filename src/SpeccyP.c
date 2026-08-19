@@ -171,7 +171,7 @@ extern ZX_Input_t zx_input;
 	bool key_help_state=false;
 	bool help_mode_draw=false;
 
-	bool need_reset_after_menu=false;
+	//bool need_reset_after_menu=false;
 
 	bool old_key_pause_state=false;
 	bool key_pause_state=false;
@@ -1461,36 +1461,31 @@ void keyboard_and_other(void)
             // ######################################################
             //  Работа эмулятора
             // ######################################################
-            if (!is_menu_mode)
+            if (is_menu_mode==false)
             { // Emulation mode
                 zx_machine_enable_vbuf(true);
-/*                 if (im_z80_stop)
-                {
-                    im_z80_stop = false; ///????
-                } */
-              im_z80_stop = false;
+                im_z80_stop = false;
                 // zx_machine_set_vbuf(g_gbuf);
-                if (need_reset_after_menu)
+/*                 if (need_reset_after_menu)
                 {
                     zx_machine_reset(3);
                 }
-
+ */
                 convert_kb_u_to_kb_zx(&kb_st_ps2, zx_input.kb_data);
 
                 joy_scan(); // переопределление kempston joy на клавиши
 
             } // Emulation mode end
     }
-}
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+}  
 //=========================================================================
 // MAIN
 int fast(main)(void){  
-   // volatile uint32_t *qmi_m0_timing = (uint32_t *)0x400d000c;
+   
     vreg_disable_voltage_limit();
     vreg_set_voltage(VREG_VOLTAGE_1_30);
     sleep_ms(50);
-    set_sys_clock_khz(120*1000, 0);// стартовая частота pico
+    set_sys_clock_khz(252*1000, 0);// стартовая частота pico 252
 
 #ifdef PICO_RP2350 
   // определение RP2350 A или B  
@@ -1512,7 +1507,7 @@ int fast(main)(void){
     gpio_set_dir(psram_pin_cs, GPIO_IN); //Так работает
     gpio_pull_up(psram_pin_cs); 
     //gpio_disable_pulls(psram_pin_cs); // 
-    
+     
 #endif
 
 #if LED_BOARD != 255

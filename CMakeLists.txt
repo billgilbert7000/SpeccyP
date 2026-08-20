@@ -16,7 +16,7 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
-set(DEBUG OFF)
+set(DEBUG ON)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 8)
@@ -77,7 +77,7 @@ option(USB_SERIAL "USB CDC console (USB HID Host отключается)" OFF)
 if(SPECCY_CONFIG STREQUAL "GSP_FULL")
     set(SPECCY_CONFIG_DEFINITIONS       
         CPU_MHZ=378 
-        FLASH_MAX_FREQ_MHZ=166
+        FLASH_MAX_FREQ_MHZ=66
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
         GENERAL_SOUND 

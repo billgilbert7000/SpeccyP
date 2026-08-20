@@ -1083,7 +1083,7 @@ flag_usb_kb = false;
 #if defined GENERAL_SOUND
 // Первичная инициализация picobus
 draw_text(12 + FONT_W, 100 + YPOS, "Connect PicoBus ....", CL_LT_BLUE, CL_BLACK);
-sleep_ms(1500);
+sleep_ms(500);
 init_picobus();
 
 flag_gs = 1;

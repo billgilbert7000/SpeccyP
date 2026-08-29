@@ -892,6 +892,10 @@ inline static uint8_t fast(in_z80_cash)(Z80 *cpu,uint16_t port16) {
     if (portL == 0x89) return in_GSP(RTC_READ_REG_NOVA); 
     #endif
 
+    #if defined(RTC_GLUK)
+    if (port16 == 0xBFF7) return in_GSP(RTC_READ_REG); 
+    #endif
+
     #ifdef MIDI    
     if (port16 == 0xa1cf ) 	return in_GSP(MIDI_IN); 
     #endif
@@ -978,6 +982,10 @@ inline static uint8_t fast(in_z80_p8)(Z80 *cpu, uint16_t port16) {
 
     #if defined(RTC_NOVA)
     if (portL == 0x89) return in_GSP(RTC_READ_REG_NOVA); 
+    #endif
+
+    #if defined(RTC_GLUK)
+    if (port16 == 0xBFF7) return in_GSP(RTC_READ_REG); 
     #endif
 
     #ifdef MIDI    
@@ -1389,6 +1397,11 @@ inline static void fast(out_zx_ext)(Z80 *cpu,uint16_t port16, uint8_t val)
         }
     #endif
 
+    #ifdef  RTC_GLUK
+        if (port16  ==  0xDFF7 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
+        if (port16  ==  0xBFF7 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
+    #endif
+
     #ifdef  RTC_NOVA
         if (portL  ==  0x88 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
         if (portL  ==  0x89 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
@@ -1696,6 +1709,11 @@ inline static void fast(extram_p8)(Z80 *cpu, uint16_t port16, uint8_t val)
          z_controler_cs = val; 
          return;
         }
+    #endif
+
+    #ifdef  RTC_GLUK
+        if (port16  ==  0xDFF7 ) {out_GSP(RTC_WRITE_ADRESS,  val); return;}//номер регистра часов
+        if (port16  ==  0xBFF7 ) {out_GSP(RTC_WRITE_REG,  val); return;}//данные регистра часов
     #endif
 
     #ifdef  RTC_NOVA
@@ -2515,12 +2533,14 @@ break;
 		
 			if (conf.Disks[0][0] ==0 ) 
 			{
+             copy_imge_reset();   
 				rom=ROM_128;
 				zx_cpu_ram[0]=zx_rom_bank[0]; // диска нет 128 BASIC 
 				zx_7ffd_lastOut=0x00;
 			}
 			else 
 			{
+             copy_imge_reset();   
 			rom=ROM_DOS;
 			zx_cpu_ram[0]=zx_rom_bank[2]; // диск есть TR-DOS  
 			zx_7ffd_lastOut=0x10;//0x10
@@ -2783,7 +2803,28 @@ void fast(dos_quorum)(void)
         WD1793_Execute(); // Кворум всегда есть доступ к портам DOS
 }
 //=======================================================================================
-
+//
+void led_blink0(void)
+    {
+    	static bool led_indicator = 0;
+        gpio_put(24, led_indicator);
+        led_indicator = !led_indicator;
+    }
+// 
+void led_blink(void)
+    {
+    	static uint16_t j = 320;
+         j--;
+        if (j==0) 
+        {
+        j=320;    
+         static bool led_indicator = 0;
+         gpio_put(24, led_indicator);
+        led_indicator = !led_indicator;
+        }
+        
+    }
+//
 extern uint16_t beepPWM;
 uint8_t* active_screen_buf=NULL;
 //------------------------------------------
@@ -2821,6 +2862,9 @@ void fast(zx_machine_main_loop_start)()
 	register uint8_t old_zx_pix8=0;
 	register uint32_t colorBuf;
 	
+    gpio_init(24);
+    gpio_set_dir(24, GPIO_OUT);
+    gpio_put(24, 0);
 	while(1){
 		
 	  	while (im_z80_stop) // останов Z80 
@@ -2947,7 +2991,6 @@ if (   (inx_tick_screen<32) &&  (int_enable))
 
 		 if (inx_tick_screen>=  ticks_per_frame)      // Если прошла 1/50 сек, 71680 тактов процессора Z80
 			{
-               
 	        	//if (conf.turbo != 1) 
                // {
                 int_enable=true; // включение INT NORMAL 50 Гц или FAST 100 Гц

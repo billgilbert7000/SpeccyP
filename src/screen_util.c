@@ -517,7 +517,8 @@ if (t==0)
     float Tcpu = 27.0f - (voltage - 0.706f) / 0.001721f; // Преобразование в температуру
            // snprintf(temp_msg, sizeof temp_msg, "Tcpu: %.1f C ",Tcpu); 
            snprintf(temp_msg, sizeof temp_msg, "%.1f\xF8\x43", Tcpu);
-            draw_text(264,23,temp_msg,CL_BLACK, CL_GRAY); 
+           draw_text(264,23,temp_msg,CL_BLACK, CL_GRAY); 
+       //  draw_text(264,150,temp_msg, CL_CYAN, CL_BLACK); 
 }
 t--;   
    #endif
@@ -1259,7 +1260,7 @@ void init_menu_sound_setup() {
     sprintf(menu_sound_setup_strings[0], " Volume       N/A ");
     break;
   }
-
+    #ifndef  GENERAL_SOUND  
     switch (conf.type_sound) // i2s buster
   {
   case I2S_AY:
@@ -1270,13 +1271,17 @@ void init_menu_sound_setup() {
     sprintf(menu_sound_setup_strings[1], " I2S  buster  N/A ");
     break;
   }
+  #else 
+  sprintf(menu_sound_setup_strings[1], " I2S  buster  N/A ");
+   #endif
+
    if (conf.sound_fdd) strcpy(menu_sound_setup_strings[2], " Noise FDD    OFF ");
   else strcpy(menu_sound_setup_strings[2], " Noise FDD     ON ");
 
      sprintf(menu_sound_setup_strings[3], " Volume LOAD   %2d ", conf.vol_load );
 
    
-
+#ifndef  GENERAL_SOUND    
     if (conf.beep_mode==0)
         strcpy(menu_sound_setup_strings[4], " Beep Mode  MIX   ");
     else if (conf.beep_mode==1)
@@ -1289,11 +1294,22 @@ void init_menu_sound_setup() {
       beep_pin = 29;
       sprintf(menu_sound_setup_strings[4], " Beep Mode  GP%d  ", beep_pin);
     }
+#else
+    if (conf.beep_mode==0)
+      strcpy(menu_sound_setup_strings[4], " Beep Mode    MIX ");
+    else if (conf.beep_mode==1)
+    {
+      strcpy(menu_sound_setup_strings[4], " Beep Mode Buzzer ");
+    }
+    else if (conf.beep_mode==2)
+    {
+      strcpy(menu_sound_setup_strings[4], " Beep Mode  Audio ");
+    }
+#endif
+
     strcpy(menu_sound_setup_strings[5], " Save config      ");
-    strcpy(menu_sound_setup_strings[6]," Return           ");
+    strcpy(menu_sound_setup_strings[6], " Return           ");
 }
-
-
 
 //    
 uint8_t MenuBox_sound_setup(uint8_t xPos, uint8_t yPos,uint8_t lPos ,uint8_t hPos, char *text,  uint8_t Pos,uint8_t cPos,uint8_t over_emul)
@@ -1374,7 +1390,8 @@ wait_enter(); // ожидание отпускания enter
       init_menu_sound_setup();
       draw_text(xPos,yPos+10*0,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
         break;
-        
+
+         #ifndef  GENERAL_SOUND  
         case 1:// усилитель -
          if ((conf.type_sound == I2S_AY) || (conf.type_sound == I2S_TS))
          {   
@@ -1385,10 +1402,10 @@ wait_enter(); // ожидание отпускания enter
           set_audio_buster();
              init_menu_sound_setup();
         draw_text(xPos,yPos+10*1,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
-
          } 
           break;      
-          
+          #endif
+
           case 2:// noise fdd -
           conf.sound_fdd  ^= true;
           init_menu_sound_setup();
@@ -1403,16 +1420,22 @@ wait_enter(); // ожидание отпускания enter
            draw_text(xPos,yPos+10*3,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
             break;
 
-
+          #ifndef  GENERAL_SOUND    
           case 4:// beep mode -
           if (conf.beep_mode == 0) conf.beep_mode=0;
             else conf.beep_mode--;
           init_menu_sound_setup();
           draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN);
           break;
-
-
-
+          #else
+          case 4:// beep mode -
+          if (conf.beep_mode == 0) conf.beep_mode=2;
+          else conf.beep_mode--;
+          set_beep_mode(); 
+          init_menu_sound_setup();
+          draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+          break;
+          #endif
       }
    
     }
@@ -1443,7 +1466,8 @@ wait_enter(); // ожидание отпускания enter
              init_menu_sound_setup();
         draw_text(xPos,yPos+10*0,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
         break;
-
+        
+        #ifndef  GENERAL_SOUND  
         case 1:// усилитель +
         if ((conf.type_sound == I2S_AY) || (conf.type_sound == I2S_TS))  
         {
@@ -1455,6 +1479,7 @@ wait_enter(); // ожидание отпускания enter
         draw_text(xPos,yPos+10*1,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
         } 
          break;   
+        #endif
 
          case 2:// noise fdd +
          conf.sound_fdd  ^= true;
@@ -1469,13 +1494,22 @@ wait_enter(); // ожидание отпускания enter
              init_menu_sound_setup();
            draw_text(xPos,yPos+10*3,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
             break;
-
+           #ifndef  GENERAL_SOUND  
            case 4:// beep mode
           if (conf.beep_mode == 2) conf.beep_mode=2;
             else conf.beep_mode++;
           init_menu_sound_setup();
           draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN);
           break;
+          #else
+          case 4:// beep mode
+          if (conf.beep_mode == 2) conf.beep_mode=0;
+          else conf.beep_mode++;
+          set_beep_mode(); 
+          init_menu_sound_setup();
+          draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN);
+          break;
+          #endif
 
 
 
@@ -1497,13 +1531,9 @@ wait_enter(); // ожидание отпускания enter
              init_menu_sound_setup();
         draw_text(xPos,yPos+10*2,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
      continue;
-
            case 4:// beep mode
            draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_PINK);
            g_delay_ms(200);
-       //   if (conf.beep_mode =3) conf.beep_mode=3;
-       //     else conf.beep_mode++;
-       //   init_menu_sound_setup();
           draw_text(xPos,yPos+10*4,menu_sound_setup_strings[cPos],  CL_BLACK, CL_LT_CYAN);
           continue;
          // break;

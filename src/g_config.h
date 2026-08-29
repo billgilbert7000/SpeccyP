@@ -62,9 +62,7 @@ void g_delay_ms(int delay);
 #define JOY_FIRE  (JOY_FIRE1) || (JOY_FIRE2)
 
 //----------------------------------------------------------------------------
-//static uint8_t mode_kbms ; // режим работы клавиатуры 0  пс пополам и так далее
-// uint16_t cpu_pc;
-//----------------------------------------------//
+
 #define FONT6X8   
 //#define FONT8X8  
 

@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 #include "config.h" 
 
@@ -182,6 +180,43 @@ extern ZX_Input_t zx_input;
 	char save_file_name_image[25];
 
 
+//---------------------------------------------------------
+void gpio_in_init(uint gpio)
+{
+    gpio_init(gpio);
+    gpio_set_dir(gpio, GPIO_IN);
+    gpio_pull_up(gpio);
+}
+
+void gpio_out_init(uint8_t gpio)
+{
+    gpio_init(gpio);
+    gpio_set_dir(gpio, GPIO_OUT);
+    gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
+    gpio_put(gpio, 0);
+}
+
+//=================================================================
+// Вспомогательная функция для остановки эмуляции и выключения звука
+//=================================================================
+void pause_emulation_and_sound(void)
+{
+    im_z80_stop = true;
+    is_menu_mode = true;
+    hardAY_on_off = 0;
+    hardAY_off(); 
+}
+
+//=================================================================
+// Вспомогательная функция для запуска эмуляции и включения звука
+//=================================================================
+void resume_emulation_and_sound(void)
+{
+    im_z80_stop = false;
+    is_menu_mode = false;
+    is_new_screen = false;
+    hardAY_on(); 
+}
 //---------------------------------------------------------
     uint8_t video_select(void)
     {
@@ -623,21 +658,6 @@ void ZXThread(){
 	return ;
 }
 
-void gpio_in_init(uint gpio)
-{
-    gpio_init(gpio);
-    gpio_set_dir(gpio, GPIO_IN);
-    gpio_pull_up(gpio);
-}
-
-void gpio_out_init(uint8_t gpio)
-{
-    gpio_init(gpio);
-    gpio_set_dir(gpio, GPIO_OUT);
-    gpio_disable_pulls(gpio); // Отключить подтяжки (по умолчанию)
-    gpio_put(gpio, 0);
-}
-
 //=================================================================================================================================
 #ifndef  GENERAL_SOUND     
 bool __not_in_flash_func(AY_timer_callback)(repeating_timer_t *rt)
@@ -679,7 +699,7 @@ static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
 // ================================================================
 //  функция таймингов Flash
 // ================================================================
-static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
+/* static void __no_inline_not_in_flash_func(set_flash_timings_old)(void) {
         const uint32_t clock_hz = conf.cpu_freq * 1000000;  
         const int max_flash_freq = FLASH_MAX_FREQ_MHZ * 1000000;
 
@@ -698,6 +718,39 @@ static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
     // ✅ Сохраняем РЕАЛЬНУЮ частоту Flash ✅ 
       real_flash_freq = clock_hz / divisor / 1000000;
            
+} */
+//==========================================================================
+//  CPU       	FLASH    	PSRAM 	
+//  252	        126 МГц	    126 МГц	
+//  266	        133 МГц 	133 МГц	
+//  332	        166 МГц	    166 МГц
+//  378	        126 МГц	    126 МГц	
+//  504	        126 МГц     126 МГц	
+//==========================================================================
+static void __no_inline_not_in_flash_func(set_flash_timings)(void) {
+    const uint32_t clock_hz = conf.cpu_freq * 1000000; 
+    const int max_flash_freq = FLASH_MAX_FREQ_MHZ * 1000000;
+
+    // Безопасное округление ВНИЗ
+    int divisor = clock_hz / max_flash_freq;
+    if (divisor < 1) divisor = 1;
+    
+    // ЗАЩИТА: если частота превышает лимит, увеличиваем делитель
+    while ((clock_hz / divisor) > max_flash_freq) {
+        divisor++;
+    }
+
+    int rxdelay = divisor;
+    if (clock_hz / divisor > 100000000) {
+        rxdelay += 1;
+    }
+    
+    qmi_hw->m[0].timing = 0x60007000 |
+                        rxdelay << QMI_M0_TIMING_RXDELAY_LSB |
+                        divisor << QMI_M0_TIMING_CLKDIV_LSB;
+ 
+         // ✅ Сохраняем РЕАЛЬНУЮ частоту Flash ✅ 
+      real_flash_freq = clock_hz / divisor / 1000000;                   
 }
 //############################################################
 void fast(init_pico)(void) // настройка и разгон для RP2350
@@ -772,11 +825,11 @@ void init_and_info()
 {
   //   gpio_put(LED_BOARD, 0);
   // sleep_ms(150); 
-     init_psram_board_all_version();// инициализация всех видов psram
-     //psram_avaiable =0;         // ❌тест без psram
-     //type_psram=NOT_PSRAM;      // ❌тест без psram
+    init_psram_board_all_version();// инициализация всех видов psram
+    // psram_avaiable =0;         // ❌тест без psram
+    // type_psram=NOT_PSRAM;      // ❌тест без psram
     #if LED_BOARD != 255
-    gpio_put(LED_BOARD, 0);
+    //gpio_put(LED_BOARD, 0);
     #endif 
 
   #if PI_CARD // ???? это для того чтобы настроить выходы для PICARD 1 ИНАЧЕ МИКРОСХЕМЫ ОБВЯЗКИ ГРЕЮТСЯ
@@ -863,7 +916,7 @@ void init_and_info()
     joy_redirecting();// установка режима работы kempston joy
        
 #if LED_BOARD != 255
-    gpio_put(LED_BOARD, 0);
+   // gpio_put(LED_BOARD, 0);
 #endif  
 /*            for (int i = 0; i < 16; i++)
          {       
@@ -951,7 +1004,7 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
         mouse[2] = 0xff; 
         mouse[3] = 0xff; 
 
-      start_PS2_capture(); //
+   //   start_PS2_capture(); //
 
     y_info += 10;
 switch (type_psram)
@@ -1083,7 +1136,7 @@ flag_usb_kb = false;
 #if defined GENERAL_SOUND
 // Первичная инициализация picobus
 draw_text(12 + FONT_W, 100 + YPOS, "Connect PicoBus ....", CL_LT_BLUE, CL_BLACK);
-sleep_ms(500);
+//sleep_ms(1500);
 init_picobus();
 
 flag_gs = 1;
@@ -1102,10 +1155,16 @@ rtc_enable = 1;
 
 #endif
 
+
+ start_PS2_capture(); //
 //++++++++++++++++++++++++++++++++++++++
     // Инициализация АЦП
     adc_init();
-adc_set_temp_sensor_enabled(true);
+    adc_set_temp_sensor_enabled(true);
+
+
+
+
 }
 //=========================================================================
 void Message_Print()
@@ -1116,9 +1175,9 @@ void Message_Print()
         {
             #define X_INFO 320-48
             #define Y_INFO 240-16
-    //   case 0:
-    //        draw_text((320-(16*FONT_W))/2,Y_INFO,"2026  ZX SPECCY P",CL_LT_CYAN ,CL_BLACK);//232   
-    //        break;
+       case 0:
+            draw_text((320-(16*FONT_W))/2,Y_INFO,"2026  ZX SPECCY P",CL_LT_CYAN ,CL_BLACK);//232   
+            break;
 
         case 1:    
        
@@ -1479,103 +1538,7 @@ void keyboard_and_other(void)
     }
 }  
 //=========================================================================
-// MAIN
-int fast(main)(void){  
-   
-    vreg_disable_voltage_limit();
-    vreg_set_voltage(VREG_VOLTAGE_1_30);
-    sleep_ms(50);
-    set_sys_clock_khz(252*1000, 0);// стартовая частота pico 120
 
-#ifdef PICO_RP2350 
-  // определение RP2350 A или B  
-     rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
-     psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
-//--------------------------------------------------------------------------------------------------
-//  GPIO 23 // Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
-// MODE=0 (PFM — Pulse Frequency Modulation)
-// MODE=1 (PWM — Pulse Width Modulation)
-#if POWER_MODE != 255
-    gpio_init(23);
-    gpio_set_dir(23, GPIO_OUT);
-    gpio_put(23, POWER_MODE);
-#endif
-    //--------------------------------------------------------------------------------------------------
-    // для корректного запуска с бутербродом PSRAM  GPIO 0,8,19,47 для всех вариантов ))
-     gpio_init(psram_pin_cs);
-   // gpio_set_dir(psram_pin_cs, GPIO_OUT);// Не загружается если psram_pin_cs притянут физически к +3.3В через R= 10 KOм
-    gpio_set_dir(psram_pin_cs, GPIO_IN); //Так работает
-    gpio_pull_up(psram_pin_cs); 
-    //gpio_disable_pulls(psram_pin_cs); // 
-     
-#endif
-
-#if LED_BOARD != 255
-    gpio_init(LED_BOARD);
-    gpio_set_dir(LED_BOARD, GPIO_OUT);
-    gpio_put(LED_BOARD, 1);
-#endif 
-
-#if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
-    rtc_enable=0;
-#endif
-
-    init_fs = disk_initialize(0); // инициализация SD
-    DIR fs;
-    init_fs = init_filesystem();                // монтирование и инициализация SD
-    config_init();                              // загрузка файла конфигурации если он есть "0:/.config/speccy_p.cnf"
-    config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига  если его нет то файл записывается
-
-    init_pico(); // инициализация частоты cpu pico и частоты флеш
-
-    pico_fatfs_reboot_spi();      // Переинициализировать SPI
-    init_fs = disk_initialize(0); // инициализация SD
-    init_fs = init_filesystem();
-
-    init_and_info();
-    //-----------------------------------------------------------------
-    // если одна плата без GS 
-    #ifndef  GENERAL_SOUND     
-    select_audio(); // переключение режимов вывода звука 
- 	//int hz = 96000;	//44000 //44100 //96000 //22050
-	repeating_timer_t timer_audio;
-	// negative timeout means exact delay (rather than delay between callbacks)
-    // f = 1 / T = 1 / 9 μs = 111111 Гц
-    // f = 1 / T = 1 / -21 μs = 47619Гц	-0,79% Гц
- 	if (!add_repeating_timer_us(AY_SAMPLE_RATE, AY_timer_callback, NULL, &timer_audio)) // -10  частота ноты До 237Гц  нужно 240,0058 Гц
-    {
-    return 1;
-    }
-    #endif
-
-	repeating_timer_t zx_flash_timer;
-	if (!add_repeating_timer_us(-1000000 / 2/*Hz*/, zx_flash_callback, NULL, &zx_flash_timer)) {
-        return 1;
-	}
-//---------------------------------------------------------------
-
-multicore_launch_core1(ZXThread);// запуск эмулятора
-//sleep_ms(3000);
-    disk_autorun ();
-    gpio_put(LED_BOARD, 0);
-//######################
-//   основной цикл
-//######################
-
-
-    while (1)
-    {
-           keyboard_and_other();
-           
-           zx_machine_input_set(&zx_input);
-      
-           led_trdos();// мигаие led 
-
-
-      } // while(1)
-  
-}
-//==========================================================================
 void file_select_trdos(void) // 
 {
 	is_menu_mode = true;
@@ -1706,6 +1669,8 @@ bool save_config(void)
 
     MessageBox("       Saving config      ", "", CL_WHITE, CL_BLUE, 2);
 
+
+
     sprintf(temp_msg, "0:/.config/speccy_p.cnf");//
 
    int fd = f_open(&f, temp_msg, FA_CREATE_ALWAYS | FA_WRITE);
@@ -1715,6 +1680,8 @@ bool save_config(void)
         f_close(&f);
         return false;
     }
+
+
     UINT bytesWritten;
     fd = f_write(&f, &conf, sizeof(conf), &bytesWritten);
     if (bytesWritten != sizeof(conf))
@@ -1722,26 +1689,25 @@ bool save_config(void)
         f_close(&f);
         return false;
     }
+
+
     f_close(&f);
 
     config_ini_save("0:/.config/speccy_p.ini");//текстовый файл конфига
 
-
+    
     return true;
 }
 //=========================================================
 void pause_zx(void) //  [Pause Break]
 {
-    im_z80_stop = true;
-    is_menu_mode = true;
-    hardAY_on_off = 0;
-    hardAY_off(); // off hard AY   help
+    pause_emulation_and_sound();
 
     draw_text(7, 228, " PAUSE PRESS [ESC] TO EXIT ", CL_WHITE, CL_BLUE);
    
   while (1)
   {
-   // if (mode_kbms)  sleep_ms(DELAY_KEY); // задержка если это не ps/2
+  
     if (!decode_key_joy()) continue;
 
 
@@ -1749,10 +1715,7 @@ void pause_zx(void) //  [Pause Break]
     {
        wait_esc();
 
-            im_z80_stop = false;
-            is_menu_mode = false;
-            is_new_screen = false;
-            hardAY_on();
+       resume_emulation_and_sound();
        return ;
     }
 }
@@ -1761,10 +1724,7 @@ void pause_zx(void) //  [Pause Break]
 //=========================================================
 void help_zx(void)// F1
 {
-	im_z80_stop = true;
-	is_menu_mode = true;
-    hardAY_on_off=0;
-    hardAY_off();// off hard AY   help 
+	pause_emulation_and_sound();
 
 	draw_rect(0, 20, 318, 200, CL_BLACK, true);				   // рамка 3 фон
 	draw_rect(0, 20, 318, 200, CL_GRAY, false);				   // рамка 1
@@ -1774,20 +1734,14 @@ void help_zx(void)// F1
 
 	// меню помощи фактически ожидание ESC
      MenuBox_help(7, 24, 16, 17, menu_help, 17, 0, 1);
-            im_z80_stop = false;
-            is_menu_mode = false;
-            is_new_screen = false;
-            hardAY_on();// exit help
+     resume_emulation_and_sound();
 }
 //=========================================================
 
 extern uint16_t dis_adres;
 void disasm(void) // [END] KEY
 {
-	im_z80_stop = true;
-	is_menu_mode = true;
-    hardAY_on_off=0;
-    hardAY_off();// off hard AY help keyboard
+	pause_emulation_and_sound();
     disassembler();
   //  address_pc =Z80_PC(cpu_zx);
      dis_adres = Z80_PC(cpu_zx);       // PC 16-битное значение
@@ -1890,10 +1844,7 @@ if (kb_st_ps2.u[2] & KB_U2_RIGHT)
     if (kb_st_ps2.u[1] & KB_U1_ESC)
     {
      wait_esc();
-    im_z80_stop = false;
-            is_menu_mode = false;
-            is_new_screen = false;
-            hardAY_on(); // ON hard AY disassm
+     resume_emulation_and_sound();
       return ; // ESC exit
     }
   }
@@ -1901,19 +1852,12 @@ if (kb_st_ps2.u[2] & KB_U2_RIGHT)
 
      MenuBox_help(7, 24, 16, 1,menu_keyboard, 1, 0, 1);
  
-            im_z80_stop = false;
-            is_menu_mode = false;
-            is_new_screen = false;
-            hardAY_on(); // ON hard AY disassm
+     resume_emulation_and_sound();
 }
 //===========================================
 void help_keyboard(void) // F4
 {
-	im_z80_stop = true;
-	is_menu_mode = true;
-    hardAY_on_off=0;
-    hardAY_off();// off hard AY help keyboard
-
+	pause_emulation_and_sound();
 
 	draw_rect(0, 10, 318, 200, CL_BLACK, true);				   // рамка 3 фон
 	draw_rect(0, 10, 318, 200, CL_GRAY, false);				   // рамка 1
@@ -1935,19 +1879,12 @@ void help_keyboard(void) // F4
 	}
      MenuBox_help(7, 24, 16, 1,menu_keyboard, 1, 0, 1);
  
-            im_z80_stop = false;
-            is_menu_mode = false;
-        //    is_new_screen = false;
-            hardAY_on(); // ON hard AY help keyboard
-
+     resume_emulation_and_sound();
 }
 //=========================================================
 void setup_zx(void)
 {
-	im_z80_stop = true;
-	is_menu_mode = true;
-    hardAY_on_off=0;
-    hardAY_off();// off hard AY SETUP
+	pause_emulation_and_sound();
 
 #define w1 290
 #define h1 180
@@ -1993,12 +1930,17 @@ void setup_zx(void)
 
         draw_text(x1 + 120, y1 + 20+M_AUTORUN*10, menu_autorun[conf.autorun], CL_GRAY, CL_BLACK); 
 
-
+ 
 
 ////////////////////
         #ifndef PICO_RP2040
-        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A %dMHz %.2fV ",clock_get_hz(clk_sys)/MHZ, table_voltage[conf.voltage]/ 100.0);
-        else snprintf(temp_msg, sizeof temp_msg, "RP2350B %dMHz",clock_get_hz(clk_sys)/MHZ);//conf.cpu_freq);
+        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A");
+        else snprintf(temp_msg, sizeof temp_msg, "RP2350B");
+        draw_text(138,140,temp_msg, CL_GRAY, CL_BLACK);
+        #endif
+
+        #ifndef PICO_RP2040
+        snprintf(temp_msg, sizeof temp_msg, "%dMHz %.2fV ",clock_get_hz(clk_sys)/MHZ, table_voltage[conf.voltage]/ 100.0);
         #else
         snprintf(temp_msg, sizeof temp_msg, "RP2040  %dMHz",CPU_MHZ);    
         #endif
@@ -2016,9 +1958,14 @@ void setup_zx(void)
          snprintf(temp_msg, sizeof temp_msg,"Q-PSRAM %dMb %dMHz", size_psram , real_psram_freq );
          else 
          snprintf(temp_msg, sizeof temp_msg,"PSRAM   %dMb %dMHz", size_psram ,real_psram_freq ); 
-         draw_text(138, 170, temp_msg, CL_GRAY, CL_BLACK);
-    }
+         draw_text(138, 170, temp_msg,CL_GRAY, CL_BLACK);
+    } 
 
+
+        #ifdef GENERAL_SOUND 
+         sys_GS(SYS_INFO);
+         draw_text(138, 180, tx_buffer, CL_GRAY, CL_BLACK);
+       #endif  
 ////////////////////
        
      static  uint8_t numsetup = 14;
@@ -2120,9 +2067,7 @@ if (numsetup == M_JOY)
         {
             MessageBox(" ZX SPECTRUM RESET ", "", CL_WHITE, CL_RED, 2);
             zx_machine_reset(3);
-            im_z80_stop = false;
-            is_menu_mode = false;
-        //    is_new_screen = false;
+            resume_emulation_and_sound();
             return;
  
         }
@@ -2130,9 +2075,7 @@ if (numsetup == M_JOY)
         {
             MessageBox("  HARD RESET  ", "", CL_WHITE, CL_RED, 2);
             pico_reset();
-            im_z80_stop = false;
-            is_menu_mode = false;
-         //   is_new_screen = false;
+            resume_emulation_and_sound();
             return;
  
         }
@@ -2172,20 +2115,14 @@ if (numsetup == M_JOY)
 //--------------
         if (numsetup == M_EXIT) // Exit
         {
-            im_z80_stop = false;
-            is_menu_mode = false;
-            is_new_screen = false;
-            hardAY_on(); // EXIT SETUP
+            resume_emulation_and_sound();
             return;
 
         }
         if (numsetup == 0xff) // exit
         {
             numsetup = 13;
-            im_z80_stop = false;
-            is_menu_mode = false;
-            is_new_screen = false;
-            hardAY_on();// EXIT SETUP
+            resume_emulation_and_sound();
             return;
         }
 
@@ -2371,17 +2308,12 @@ uint8_t MenuBox_sv(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, char 
 //=================================================================================
 	void save_slot(void)
 	{
-		im_z80_stop = true;
-		is_menu_mode = true;
-        hardAY_on_off=0;
-		hardAY_off();//save_slot
+		pause_emulation_and_sound();
   //      uint8_t num = MenuBox_sv(38+16, 7, 31, 25, "SAVE",  25, 0, 1);
            uint8_t num = MenuBox_sv(38, 7, 33, 25, "SAVE",  25, 0, 1);
 		if (num == 0xff) // exit
 		{
-			im_z80_stop = false;
-			is_menu_mode = false;
-            hardAY_on();// exit save slot
+			resume_emulation_and_sound();
 			return;
 		}
     
@@ -2402,8 +2334,7 @@ uint8_t MenuBox_sv(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, char 
 
 		}
 		
-		im_z80_stop = false;
-		is_menu_mode = false;
+		resume_emulation_and_sound();
 		sleep_ms(3000);
 	
 		return;
@@ -2411,11 +2342,7 @@ uint8_t MenuBox_sv(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, char 
     //=================================================================================
 	void save_all(void)
 	{
-		im_z80_stop = true;
-		is_menu_mode = true;
-        hardAY_on_off=0;
-		hardAY_off();//save all
-        
+		pause_emulation_and_sound();
     
 		sprintf(save_file_name_image, "0:/save/0_slot.Z80");
 	//	sleep_ms(10);
@@ -2435,30 +2362,21 @@ uint8_t MenuBox_sv(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, char 
             save_config(); //если нулевой слот то сохраняем ещё и всю конфигурацию
 		}
 		
-		im_z80_stop = false;
-		is_menu_mode = false;
-       // hardAY_on();
-	//	sleep_ms(1000);
+		resume_emulation_and_sound();
 	
 		return;
 	}
 	//=================================================================================
 	void load_slot(void)
 	{
-		im_z80_stop = true;
-		is_menu_mode = true;
+		pause_emulation_and_sound();
 		im_ready_loading = false;
-        hardAY_on_off=0;
-        hardAY_off();// load slot
 
 		uint8_t num = MenuBox_sv(38, 7, 33, 25, "LOAD",  25, 0, 1);
 
 		if (num == 0xff) // exit
 		{
-			im_z80_stop = false;
-			is_menu_mode = false;
-            hardAY_on();//load slot
-          
+			resume_emulation_and_sound();
 			return;
 		}
 
@@ -2470,11 +2388,7 @@ uint8_t MenuBox_sv(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, char 
 			MessageBox(" Error loading ", "", CL_LT_YELLOW, CL_RED, 2);
 
             if (num==0) config_init(); //если нулевой слот то загружаем ещё и всю конфигурацию
-		im_z80_stop = false;
-		is_menu_mode = false;
-
-
-      //  hardAY_on();
+		resume_emulation_and_sound();
 	}
 //==============================================================================================
 // AUTORUN
@@ -2768,11 +2682,22 @@ void __no_inline_not_in_flash_func(init_psram_butter)(uint cs_pin) {
     const int clock_hz = clock_get_hz(clk_sys);
     
     // Расчет делителя частоты
+/*    старый вариант
     int divisor = (clock_hz + max_psram_freq - 1) / max_psram_freq;
     if (divisor == 1 && clock_hz > 100000000) {
         divisor = 2;
-    }
+    } */
+ //////////   
+// Безопасное округление ВНИЗ
+    int divisor = clock_hz / max_psram_freq;
+    if (divisor < 1) divisor = 1;
     
+    // ЗАЩИТА: если частота превышает лимит, увеличиваем делитель
+    while ((clock_hz / divisor) > max_psram_freq) {
+        divisor++;
+    }
+/////////////
+
     real_psram_freq = clock_hz / divisor /1000000 ;
    
     // Расчет задержки чтения
@@ -3644,3 +3569,111 @@ void file_info (void)
 			}
 		}
 //################################################################################
+// MAIN
+int fast(main)(void){  
+   
+    vreg_disable_voltage_limit();
+    vreg_set_voltage(VREG_VOLTAGE_1_30);
+    sleep_ms(50);
+    set_sys_clock_khz(252*1000, 0);// стартовая частота pico 120
+
+#ifdef PICO_RP2350 
+  // определение RP2350 A или B  
+     rp2350a = (*((io_ro_32*)(SYSINFO_BASE + SYSINFO_PACKAGE_SEL_OFFSET)) & 1);
+     psram_pin_cs = rp2350a ? PSRAM_BUTTER_PIN_CS : 47;
+//--------------------------------------------------------------------------------------------------
+//  GPIO 23 // Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
+// MODE=0 (PFM — Pulse Frequency Modulation)
+// MODE=1 (PWM — Pulse Width Modulation)
+#if POWER_MODE != 255
+    gpio_init(23);
+    gpio_set_dir(23, GPIO_OUT);
+    gpio_put(23, POWER_MODE);
+#endif
+    //--------------------------------------------------------------------------------------------------
+    // для корректного запуска с бутербродом PSRAM  GPIO 0,8,19,47 для всех вариантов ))
+     gpio_init(psram_pin_cs);
+   // gpio_set_dir(psram_pin_cs, GPIO_OUT);// Не загружается если psram_pin_cs притянут физически к +3.3В через R= 10 KOм
+    gpio_set_dir(psram_pin_cs, GPIO_IN); //Так работает
+    gpio_pull_up(psram_pin_cs); 
+    //gpio_disable_pulls(psram_pin_cs); // 
+     
+#endif
+
+#if LED_BOARD != 255
+    gpio_init(LED_BOARD);
+    gpio_set_dir(LED_BOARD, GPIO_OUT);
+    gpio_put(LED_BOARD, 1);
+#endif 
+
+#if defined(RTC_NOVA) || defined(RTC_SMUC) || defined(RTC_GLUK)
+    rtc_enable=0;
+#endif
+
+    init_fs = disk_initialize(0); // инициализация SD
+    DIR fs;
+    init_fs = init_filesystem();                // монтирование и инициализация SD
+    config_init();                              // загрузка файла конфигурации если он есть "0:/.config/speccy_p.cnf"
+    config_ini_load("0:/.config/speccy_p.ini"); // текстовый файл конфига  если его нет то файл записывается
+
+    init_pico(); // инициализация частоты cpu pico и частоты флеш
+
+    pico_fatfs_reboot_spi();      // Переинициализировать SPI
+    init_fs = disk_initialize(0); // инициализация SD
+    init_fs = init_filesystem();
+
+    init_and_info();
+
+
+#if LED_BOARD != 255
+    gpio_init(LED_BOARD);
+    gpio_set_dir(LED_BOARD, GPIO_OUT);
+    gpio_put(LED_BOARD, 0);
+#endif 
+
+    //-----------------------------------------------------------------
+    // если одна плата без GS 
+    #ifndef  GENERAL_SOUND     
+    select_audio(); // переключение режимов вывода звука 
+ 	//int hz = 96000;	//44000 //44100 //96000 //22050
+	repeating_timer_t timer_audio;
+	// negative timeout means exact delay (rather than delay between callbacks)
+    // f = 1 / T = 1 / 9 μs = 111111 Гц
+    // f = 1 / T = 1 / -21 μs = 47619Гц	-0,79% Гц
+ 	if (!add_repeating_timer_us(AY_SAMPLE_RATE, AY_timer_callback, NULL, &timer_audio)) // -10  частота ноты До 237Гц  нужно 240,0058 Гц
+    {
+    return 1;
+    }
+    #endif
+
+	repeating_timer_t zx_flash_timer;
+	if (!add_repeating_timer_us(-1000000 / 2/*Hz*/, zx_flash_callback, NULL, &zx_flash_timer)) {
+        return 1;
+	}
+//---------------------------------------------------------------
+
+multicore_launch_core1(ZXThread);// запуск эмулятора
+//sleep_ms(3000);
+    disk_autorun ();
+
+//######################
+//   основной цикл
+//######################
+/*     gpio_init(24);
+    gpio_set_dir(24, GPIO_OUT);
+    gpio_put(24, 0); */
+
+    while (1)
+    {
+           keyboard_and_other();
+        //   gpio_put(LED_BOARD, 0);
+          // led_blink();
+           zx_machine_input_set(&zx_input);
+      
+           led_trdos();// мигаие led 
+
+
+      } // while(1)
+  
+}
+//==========================================================================

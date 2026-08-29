@@ -16,20 +16,20 @@ endif()
 # Устанавливаем параметры платы и чипа и так далее
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
-set(DEBUG ON)
+set(DEBUG OFF)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 8)
-set(VERSION_PATCH 0)
+set(VERSION_PATCH 1)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
-math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 0")
+math(EXPR CONFIG_VERSION_VALUE "${VERSION_MAJOR}*1000 + ${VERSION_MINOR}*100 + ${VERSION_PATCH}*10  + 7")
 
 # == Конфигурация SpeccyP ==
 
 # Список допустимых конфигураций (единое место для изменений)
-set(SPECCY_CONFIG_VALUES SPECCY SPECCY_WSZERO GSP_FULL GSP_LITE)
+set(SPECCY_CONFIG_VALUES SPECCY SPECCY_WSZERO SPECCY_GSP_M1 SPECCY_GSP_M2 GSP_LITE)
 
 # Конфигурация сборки (можно задать через -DSPECCY_CONFIG=...)
 set(SPECCY_CONFIG "SPECCY" CACHE STRING "Конфигурация сборки: ${SPECCY_CONFIG_VALUES}")
@@ -74,10 +74,10 @@ option(USB_SERIAL "USB CDC console (USB HID Host отключается)" OFF)
 
 ###
 # Определяем опции в зависимости от конфигурации 
-if(SPECCY_CONFIG STREQUAL "GSP_FULL")
+if(SPECCY_CONFIG STREQUAL "SPECCY_GSP_M2")
     set(SPECCY_CONFIG_DEFINITIONS       
-        CPU_MHZ=378 
-        FLASH_MAX_FREQ_MHZ=66
+        CPU_MHZ=378    ## 332 flash и psram реально 166 
+        FLASH_MAX_FREQ_MHZ=166
         PSRAM_MAX_FREQ_MHZ=166
         TEST_DEBUG #
         GENERAL_SOUND 
@@ -90,7 +90,22 @@ if(SPECCY_CONFIG STREQUAL "GSP_FULL")
     )
       set(GENERAL_SOUND ON)
 #
-     
+elseif(SPECCY_CONFIG STREQUAL "SPECCY_GSP_M1")
+    set(SPECCY_CONFIG_DEFINITIONS  
+        CPU_MHZ=378    ## 332 flash и psram реально 166 
+        FLASH_MAX_FREQ_MHZ=166
+        PSRAM_MAX_FREQ_MHZ=166
+        TEST_DEBUG #
+        GENERAL_SOUND 
+        TURBOSOUND
+        Z_CONTROLER
+        MIDI
+     #   RTC_NOVA
+     #   RTC_GLUK
+     #   RTC_SMUC
+    )
+      set(GENERAL_SOUND ON)
+###     
 elseif(SPECCY_CONFIG STREQUAL "GSP_LITE")
     set(SPECCY_CONFIG_DEFINITIONS  
         CPU_MHZ=378 
@@ -316,7 +331,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
 CONFIG_VERSION=${CONFIG_VERSION_VALUE}
 ###CPU_KHZ=CPU_MHZ*1000
-PICOBUS_SPEED=20   #// 160000000 = 20MB/s // 80000000 = 10MB/s
+PICOBUS_SPEED=80 #  // 80 - 160  240 МГц вообще кратно 126 идеально 
 POWER_MODE=1
 VOLTAGE_RP2040=VREG_VOLTAGE_1_30
 ##DEBUG_MSG

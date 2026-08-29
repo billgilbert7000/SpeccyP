@@ -29,8 +29,8 @@ BEEP_PIN=28  # на IN
 
 #PS/2 клавиатура
 beginPS2_PIN=0
-PIO_PS2=pio0
-SM_PS2=3 #  
+PIO_PS2=pio1 
+SM_PS2=2  ##2
 
 #VIDEO
 beginVideo_PIN=6

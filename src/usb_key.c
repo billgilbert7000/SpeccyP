@@ -424,9 +424,7 @@ void __not_in_flash_func(keyboard_report) (uint8_t const *report, uint16_t len)
     scancode_usb(report[6]);
  
     scancode_usb(report[7]);
-    
-//if ((kb_st_ps2.u[0]=0)&(kb_st_ps2.u[1]=0)&(kb_st_ps2.u[2]=0)&(kb_st_ps2.u[3]=0)) flag_usb_kb = true;
- //  else flag_usb_kb = false;   // клавиша клавиатуры usb была нажата / есть событие usb клавиатуры
+
    
 }
 

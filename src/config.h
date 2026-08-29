@@ -490,11 +490,13 @@ extern bool flag_gs;
 #define GS_RESET        0x01 // Сброс pico GS
 #define TS_VOLUME       0x02 // второй байт команды третий значение
 #define TS_RESET        0x03 // второй байт команды
-#define TS_BUSTER       0x04 // второй байт команды третий  значение 
+//#define TS_BUSTER       0x04 // второй байт команды третий  значение 
+#define SET_BEEP        0x04 //beep_hard  // второй байт команды третий  значение 
 #define MUTE_GLOBAL     0x05 // Полное отключение звука
 #define RTC_DATE_TIME   0x06 // Передача строки Data Time  
 #define RTC_TIME        0x07 // Передача строки Time  
 #define RTC_BIN         0x08 // Передача данных RTC  9 байт
+#define SYS_INFO        0x09 // Передача системной информации 
 
 #define PICOBUS_CONNECT    0x77    // команда инициализации
 // дефайны эмуляции портов GS 

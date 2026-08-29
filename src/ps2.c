@@ -455,16 +455,15 @@ void start_PS2_capture(){
         false                              // Don't start yet
     );
     
-    // Настройка прерываний DMA
+     // Настройка прерываний DMA
     dma_channel_set_irq1_enabled(dma_chan, true);
     irq_set_exclusive_handler(DMA_IRQ_1, dma_handler_capture);
     irq_set_enabled(DMA_IRQ_1, true);
     
     // Запуск DMA
-    dma_start_channel_mask((1u << dma_chan0) | (1u << dma_chan));
+    dma_start_channel_mask((1u << dma_chan0) | (1u << dma_chan));  
 
-   // обнуление состояния клавиш
- //  kb_st_ps2.u[0]=kb_st_ps2.u[1]=kb_st_ps2.u[2]=kb_st_ps2.u[3]=0;
+
   
 
 };

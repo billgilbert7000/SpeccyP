@@ -99,6 +99,7 @@ PBUS_CS_1;
        if (command_sys==RTC_DATE_TIME)   receive_buffer(tx_buffer , 20); // получение строки даты и времени
        if (command_sys==RTC_TIME)   receive_buffer(tx_buffer , 9 ); // получение строки времени 00:00:00
        if (command_sys==RTC_BIN)   receive_buffer(tx_buffer , 6 ); // получение времени BIN 10 байт
+       if (command_sys==SYS_INFO)   receive_buffer(tx_buffer , 32 ); // получение инфы от GS
 }
 //################################################################################
 

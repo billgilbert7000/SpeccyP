@@ -69,19 +69,31 @@ void init_vol_ay(void)
     send_buffer(init_msg, sizeof(init_msg));     // Отправка буфера команды
     PBUS_CS_1;                                   // Деактивация выбора устройства (Chip Select = 1)
 }
+/**
+ * @brief Установка режима вывода BEEPer на General Sound.
+ * Отправляет команду SERVICE_COMMAND с параметром SET_BEEP.
+ */
+void set_beep_mode(void)
+{
+    while (picobus_busy) { busy_wait_us(100); }  // Ожидание освобождения шины picobus
+    PBUS_CS_0;
+    const uint8_t init_msg[] = { SERVICE_COMMAND, SET_BEEP, conf.beep_mode}; 
+    send_buffer(init_msg, sizeof(init_msg));
+    PBUS_CS_1;
+}
 
 /**
  * @brief Установка режима усилителя (Audio Booster) на General Sound.
  * Отправляет команду SERVICE_COMMAND с параметром TS_BUSTER.
  */
-void set_audio_buster(void)
+/* void set_audio_buster(void)
 {
     while (picobus_busy) { busy_wait_us(100); }  // Ожидание освобождения шины picobus
     PBUS_CS_0;
     const uint8_t init_msg[] = { SERVICE_COMMAND, TS_BUSTER, conf.audio_buster }; 
     send_buffer(init_msg, sizeof(init_msg));
     PBUS_CS_1;
-}
+} */
 
 /**
  * @brief Обработчик вывода бипера для режима General Sound.
@@ -105,7 +117,8 @@ void select_audio(void)
     conf.type_sound = I2S_AY;           // Принудительно устанавливаем режим I2S_AY
     hw_beep_out = gsp_beep_out;         // Назначаем обработчик бипера
     init_vol_ay();                      // Установка громкости AY
-    set_audio_buster();                 // Установка усилителя I2S
+ //  set_audio_buster();                 // Установка усилителя I2S уже не используктся v1.8.0
+    set_beep_mode(); 
 }
 
 /**

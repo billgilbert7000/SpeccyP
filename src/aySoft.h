@@ -76,6 +76,7 @@ void hardAY_on(void);
 // Установка громкости
 void init_vol_ay(void);
 void set_audio_buster(void);
+void set_beep_mode(void);
 
 // Заглушки для совместимости
 void ay_mute(void);

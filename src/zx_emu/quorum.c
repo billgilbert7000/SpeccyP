@@ -37,10 +37,30 @@ extern uint8_t wd1793_PortFF;
 
 uint8_t qu_ExtKb[8];
 
+void Quorum1024_HighRamLock_Set(int value) {
+    switch (value) {
+        case 0:
+            conf.Q1024HighRamLock = false;
+            break;
+        case 1:
+            conf.Q1024HighRamLock = true;
+            break;
+        case -1:
+        default:
+            conf.Q1024HighRamLock = ! conf.Q1024HighRamLock;
+            break;
+    }
+    pager7ffd_Quorum1024(zx_7ffd_lastOut);
+}
+
 void fast(pager7ffd_Quorum1024)(uint8_t val) {
 	//zx_RAM_bank_active  = (val&0b00000111); //128K only
     // linear bank numbering, bits 5 7 6 3 2 1
 	zx_RAM_bank_active  = (val & 0b00100111) | ((val >> 3) & 0b00011000); //1024k
+
+    if (conf.Q1024HighRamLock)
+        if (zx_0000_lastOut & 1<<5)
+            zx_RAM_bank_active &= 0b111;    // 128K only in BASIC ROM modes
 
     //if (val& 0x20) zx_state_48k_MODE_BLOCK=true; // 5bit = 1 48k mode block
     zx_state_48k_MODE_BLOCK = false;
@@ -324,7 +344,8 @@ inline static void fast(out_z80quorum)(Z80 *cpu, uint16_t port16, uint8_t val)
 //	if ((val&0b00100000) == 0) zx_cpu_ram[0] = zx_rom_bank[3]; 
 //	else  
 	zx_0000_lastOut = val;	// QUORUM
-	rom_select(); // переключение ПЗУ по портам и по сигналу DOS
+    pager7ffd_Quorum1024(zx_7ffd_lastOut);
+	//rom_select(); // переключение ПЗУ по портам и по сигналу DOS
 	return;
 } 
 // QUORUM

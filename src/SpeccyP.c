@@ -2033,7 +2033,7 @@ if (numsetup == M_JOY)
 
   if (numsetup == M_ADVANCED)
         {
-          uint8_t x = MenuBox_advanced_setup(94, 44, 17, 9, "Advanced setup", 9, 8, 1);
+          uint8_t x = MenuBox_advanced_setup(94, 44, 17, 10, "Advanced setup", 10, 9, 1);
            if (x==0xff) continue;
 
            continue;

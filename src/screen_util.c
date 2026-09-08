@@ -17,6 +17,8 @@
 #endif
 #include "aySoft.h"
 
+#include "zx_emu/quorum.h"
+
 
 //#include "math.h"
 #define ABS(x) (((x)<0)?(-(x)):(x))
@@ -996,8 +998,15 @@ void init_menu_advanced() {
        sprintf(menu_advanced_strings[5], " Voltage   %.2f V ",table_voltage[conf.voltage]/ 100.0 );
        sprintf(menu_advanced_strings[6], " Freq CPU %d MHz ",conf.cpu_freq);
 
-    strcpy(menu_advanced_strings[7], " Save config      ");
-    strcpy(menu_advanced_strings[8]," Return           ");
+    if (conf.mashine == QUORUM1024) {
+        strcpy(menu_advanced_strings[7], 
+            (conf.Q1024HighRamLock) ? " Q1024 HiRam Lock " : " Q1024 HiRam Open ");        
+    } else {
+        strcpy(menu_advanced_strings[7],"                  ");
+    }
+
+    strcpy(menu_advanced_strings[8], " Save config      ");
+    strcpy(menu_advanced_strings[9]," Return           ");
 }
 
 
@@ -1036,6 +1045,7 @@ wait_enter(); // ожидание отпускания enter
       kb_st_ps2.u[2] = 0;
       draw_text(xPos, yPos+ 10 * cPos, menu_advanced[cPos], CL_INK, CL_BLACK); // стирание курсора
       cPos++;
+      if (menu_advanced[cPos][1] == ' ') cPos++; //skip empty line
       if (cPos == Pos)
         cPos = 0;
       draw_text(xPos, yPos+ 10 * cPos, menu_advanced[cPos], CL_BLACK, CL_LT_CYAN);   // курсор
@@ -1047,9 +1057,10 @@ wait_enter(); // ожидание отпускания enter
     {
       kb_st_ps2.u[2] = 0;
       draw_text(xPos, yPos+ 10 * cPos, menu_advanced[cPos], CL_INK, CL_BLACK); // стирание курсора
-      if (cPos == 0)
+      if (cPos == 0) 
         cPos = Pos;
       cPos--;
+      if (menu_advanced[cPos][1] == ' ') cPos--; //skip empty line
       draw_text(xPos, yPos+ 10 * cPos, menu_advanced[cPos], CL_BLACK, CL_LT_CYAN);  // курсор
       
     }
@@ -1095,7 +1106,14 @@ wait_enter(); // ожидание отпускания enter
              init_menu_advanced();
            draw_text(xPos,yPos+10*6,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
            break;  
-          #endif  
+          #endif 
+
+          case 7: 
+            Quorum1024_HighRamLock_Set(0);
+            pager7ffd_Quorum1024(zx_7ffd_lastOut);
+            init_menu_advanced();
+            draw_text(xPos,yPos+10*7,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+            break;
 
       }
    
@@ -1144,6 +1162,12 @@ wait_enter(); // ожидание отпускания enter
            draw_text(xPos,yPos+10*6,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
            break;  
            #endif 
+
+          case 7: 
+            Quorum1024_HighRamLock_Set(1);
+            init_menu_advanced();
+            draw_text(xPos,yPos+10*7,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+            break;
 
 
       default:
@@ -1199,12 +1223,18 @@ wait_enter(); // ожидание отпускания enter
           continue;// break;   
           #endif
 
+        case 7: 
+            Quorum1024_HighRamLock_Set(-1); //toggle
+            init_menu_advanced();
+            draw_text(xPos,yPos+10*7,menu_advanced_strings[cPos],  CL_BLACK, CL_LT_CYAN); 
+            continue;
 
-       case 7:// Save config
+
+       case 8:// Save config
        save_config();
        break;
 
-      case 8:// Return menu
+      case 9:// Return menu
       return 0xff; // ESC exit
      }
 

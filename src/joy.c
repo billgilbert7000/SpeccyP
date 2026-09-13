@@ -73,7 +73,8 @@ uint8_t d_joy_get_data2(){
 
     //NES to Interface 2
     data = ~data; // инверсия битов data
-    data = (data & 0x0c) | ((data & 0x80) >> 7) | ((data & 1) << 1) | ((data & 2) << 3);
+    // NES Buttons A and B maps to single FIRE
+    data = (data & 0x0c) | ((data & 0x80) >> 7) | ((data & 0x40) >> 6) | ((data & 1) << 1) | ((data & 2) << 3);
         
     if (!data) return 0; // выход если ничего не нажато
 

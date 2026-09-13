@@ -2187,7 +2187,7 @@ void machine_Scorpion_256(Z80 *cpu)
         cpu->out          = (Z80Write)out_scorpion_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Scorpion_256;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2302,7 +2302,7 @@ void machine_NOVA_256(Z80 *cpu)
         cpu->out          = (Z80Write)out_nova_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_NOVA_256;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;

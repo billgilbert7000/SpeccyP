@@ -16,6 +16,16 @@ void d_sleep_us(uint us){
 }
 //---------------------------------------------
 
+// RAW NES Joysticks bits
+// 7 = A
+// 6 = B
+// 5 = Select
+// 4 = Start
+// 3 = Up
+// 2 = Down
+// 1 = Left
+// 0 = Right
+
 uint8_t joyData[2];
 
 uint8_t d_joy_scan() {

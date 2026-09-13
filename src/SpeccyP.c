@@ -1337,6 +1337,8 @@ void keyboard_and_other(void)
                 else  zx_input.kempston = 0;
             };
         }
+        
+        zx_input.sinclair1 = data2_joy;
 
   // ОПРОС КЛАВИАТУРЫ И ДЖОЙСТИКА
  if ((decode_PS2()) | (decode_key(is_menu_mode)) | (decode_joy()) )
@@ -1547,6 +1549,8 @@ void keyboard_and_other(void)
                 }
  */
                 convert_kb_u_to_kb_zx(&kb_st_ps2, zx_input.kb_data);
+
+                zx_input.sinclair1 = data2_joy;
 
                 if (zx_input.sinclair1) 
                     zx_input.kb_data[4] |= zx_input.sinclair1;

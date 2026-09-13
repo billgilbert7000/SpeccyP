@@ -291,7 +291,9 @@ extern uint8_t RAM[]; //Реальная память RAM
 extern uint8_t joy_key_ext;
 extern bool joy_connected;
 extern uint8_t data_joy;
+extern uint8_t data2_joy;
 extern uint8_t old_data_joy;
+extern uint8_t old_data2_joy;
 //--------------------------------------------------
 // fdd & trdos
 extern bool trdos;

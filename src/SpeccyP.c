@@ -1548,6 +1548,11 @@ void keyboard_and_other(void)
  */
                 convert_kb_u_to_kb_zx(&kb_st_ps2, zx_input.kb_data);
 
+                if (zx_input.sinclair1) 
+                    zx_input.kb_data[4] |= zx_input.sinclair1;
+                if (zx_input.sinclair2) 
+                    zx_input.kb_data[3] |= zx_input.sinclair2;
+
                 joy_scan(); // переопределление kempston joy на клавиши
 
             } // Emulation mode end

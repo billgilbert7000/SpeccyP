@@ -36,6 +36,8 @@ typedef struct ZX_Input_t
 {
     uint8_t kb_data[8];
     uint8_t kempston;
+    uint8_t sinclair1;  //Interface 2 Joy1 67890
+    uint8_t sinclair2;  //Interface 2 Joy2 12345
 } ZX_Input_t;
  
 void zx_machine_input_set(ZX_Input_t *input_data);

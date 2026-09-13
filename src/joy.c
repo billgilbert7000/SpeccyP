@@ -65,7 +65,11 @@ uint8_t d_joy_get_data2(){
     //d_joy_scan();
     uint8_t data = joyData[1]; 
   	
-    if (data==0) return 0;
+    if (data==0) return 0; // No joystick
+
+    // защита от дурака
+    if ((data & 0b00000011) == 0) data |= 0b00000011;   // если left и right нажаты одновременно то ничего не нажато
+    if ((data & 0b00001100) == 0) data |= 0b00001100;   // если up и down нажаты одновременно то ничего не нажато
 
     //NES to Interface 2
     data = ~data; // инверсия битов data
@@ -73,10 +77,6 @@ uint8_t d_joy_get_data2(){
         
     if (!data) return 0; // выход если ничего не нажато
 
-    // защита от дурака
-    if ((data & 0b00000011) == 0b00000011) data &= 0b11111100;   // если left и right нажаты одновременно то ничего не нажато
-    if ((data & 0b00001100) == 0b00001100) data &= 0b11110011;   // если up и down нажаты одновременно то ничего не нажато
-       
     return data;
 }
 
@@ -94,14 +94,16 @@ uint8_t d_joy_get_data()
     else
     {  joy_key_ext =0;
         joy_connected = true;
+
+        // защита от дурака
+        if ((data & 0b00000011) == 0) data |= 0b00000011;   // если left и right нажаты одновременно то ничего не нажато
+        if ((data & 0b00001100) == 0) data |= 0b00001100;   // если up и down нажаты одновременно то ничего не нажато
+
         // NES to Kempston
         data = (data & 0x0f) | ((data >> 2) & 0x30) | ((data << 3) & 0x80) | ((data << 1) & 0x40);
         data = ~data; // инверсия битов data
         
         if (!data) return joy_k; // выход если ничего не нажато
-        // защита от дурака
-        if ((data & 0b00000011) == 0b00000011) data &= 0b11111100;   // если left и right нажаты одновременно то ничего не нажато
-        if ((data & 0b00001100) == 0b00001100) data &= 0b11110011;   // если up и down нажаты одновременно то ничего не нажато
        
      //   data &= 0b01111111; // отсекаем кнопку joy [START] или не отсекаем
 /* 

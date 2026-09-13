@@ -66,6 +66,7 @@ void config_defain(void)
       conf.turbo=0; // при включении TURBO OFF!
       conf.tape_mode=0; // 0=fast, 1=slow
       conf.beep_mode=0; // 0 - pwm  , 1 - gpio
+      conf.Q1024HighRamLock = false;
 }
 #endif
 
@@ -109,6 +110,7 @@ void config_defain(void)
       conf.turbo=0; // при включении TURBO OFF!
       conf.tape_mode=0; // 0=fast, 1=slow
       conf.beep_mode=0; // 0 - pwm  , 1 - gpio
+      conf.Q1024HighMemLock = false;
 }
 #endif
 
@@ -152,6 +154,7 @@ void config_defain(void)
       conf.turbo=0; // при включении TURBO OFF!
       conf.tape_mode=0; // 0=fast, 1=slow
       conf.beep_mode=0; // 0 - pwm  , 1 - gpio
+      conf.Q1024HighMemLock = false;
 }
 #endif
 

@@ -20,7 +20,7 @@ set(DEBUG OFF)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 8)
-set(VERSION_PATCH 1)
+set(VERSION_PATCH 2)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла

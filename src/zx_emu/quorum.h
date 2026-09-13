@@ -13,3 +13,4 @@ void machine_Quorum1024(Z80 *cpu);
 void init_rom_ram_Q1024();
 void fast(rom_select_Quorum1024)();
 void fast(pager7ffd_Quorum1024)(uint8_t val);
+void Quorum1024_HighRamLock_Set(int value);

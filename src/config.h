@@ -412,6 +412,8 @@ extern struct data_config
    char Disks[4][DIRS_DEPTH*(LENF+16)];//110 // 5*22
    char activefilename[DIRS_DEPTH*(LENF+16)]; // 400 // 5*22
 
+   bool Q1024HighRamLock;
+
 }  conf;
 
 void config_defain(void);// процедура конфигурации по умолчанию

@@ -512,17 +512,18 @@ static uint16_t t = 0;
 if (t==0)
 {
   t = 6000;
- //   uint16_t temp_value = adc_read();
- adc_select_input(rp2350a ? 4 : 8); // Выбор внутреннего датчика температуры TODO RP2350B adc_select_input(8); 
+  //   uint16_t temp_value = adc_read();
+  adc_select_input(rp2350a ? 4 : 8); // Выбор внутреннего датчика температуры TODO RP2350B adc_select_input(8);
 
-    float voltage = adc_read() * 3.3f / 4096; // Преобразование в напряжение
-    float Tcpu = 27.0f - (voltage - 0.706f) / 0.001721f; // Преобразование в температуру
-           // snprintf(temp_msg, sizeof temp_msg, "Tcpu: %.1f C ",Tcpu); 
-           snprintf(temp_msg, sizeof temp_msg, "%.1f\xF8\x43", Tcpu);
-           draw_text(264,23,temp_msg,CL_BLACK, CL_GRAY); 
-       //  draw_text(264,150,temp_msg, CL_CYAN, CL_BLACK); 
+  float voltage = adc_read() * 3.3f / 4096;            // Преобразование в напряжение
+  float Tcpu = 27.0f - (voltage - 0.706f) / 0.001721f; // Преобразование в температуру
+  if (Tcpu>0) 
+  {
+  snprintf(temp_msg, sizeof temp_msg, "%.1f\xF8\x43", Tcpu);
+  draw_text(254, 150, temp_msg, Tcpu < 45 ? CL_BLUE : CL_RED, CL_BLACK);
+  }
 }
-t--;   
+   t--;   
    #endif
 
 #endif //

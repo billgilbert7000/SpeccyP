@@ -43,7 +43,7 @@ void zx_machine_input_set(ZX_Input_t *input_data);
 // работа со звуком - функции реального времени
 
 // функции управления zx машиной
-void zx_machine_reset(uint8_t rom_x);
+void zx_machine_reset(uint8_t reset_type);
 void zx_machine_init();
 void fast(zx_machine_main_loop_start)(); // функция содержит бесконечный цикл
 //void copy_imge_reset();
@@ -84,6 +84,11 @@ extern uint32_t zx_RAM_bank_active;
 extern uint8_t cash_f;
 
 zuint8 fast(read_memory)(Z80 *cpu, zuint16 addr);
+
+#define RES_HARD    0 // первый запуск при включении или hard reset
+#define RES_DOS     1 // загрузка с вставленной дискетой по SPACE
+#define RES_NO_SCREEN   2 // reset в  48 BASIC 
+#define RES_BASIC   3 // reset в ROM 48 BASIC  с выводом заставки
 
 // Настройки и функции для эмулятора Z80 REDCODE
 

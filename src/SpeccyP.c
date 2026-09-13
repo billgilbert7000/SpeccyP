@@ -12,18 +12,21 @@
 #include "hardware/sync.h"
 #include "hardware/irq.h"
 #include "hardware/watchdog.h"
+
 #include "hardware/clocks.h"
 #include "hardware/structs/systick.h"
 #include "hardware/pwm.h"
 #include "hardware/vreg.h"
+//******************************************* */
 
-
+#include "flash_info.h"
 
 //#######################################
 #ifdef PICO_RP2350
 #include <hardware/structs/qmi.h>
 #include <hardware/structs/xip.h>
 #include <hardware/regs/sysinfo.h>
+
 #endif
 //######################################
 
@@ -96,6 +99,7 @@ void  config_init(void);
 void help_zx(void); //F1
 void pause_zx(void);//  [Pause Break]
 void help_keyboard(void); // F4
+void system_info(void); // Ctrl+F12
 //void turbo_switch(void);
 void led_trdos(void);
 void load_slot(void);
@@ -1354,7 +1358,8 @@ void keyboard_and_other(void)
 
 //########################################################################################
                 // меню если is_menu_mode =true файловое меню
-                if ((is_menu_mode) && (!trdos))   { file_manager(); TAP_RestorePage(); }// файловое меню
+             //   if ((is_menu_mode) && (!trdos))   { file_manager(); TAP_RestorePage(); }// файловое меню
+                if (is_menu_mode)   { file_manager(); TAP_RestorePage(); }// файловое меню  fix unreal demo 
 //########################################################################################
     if ((!is_menu_mode)) // что нажимается вне файлового менеджера
     {
@@ -1368,12 +1373,14 @@ void keyboard_and_other(void)
                   msg_bar=3+conf.turbo;
                   wait_msg = 2000; 
                 }
+          //  if(KEY_CTRL_F12) system_info(); // Ctrl+F12
             // кнопка перехода в меню SETUP
            if (((MENU_SETUP) | (joy_key_ext  == 0x88)) )  setup_zx();  // START+ [B] SetUp
            //
            if (F1)  help_zx();
            if (F4)  help_keyboard();
            if (F9)  nmi_zx();
+           
            if (PAUSE) pause_zx(); //  [Pause Break]
 /*            if (F6) // палитра
            {
@@ -1512,7 +1519,7 @@ void keyboard_and_other(void)
                hardAY_off();
                MessageBox(" ZX SPECTRUM RESET ", "", CL_WHITE, CL_RED, 2);
                kb_st_ps2.u[1] = 0; // Обнуляет ряд клавиш с LCTRL, RCTRL и т.д.
-               zx_machine_reset(3);
+               zx_machine_reset(RES_BASIC);
                im_z80_stop = false;
                is_menu_mode = false;
            }
@@ -1881,11 +1888,23 @@ void help_keyboard(void) // F4
  
      resume_emulation_and_sound();
 }
+//---------------------------------------------------------
+/* 
+uint32_t get_flash_size(void) 
+    {
+        uint32_t flash_size = (1 << rx[3]);
+        pos += snprintf(buf + pos, sizeof(buf) - pos,
+            " Flash size     : %d MB\n"
+            " Flash JEDEC ID : %02X-%02X-%02X-%02X\n",
+            (int)(flash_size >> 20), rx[0], rx[1], rx[2], rx[3]); 
+    }
+*/
 //=========================================================
 void setup_zx(void)
 {
 	pause_emulation_and_sound();
-
+//uint32_t fsize = PICO_FLASH_SIZE_BYTES / (1024 * 1024);
+//uint32_t fsize = flash_get_size_mb();
 #define w1 290
 #define h1 180
 #define x1 18
@@ -1933,38 +1952,36 @@ void setup_zx(void)
  
 
 ////////////////////
-        #ifndef PICO_RP2040
+         #ifdef PICO_RP2350 
         if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A");
         else snprintf(temp_msg, sizeof temp_msg, "RP2350B");
-        draw_text(138,140,temp_msg, CL_GRAY, CL_BLACK);
-        #endif
+     //   draw_text(138,140,temp_msg, CL_GRAY, CL_BLACK);
 
-        #ifndef PICO_RP2040
-        snprintf(temp_msg, sizeof temp_msg, "%dMHz %.2fV ",clock_get_hz(clk_sys)/MHZ, table_voltage[conf.voltage]/ 100.0);
+        draw_text(260,23,temp_msg,CL_BLACK, CL_GRAY); 
+        
+    
+        snprintf(temp_msg, sizeof temp_msg, "CPU: %dMHz %.2fV ",clock_get_hz(clk_sys)/MHZ, table_voltage[conf.voltage]/ 100.0);
+        draw_text(138,150,temp_msg,CL_BLUE, CL_BLACK); 
+        snprintf(temp_msg, sizeof temp_msg, "FLASH   %dMHz %dMb %s",real_flash_freq , flash_get_size_mb(), flash_get_manufacturer());
+        draw_text(138,160,temp_msg,CL_BLUE, CL_BLACK); 
+  
         #else
-        snprintf(temp_msg, sizeof temp_msg, "RP2040  %dMHz",CPU_MHZ);    
+        draw_text(260,23,"RP2040",CL_BLACK, CL_GRAY); 
         #endif
-        draw_text(138,150,temp_msg, CL_GRAY, CL_BLACK);
-
-    #ifdef PICO_RP2350 
-        snprintf(temp_msg, sizeof temp_msg, "FLASH %d MHz ",real_flash_freq );
-        draw_text(138,160,temp_msg,CL_GRAY, CL_BLACK); 
-    #endif
-
 /////////////////////
 	if (psram_avaiable)
     {
         if (type_psram==2)
-         snprintf(temp_msg, sizeof temp_msg,"Q-PSRAM %dMb %dMHz", size_psram , real_psram_freq );
+         snprintf(temp_msg, sizeof temp_msg,"Q-PSRAM %dMHz %dMb " , real_psram_freq, size_psram  );
          else 
-         snprintf(temp_msg, sizeof temp_msg,"PSRAM   %dMb %dMHz", size_psram ,real_psram_freq ); 
-         draw_text(138, 170, temp_msg,CL_GRAY, CL_BLACK);
+         snprintf(temp_msg, sizeof temp_msg,"PSRAM   %dMHz %dMb ", real_psram_freq, size_psram  ); 
+         draw_text(138,170,temp_msg,CL_BLUE, CL_BLACK); 
     } 
 
 
         #ifdef GENERAL_SOUND 
          sys_GS(SYS_INFO);
-         draw_text(138, 180, tx_buffer, CL_GRAY, CL_BLACK);
+         draw_text(138, 180, tx_buffer, CL_BLUE, CL_BLACK); 
        #endif  
 ////////////////////
        
@@ -2066,7 +2083,7 @@ if (numsetup == M_JOY)
         if (numsetup ==M_SOFT_RESET) // Soft reset
         {
             MessageBox(" ZX SPECTRUM RESET ", "", CL_WHITE, CL_RED, 2);
-            zx_machine_reset(3);
+            zx_machine_reset(RES_BASIC);
             resume_emulation_and_sound();
             return;
  
@@ -2380,7 +2397,7 @@ uint8_t MenuBox_sv(uint8_t xPos, uint8_t yPos, uint8_t lPos, uint8_t hPos, char 
 			return;
 		}
 
-		zx_machine_reset(3);
+		zx_machine_reset(RES_NO_SCREEN);
 		sprintf(save_file_name_image, "0:/save/%d_slot.Z80", num);
 		if (load_image_z80(save_file_name_image))
 			MessageBox("Loading slot...", temp_msg, CL_WHITE, CL_BLUE, 2);
@@ -2403,6 +2420,7 @@ void mount_image_Z80(void)
 		sprintf(save_file_name_image, "0:/save/0_slot.Z80");
         sleep_ms(2000);
        load_image_z80(save_file_name_image);
+
 	//	if (load_image_z80(save_file_name_image))
 
 	//		MessageBox("Loading all RAM...", temp_msg, CL_WHITE, CL_BLUE, 2);
@@ -3028,7 +3046,7 @@ void file_manager (void)
                              OpenTRDFile(conf.activefilename,0);
                              write_protected = false; // защита записи отключена для TRD
 
-                            zx_machine_reset(1);// включить загрузку файла при reset 1 раз
+                            zx_machine_reset(RES_DOS);// включить загрузку файла при reset 1 раз
 
                             is_new_screen = false;
                             is_menu_mode = false;
@@ -3043,7 +3061,7 @@ void file_manager (void)
                             file_type[0] = SCL;
                             strncpy(conf.DiskName[0], files[cur_file_index], LENF); // disk A
                             Run_file_scl(conf.activefilename, 0);
-                            zx_machine_reset(1);// включить загрузку файла при reset 1 раз
+                            zx_machine_reset(RES_DOS);// включить загрузку файла при reset 1 раз
                             im_z80_stop = false;
                             is_menu_mode = false;
                             is_new_screen = false;
@@ -3059,7 +3077,7 @@ void file_manager (void)
                              OpenFDI_File(conf.activefilename,0);
                           //   write_protected = true; // защита записи включена
 
-                            zx_machine_reset(1);// включить загрузку файла при reset 1 раз
+                            zx_machine_reset(RES_DOS);// включить загрузку файла при reset 1 раз
 
                             is_new_screen = false;
                             is_menu_mode = false;
@@ -3112,79 +3130,31 @@ void file_manager (void)
 
                             if (strcasecmp(ext, "z80") == 0)
                             {
-                                im_z80_stop = true;
-                                while (im_z80_stop)
-                                {
-                                    sleep_ms(10);
-                                    if (im_ready_loading)
-                                    {
-                                        // sleep_ms(10);
                                         conf.turbo = 0;
                                         turbo_switch();
-                                        zx_machine_reset(3);
-                                      //  AY_reset(); // сбросить AY
-
-                                        if (load_image_z80(conf.activefilename))
-                                        {
-                                            memset(temp_msg, 0, sizeof(temp_msg));
-                                            sprintf(temp_msg, " Loading file:%s", auto_start_filename);
-                                            MessageBox("Z80", temp_msg, CL_WHITE, CL_BLUE, 2);
-                                            conf.activefilename[0] = 0;
-                                            im_z80_stop = false;
-                                            im_ready_loading = false;
-                                            is_menu_mode = false;
-                                            break;
-                                        }
-                                        else
-                                        {
-                                            MessageBox("Error loading snapshot!!!", auto_start_filename, CL_YELLOW, CL_LT_RED, 1);
-                                            last_action = time_us_32();
-                                            draw_file_window();
-                                            im_z80_stop = false;
-                                            im_ready_loading = false;
-                                            break;
-                                        }
-                                    }
-                                }
-                                return; // continue;
+                                        zx_machine_reset(RES_NO_SCREEN);
+                                        if (load_image_z80(conf.activefilename))                             
+			                         MessageBox("Loading *Z80...", temp_msg, CL_WHITE, CL_BLUE, 2);
+		                             else
+		                          	 MessageBox(" Error loading ", "", CL_LT_YELLOW, CL_RED, 2);
+                                    resume_emulation_and_sound();
+                                    return; 
                             }
+
                             else if (strcasecmp(ext, "sna") == 0)
                             {
-
-                                im_z80_stop = true;
-                                while (im_z80_stop)
-                                {
-                                    sleep_ms(10);
-                                    if (im_ready_loading)
-                                    {
-                                     //   if (conf.mashine!=SCORP256) zx_machine_reset(3); // убрать для работы в SCORPION
-                                        zx_machine_reset(3);
-                                      //  AY_reset(); // сбросить AY
+                                        conf.turbo = 0;
+                                        turbo_switch();
+                                        zx_machine_reset(RES_NO_SCREEN);
                                         if (load_image_sna(conf.activefilename))
-                                        {
-                                            memset(temp_msg, 0, sizeof(temp_msg));
-                                            sprintf(temp_msg, " Loading file:%s", auto_start_filename);
-                                            MessageBox("SNA", temp_msg, CL_WHITE, CL_BLUE, 2);
-                                            conf.activefilename[0] = 0;
-                                            im_z80_stop = false;
-                                            im_ready_loading = false;
-                                            is_menu_mode = false;
-                                            break;
-                                        }
-                                        else
-                                        {
-                                            MessageBox("Error loading snapshot!!!", auto_start_filename, CL_YELLOW, CL_LT_RED, 1);
-                                            // printf("load_image_sna - ERROR\n");
-                                            last_action = time_us_32();
-                                            draw_file_window();
-                                            im_z80_stop = false;
-                                            im_ready_loading = false;
-                                            break;
-                                        }
-                                    }
-                                }
-                                return; 
-                            }
+		                             	MessageBox("Loading *SNA...", temp_msg, CL_WHITE, CL_BLUE, 2);
+		                                else
+			                            MessageBox(" Error loading ", "", CL_LT_YELLOW, CL_RED, 2);
+                                       
+                                        resume_emulation_and_sound();
+                                        return; 
+                            }  
+
                             else if (strcasecmp(ext, "scr") == 0)
                             {
                                 if (LoadScreenshot(conf.activefilename, true))
@@ -3195,7 +3165,6 @@ void file_manager (void)
                                 else
                                 {
                                     MessageBox("Error loading screen!!!", auto_start_filename, CL_YELLOW, CL_LT_RED, 1);
-                                   // break;
                                 }
                             }
                             else if (strcasecmp(ext, "tap") == 0)
@@ -3568,10 +3537,39 @@ void file_info (void)
 				}
 			}
 		}
+ //###############################################################################
+// ── Uptime across soft reboots ───────────────────────────────────────────────
+// HWInfo's Uptime used raw time_us_64() (µs since the last chip reset), so an
+// F12 reboot / video-mode switch / crash watchdog restarted it from zero.
+// Accumulate the pre-reboot seconds in a watchdog scratch register instead:
+// scratch survives a watchdog reboot but is cleared by a power-on / RUN-pin
+// reset — exactly the boundary a "since power-on" uptime wants.
+// scratch[3] = 0x55 tag (top byte) | uptime seconds (24 bits ≈ 194 days).
+// scratch[2] is MIDI_REFLASH_SCRATCH (MidiSynth.cpp); 4..7 belong to the
+// SDK/bootrom watchdog_reboot vector.
+#define UPTIME_SCRATCH  3
+#define UPTIME_TAG      0x55000000u
+#define UPTIME_TAG_MASK 0xFF000000u
+static uint32_t s_uptime_offset_s = 0; // seconds accumulated before the last watchdog reboot
+
+
+ // Called once at main() entry, before anything can arm the watchdog.
+static void uptime_init(void) {
+    uint32_t v = watchdog_hw->scratch[UPTIME_SCRATCH];
+    if (watchdog_caused_reboot() && (v & UPTIME_TAG_MASK) == UPTIME_TAG)
+        s_uptime_offset_s = v & ~UPTIME_TAG_MASK;
+    watchdog_hw->scratch[UPTIME_SCRATCH] = UPTIME_TAG | (s_uptime_offset_s & ~UPTIME_TAG_MASK);
+}
+
+
 //################################################################################
 // MAIN
 int fast(main)(void){  
-   
+     uptime_init();   // capture pre-reboot uptime from watchdog scratch (see uptime_seconds)
+   // flash_info();  // Читает JEDEC ID в глобальный rx[4]
+    
+
+
     vreg_disable_voltage_limit();
     vreg_set_voltage(VREG_VOLTAGE_1_30);
     sleep_ms(50);
@@ -3610,7 +3608,9 @@ int fast(main)(void){
     rtc_enable=0;
 #endif
 
-    init_fs = disk_initialize(0); // инициализация SD
+    flash_info();  // Читает JEDEC ID в глобальный rx[4]
+
+ init_fs = disk_initialize(0); // инициализация SD
     DIR fs;
     init_fs = init_filesystem();                // монтирование и инициализация SD
     config_init();                              // загрузка файла конфигурации если он есть "0:/.config/speccy_p.cnf"
@@ -3621,16 +3621,11 @@ int fast(main)(void){
     pico_fatfs_reboot_spi();      // Переинициализировать SPI
     init_fs = disk_initialize(0); // инициализация SD
     init_fs = init_filesystem();
+   
 
+   
+    
     init_and_info();
-
-
-#if LED_BOARD != 255
-    gpio_init(LED_BOARD);
-    gpio_set_dir(LED_BOARD, GPIO_OUT);
-    gpio_put(LED_BOARD, 0);
-#endif 
-
     //-----------------------------------------------------------------
     // если одна плата без GS 
     #ifndef  GENERAL_SOUND     
@@ -3659,14 +3654,14 @@ multicore_launch_core1(ZXThread);// запуск эмулятора
 //######################
 //   основной цикл
 //######################
-/*     gpio_init(24);
+    gpio_init(24);
     gpio_set_dir(24, GPIO_OUT);
-    gpio_put(24, 0); */
+    gpio_put(24, 0);
 
     while (1)
     {
            keyboard_and_other();
-        //   gpio_put(LED_BOARD, 0);
+           gpio_put(LED_BOARD, 0);
           // led_blink();
            zx_machine_input_set(&zx_input);
       
@@ -3677,3 +3672,82 @@ multicore_launch_core1(ZXThread);// запуск эмулятора
   
 }
 //==========================================================================
+//===========================================
+void system_info(void) // Ctrl+F12
+{
+	pause_emulation_and_sound();
+
+	draw_rect(0, 10, 318, 200, CL_BLACK, true);				   // рамка 3 фон
+	draw_rect(0, 10, 318, 200, CL_GRAY, false);				   // рамка 1
+	draw_rect(0 + 2, 10 + 2, 318 - 4, 200 - 4, CL_GRAY, false); // рамка 2
+
+	draw_rect(0 + 3, 10 + 3, 318 - 6, 8, CL_GRAY, true);			 // шапка меню
+	draw_text(0 + 10, 10 + 3, "System Info  [ESC] Exit", CL_BLACK, CL_GRAY); // шапка меню
+
+
+ is_new_screen = true;
+        #define YP 40
+        #define XP 10
+        uint8_t y_info = YPOS; //координата по оси Y для вывода информации
+
+
+        snprintf(temp_msg, sizeof temp_msg, "SpeccyP  v" FW_VERSION);
+        draw_text(XP, YP, temp_msg, CL_GRAY, CL_BLACK);
+
+        #ifndef PICO_RP2040
+        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A %dMHz",conf.cpu_freq);
+        else snprintf(temp_msg, sizeof temp_msg, "RP2350B %dMHz",conf.cpu_freq);
+        #else
+        snprintf(temp_msg, sizeof temp_msg, " RP2040 %dMHz",CPU_MHZ);    
+        #endif
+        draw_text(XP,YP+12,temp_msg,CL_GRAY ,CL_BLACK);
+
+////////////////////
+        #ifndef PICO_RP2040
+        if (rp2350a) snprintf(temp_msg, sizeof temp_msg, "RP2350A");
+        else snprintf(temp_msg, sizeof temp_msg, "RP2350B");
+        draw_text(138,140,temp_msg, CL_GRAY, CL_BLACK);
+        #endif
+
+        #ifndef PICO_RP2040
+        snprintf(temp_msg, sizeof temp_msg, "%dMHz %.2fV ",clock_get_hz(clk_sys)/MHZ, table_voltage[conf.voltage]/ 100.0);
+        #else
+        snprintf(temp_msg, sizeof temp_msg, "RP2040  %dMHz",CPU_MHZ);    
+        #endif
+        draw_text(138,150,temp_msg, CL_GRAY, CL_BLACK);
+
+    #ifdef PICO_RP2350 
+        snprintf(temp_msg, sizeof temp_msg, "FLASH %d MHz ",real_flash_freq );
+        draw_text(138,160,temp_msg,CL_GRAY, CL_BLACK); 
+    #endif
+
+/////////////////////
+	if (psram_avaiable)
+    {
+        if (type_psram==2)
+         snprintf(temp_msg, sizeof temp_msg,"Q-PSRAM %dMb %dMHz", size_psram , real_psram_freq );
+         else 
+         snprintf(temp_msg, sizeof temp_msg,"PSRAM   %dMb %dMHz", size_psram ,real_psram_freq ); 
+         draw_text(138, 170, temp_msg,CL_GRAY, CL_BLACK);
+    } 
+
+
+        #ifdef GENERAL_SOUND 
+         sys_GS(SYS_INFO);
+         draw_text(138, 180, tx_buffer, CL_GRAY, CL_BLACK);
+       #endif  
+////////////////////
+
+        if (init_fs == FR_OK) 
+        {
+            tf_card_get_complete_info_string(temp_msg, sizeof(temp_msg));
+            draw_text(XP, YP+32 , temp_msg, CL_GRAY, CL_BLACK);
+        }
+        else
+            draw_text(XP, YP+32 , "SD card not found", CL_GRAY, CL_BLACK);
+
+
+     MenuBox_help(7, 24, 16, 1,menu_keyboard, 1, 0, 1);
+ 
+     resume_emulation_and_sound();
+}

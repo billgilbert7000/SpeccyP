@@ -1904,20 +1904,17 @@ inline static void fast(halt_z80)(Z80 *cpu, zuint8 signal)
 
 
 }
-inline static zuint8 fast(inta_callback)(Z80 *cpu, zuint16 address)
-{
- // gpio_put(LED_BOARD, 1);
- // led_blink();
- //int_enable = false;
- //z80_int(&cpu_zx, false);// INT OFF
-        // Сброс линии INT после обработки
-   //     if (int_enable && !(cpu_zx.request & Z80_REQUEST_INT)) {
-    //        z80_int(&cpu_zx, Z_FALSE);
-           // z1->int_pending = 0;
-     //      int_enable = false;
-    //    }
-return 0xff;
+// Called by redcode for all three INT modes (IM0/IM1/IM2) at the INTA
+// M-cycle — the moment the Z80 acknowledges the interrupt. We deassert
+// INT_LINE here instead of after a blind 32T window; this implements the
+// level-triggered model: INT stays asserted until acknowledged, so
+// firmware running DI for >32T no longer silently drops the interrupt.
+static zuint8 __not_in_flash_func(inta_callback)(void* ctx, zuint16 pc) {
+    (void)ctx; (void)pc;
+    z80_int(&cpu_zx, Z_FALSE); // Сброс линии INT после обработки
+    return 0xFF;  // IM0: RST 38h  |  IM2: vector at (I<<8)|0xFF = 0x17FF → ISR
 }
+
 
 inline static zuint8 fast(nop_callback)(Z80 *cpu, zuint16 address)
 {
@@ -1962,7 +1959,8 @@ void machine_Spectrum_48(Z80 *cpu)
         cpu->out          = (Z80Write)out_spec48;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = Z_NULL;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
+
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -1992,7 +1990,7 @@ void machine_Pentagon_128(Z80 *cpu)
         cpu->out          = (Z80Write)out_spec128;//machine_cpu_out;
         cpu->halt         = Z_NULL;//= (Z80Halt)halt_z80;
         cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2031,7 +2029,7 @@ void machine_Pentagon_512(Z80 *cpu)
         cpu->out          = (Z80Write)out_zx_ext;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2076,7 +2074,7 @@ void machine_Pentagon_512_cash(Z80 *cpu)
         cpu->out          = (Z80Write)out_zx_ext;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Pentagon_512_cash;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2114,7 +2112,7 @@ void machine_Pentagon_1024(Z80 *cpu)
         cpu->out          = (Z80Write)out_zx_ext;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2148,7 +2146,7 @@ void machine_Scorpion_256(Z80 *cpu)
         cpu->out          = (Z80Write)out_scorpion_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Scorpion_256;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2187,7 +2185,7 @@ void machine_Scorpion_256(Z80 *cpu)
         cpu->out          = (Z80Write)out_scorpion_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Scorpion_256;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2229,7 +2227,7 @@ void machine_Scorpion_GMX(Z80 *cpu)
         cpu->out          = (Z80Write)extram_gmx;
         cpu->halt         = Z_NULL;
         cpu->nmia         = Z_NULL;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2264,7 +2262,7 @@ void machine_NOVA_256(Z80 *cpu)
         cpu->out          = (Z80Write)out_nova_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_NOVA_256;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2302,7 +2300,7 @@ void machine_NOVA_256(Z80 *cpu)
         cpu->out          = (Z80Write)out_nova_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_NOVA_256;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2341,7 +2339,7 @@ void machine_MurmoZavr(Z80 *cpu)
         cpu->out          = (Z80Write)extram_p8;// aff7 + Pentagon 128
         cpu->halt         = Z_NULL;
         cpu->nmia         = Z_NULL;
-        cpu->inta         = Z_NULL;//= (Z80Read )inta_callback;
+        cpu->inta         = (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2364,7 +2362,7 @@ void copy_imge_reset()
     memcpy(zx_ram_bank[5], cat_img, 6144+768); // TODO
 }
 
-void init_rom_ram(uint8_t rom_x)
+void init_rom_ram(uint8_t reset_type)
 {
 		// настройка ОЗУ 
         zx_cpu_ram[1] = zx_ram_bank[5]; // 0x4000 - 0x7FFF
@@ -2406,7 +2404,7 @@ break;
 
 
 case QUORUM1024:
-        init_rom_ram_Q1024();
+    init_rom_ram_Q1024();
    	zx_RAM_bank_active =0x00;
 	zx_RAM_bank_7ffd =0x00;
     zx_RAM_bank_1ffd =0x00;
@@ -2448,8 +2446,8 @@ break;
         else zx_rom_bank[2]=&ROM_TRDOS_505D[0*16384];//TRDOS 5.05D
         zx_rom_bank[3]=&ROM_Qsm[0*16384];//SERVICE PENTAGON  /// TODO     заглушка не используется
 		rom=ROM_48;
-	
-		if (rom_x ==0) // первый запуск при включении или hard reset
+
+		if (reset_type == RES_HARD) // первый запуск при включении или hard reset
         {
         switch (conf.autorun)
 		{
@@ -2479,14 +2477,22 @@ break;
 			break;
 		}
 		}
-         copy_imge_reset();
-        if (rom_x ==1) // загрузка с вставленной дискетой по SPACE
+        
+        if (reset_type == RES_DOS) // загрузка с вставленной дискетой по SPACE
 		{
+         copy_imge_reset();   
 		 rom=ROM_DOS;
 		 zx_cpu_ram[0]=zx_rom_bank[2]; // 0x0000 - 0x3FFF TR-DOS    запуск trd по   SPACE
 		}
 
-		if (rom_x ==3) // просто reset в  48 BASIC
+		if (reset_type ==2) // просто reset в  48 BASIC с выводом заставки
+		{
+         copy_imge_reset();       
+		 rom=ROM_48;
+		 zx_cpu_ram[0]=zx_rom_bank[1]; //  48 BASIC
+		}
+
+		if (reset_type == RES_BASIC) // просто reset в  48 BASIC
 		{
 		 rom=ROM_48;
 		 zx_cpu_ram[0]=zx_rom_bank[1]; //  48 BASIC
@@ -2518,7 +2524,7 @@ break;
 	  break;
  }
 //-------------------------------------------
-		if (rom_x ==0) // первый запуск при включении или hard reset
+		if (reset_type == RES_HARD) // первый запуск при включении или hard reset
         {
         switch (conf.autorun)
 		{
@@ -2568,25 +2574,30 @@ break;
 		}
 		}
         
-        if (rom_x ==1) // загрузка с вставленной дискетой по SPACE
+        if (reset_type ==RES_DOS) // загрузка с вставленной дискетой по SPACE
 		{
-            copy_imge_reset();
+        copy_imge_reset();
 		 rom=ROM_DOS;
-		 zx_cpu_ram[0]=zx_rom_bank[2]; // 0x0000 - 0x3FFF TR-DOS    запуск trd по   SPACE
-		 zx_7ffd_lastOut=0x10;//0x10
-		// trdos=true;
-           if (conf.mashine== SCORP256) rom_x=3;// загрузка только через меню TODO!
+		 zx_cpu_ram[0]=zx_rom_bank[2]; 
+		 zx_7ffd_lastOut=0x10;
+	           if (conf.mashine== SCORP256) reset_type=RES_BASIC;// загрузка только через меню TODO!
 		}
 
-		if (rom_x ==3) // просто reset в  128 BASIC
+		if (reset_type ==RES_BASIC) // просто reset в  128 BASIC
 		{
-            copy_imge_reset();
+        copy_imge_reset();
 		 rom=ROM_128;
 		 zx_cpu_ram[0]=zx_rom_bank[0]; //  128 BASIC
 		 zx_7ffd_lastOut=0x00;
 		}
 
-	
+		if (reset_type ==RES_NO_SCREEN) // просто reset в  128 BASIC
+		{
+		 rom=ROM_128;
+		 zx_cpu_ram[0]=zx_rom_bank[0]; //  128 BASIC
+		 zx_7ffd_lastOut=0x00;
+		}
+
         zx_1ffd_lastOut=0x00; 
 
 		zx_RAM_bank_active =0x00;
@@ -2620,15 +2631,15 @@ void zx_machine_init()
     init_mashine_and_extram(conf.mashine); // <= это уже тут   machine_Pentagon_128(&cpu_zx);  // инициализация машины
     z80_power(&cpu_zx, Z_TRUE); // Включаем питание машины
     z80_instant_reset(&cpu_zx); // reset z80
-    zx_machine_reset(0);        // 0-первый запуск  1- запуск trd по SPACE  3-просто reset в BASIC128
+    zx_machine_reset(RES_HARD);        // 0-первый запуск  1- запуск trd по SPACE  3-просто reset в BASIC128
 };
 
 void fast(zx_machine_input_set)(ZX_Input_t* input_data){memcpy(&zx_input,input_data,sizeof(ZX_Input_t));};
 
-void zx_machine_reset(uint8_t rom_x)
+void zx_machine_reset(uint8_t reset_type)
 {
     AY_reset();
-    init_rom_ram(rom_x);
+    init_rom_ram(reset_type);
     zx_RAM_bank_active = 0x00;
     zx_RAM_bank_7ffd = 0x00;
     zx_RAM_bank_1ffd = 0x00;
@@ -2640,7 +2651,8 @@ void zx_machine_reset(uint8_t rom_x)
 
     zx_cpu_ram[3] == zx_ram_bank[zx_RAM_bank_active];
 
-    strcpy(conf.activefilename, conf.Disks[0]); // disk A
+ if (reset_type != RES_NO_SCREEN)  strcpy(conf.activefilename, conf.Disks[0]); // disk A
+
     WD1793_Init();
 
     // memset(&RAM,0x00, 131072);	// стирание памяти 128kB
@@ -2930,57 +2942,17 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 //=======================================================================================	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Цикл ождания пока количество потраченных тактов реального процессора
-		// меньше количества расчетных тактов реального процессора на команду Z80
- 
-	  //if (conf.turbo==0)
-    { 
+		// меньше количества расчетных тактов реального процессора на команду Z80 
     
-   while (((get_ticks()-t0_time_ticks)&0xffffff)<d_dst_time_ticks);
-           }
-
-   /*         
-if (   (inx_tick_screen<32) &&  (int_enable)) 
-    {// вызов INT в обычном режиме
-   //  z80_int(&cpu_zx, true);// Генерация прерывания Z80
-     //if (conf.turbo != 1) 
-    // z80_int(&cpu_zx, true);// Генерация прерывания INT Z80; 
-    #ifdef LEDBLINK
-    led_blink();
-    #endif
-    } // вызов INT в обычном режиме
-
-/*     if (conf.turbo == 1) 
-    {
-    if (int_enable) z80_int(&cpu_zx, true);// Генерация прерывания INT Z80 в TURBO режиме;
-    } 
-  //  
-
-*/
+     while (((get_ticks()-t0_time_ticks)&0xffffff)<d_dst_time_ticks);
 
       t0_time_ticks=(t0_time_ticks+d_dst_time_ticks)&0xffffff;  
 
-
-  //   gpio_put(LED_BOARD, 1);
-   //    if (int_enable) z80_int(&cpu_zx, true);// Генерация прерывания INT Z80
-     if (/* (inx_tick_screen<32)&& */(int_enable))
-    {
-        z80_int(&cpu_zx, Z_TRUE);
-    //    int_enable = false;
-     //  dt_cpu = z80_run(&cpu_zx, 1);
-      // z80_int(&cpu_zx, false);// INT OFF
-      }
-     //  else
-     
+// Генерация прерывания INT Z80
+   //  if (int_enable) z80_int(&cpu_zx, Z_TRUE);
+         
         dt_cpu = z80_run(&cpu_zx, 1);
         tape_cycle_count += dt_cpu;
-
-        // Сброс линии INT после обработки
-        if (int_enable && !(cpu_zx.request & Z80_REQUEST_INT)) {
-            z80_int(&cpu_zx, Z_FALSE);
-            int_enable = false;
-        }
- 
-
 
     	d_dst_time_ticks=dt_cpu* ticks_per_cycle   ;// Расчетное количесто тактов реального процессора на выполненную команду Z80
 	
@@ -2991,17 +2963,9 @@ if (   (inx_tick_screen<32) &&  (int_enable))
 
 		 if (inx_tick_screen>=  ticks_per_frame)      // Если прошла 1/50 сек, 71680 тактов процессора Z80
 			{
-	        	//if (conf.turbo != 1) 
-               // {
                 int_enable=true; // включение INT NORMAL 50 Гц или FAST 100 Гц
-           // z80_int(&cpu_zx, Z_TRUE);
-              //  }
-             
-                //  z80_int(&cpu_zx, true);// Генерация прерывания INT Z80; 
-              //  z80_run(&cpu_zx, 1);//28
-              //  z80_int(&cpu_zx, false);// INT OFF
-
-                 
+               z80_int(&cpu_zx, Z_TRUE);  
+               
 		 	inx_tick_screen-=ticks_per_frame; //Такты Z80 1/50 секунды если здесь поставить =0 то в BREAKSPACE DEMO НЕ БУДЕТ КРЫЛЬЕВ!
 		 	x=0;y=0;
 			draw_img_inx=0; //??????????
@@ -3145,9 +3109,9 @@ void init_mashine_and_extram(uint8_t config_mashine) // инициализаци
 17920+32 = 17952й такт — начало вывода левого бордюра первой растровой строки
 17920+32+36 = 17988й такт — начало вывода растровой картинки первой растровой строки
 */
-//conf.shift_img=(((16+40)*224)+48);//
-    conf.shift_img=12582;
- //   main_nmi_key = false;
+
+    conf.shift_img=12582;//conf.shift_img=(((16+40)*224)+48);//
+ 
     
  // zx_cpu_init(&cpu_zx);  // одна строка инициализации
 

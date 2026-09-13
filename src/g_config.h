@@ -43,6 +43,7 @@ void g_delay_ms(int delay);
 #define KEY_CTRL_F7 (((kb_st_ps2.u[1] & KB_U1_L_CTRL) || (kb_st_ps2.u[1] & KB_U1_R_CTRL)) && (kb_st_ps2.u[3]&KB_U3_F7) ) //кнопка  CTRL+F7
 #define KEY_CTRL_F8 (((kb_st_ps2.u[1] & KB_U1_L_CTRL) || (kb_st_ps2.u[1] & KB_U1_R_CTRL)) && (kb_st_ps2.u[3]&KB_U3_F8) ) //кнопка  CTRL+F8
 
+#define KEY_CTRL_F12 (((kb_st_ps2.u[1] & KB_U1_L_CTRL) || (kb_st_ps2.u[1] & KB_U1_R_CTRL)) && (kb_st_ps2.u[3]&KB_U3_F12) ) //кнопка  CTRL+F12
 
 #define ESC_EXIT (kb_st_ps2.u[1]&KB_U1_ESC) // 
 //кнопка перехода в меню SetUp

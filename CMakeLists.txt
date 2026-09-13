@@ -20,7 +20,7 @@ set(DEBUG OFF)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 8)
-set(VERSION_PATCH 2)
+set(VERSION_PATCH 3)
 # Базовая версия (оставлено для совместимости)
 set(BASE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 ## Номер версии конфигурационного файла
@@ -98,7 +98,7 @@ elseif(SPECCY_CONFIG STREQUAL "SPECCY_GSP_M1")
         TEST_DEBUG #
         GENERAL_SOUND 
         TURBOSOUND
-        Z_CONTROLER
+     #   Z_CONTROLER
         MIDI
      #   RTC_NOVA
      #   RTC_GLUK
@@ -331,7 +331,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 ## Номер версии конфигурационного файла
 CONFIG_VERSION=${CONFIG_VERSION_VALUE}
 ###CPU_KHZ=CPU_MHZ*1000
-PICOBUS_SPEED=80 #  // 80 - 160  240 МГц вообще кратно 126 идеально 
+PICOBUS_SPEED=240 #  // 80 - 160  240 МГц вообще кратно 126 идеально 
 POWER_MODE=1
 VOLTAGE_RP2040=VREG_VOLTAGE_1_30
 ##DEBUG_MSG

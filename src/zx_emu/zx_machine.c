@@ -1909,11 +1909,13 @@ inline static void fast(halt_z80)(Z80 *cpu, zuint8 signal)
 // INT_LINE here instead of after a blind 32T window; this implements the
 // level-triggered model: INT stays asserted until acknowledged, so
 // firmware running DI for >32T no longer silently drops the interrupt.
-static zuint8 __not_in_flash_func(inta_callback)(void* ctx, zuint16 pc) {
+
+// не используется из-за Unreal Demo (сбрасывается) TODO
+/* static zuint8 __not_in_flash_func(inta_callback)(void* ctx, zuint16 pc) {
     (void)ctx; (void)pc;
     z80_int(&cpu_zx, Z_FALSE); // Сброс линии INT после обработки
     return 0xFF;  // IM0: RST 38h  |  IM2: vector at (I<<8)|0xFF = 0x17FF → ISR
-}
+} */
 
 
 inline static zuint8 fast(nop_callback)(Z80 *cpu, zuint16 address)
@@ -1959,7 +1961,7 @@ void machine_Spectrum_48(Z80 *cpu)
         cpu->out          = (Z80Write)out_spec48;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = Z_NULL;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
 
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
@@ -1990,7 +1992,7 @@ void machine_Pentagon_128(Z80 *cpu)
         cpu->out          = (Z80Write)out_spec128;//machine_cpu_out;
         cpu->halt         = Z_NULL;//= (Z80Halt)halt_z80;
         cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;// (Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2029,7 +2031,7 @@ void machine_Pentagon_512(Z80 *cpu)
         cpu->out          = (Z80Write)out_zx_ext;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2074,7 +2076,7 @@ void machine_Pentagon_512_cash(Z80 *cpu)
         cpu->out          = (Z80Write)out_zx_ext;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Pentagon_512_cash;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2112,7 +2114,7 @@ void machine_Pentagon_1024(Z80 *cpu)
         cpu->out          = (Z80Write)out_zx_ext;//machine_cpu_out;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Pentagon;  //= Z_NULL;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2146,7 +2148,7 @@ void machine_Scorpion_256(Z80 *cpu)
         cpu->out          = (Z80Write)out_scorpion_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_Scorpion_256;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2227,7 +2229,7 @@ void machine_Scorpion_GMX(Z80 *cpu)
         cpu->out          = (Z80Write)extram_gmx;
         cpu->halt         = Z_NULL;
         cpu->nmia         = Z_NULL;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2262,7 +2264,7 @@ void machine_NOVA_256(Z80 *cpu)
         cpu->out          = (Z80Write)out_nova_256;
         cpu->halt         = Z_NULL;
         cpu->nmia         = (Z80Read )nmi_NOVA_256;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2339,7 +2341,7 @@ void machine_MurmoZavr(Z80 *cpu)
         cpu->out          = (Z80Write)extram_p8;// aff7 + Pentagon 128
         cpu->halt         = Z_NULL;
         cpu->nmia         = Z_NULL;
-        cpu->inta         = (Z80Read )inta_callback;
+        cpu->inta         = Z_NULL;//(Z80Read )inta_callback;
         cpu->int_fetch    = Z_NULL;
         cpu->ld_i_a       = Z_NULL;
         cpu->ld_r_a       = Z_NULL;
@@ -2949,10 +2951,16 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
       t0_time_ticks=(t0_time_ticks+d_dst_time_ticks)&0xffffff;  
 
 // Генерация прерывания INT Z80
-   //  if (int_enable) z80_int(&cpu_zx, Z_TRUE);
+     if (int_enable) z80_int(&cpu_zx, Z_TRUE);
          
         dt_cpu = z80_run(&cpu_zx, 1);
         tape_cycle_count += dt_cpu;
+
+        // Сброс линии INT после обработки
+        if (int_enable && !(cpu_zx.request & Z80_REQUEST_INT)) {
+            z80_int(&cpu_zx, Z_FALSE);
+            int_enable = false;
+        }
 
     	d_dst_time_ticks=dt_cpu* ticks_per_cycle   ;// Расчетное количесто тактов реального процессора на выполненную команду Z80
 	
@@ -2963,9 +2971,8 @@ if (Z80_PC(cpu_zx) == 0x0556 || Z80_PC(cpu_zx) == 0x056a) TAP_Play();
 
 		 if (inx_tick_screen>=  ticks_per_frame)      // Если прошла 1/50 сек, 71680 тактов процессора Z80
 			{
-                int_enable=true; // включение INT NORMAL 50 Гц или FAST 100 Гц
-               z80_int(&cpu_zx, Z_TRUE);  
-               
+                int_enable=true; // включение INT NORMAL 50 Гц или FAST 100 Гц         
+
 		 	inx_tick_screen-=ticks_per_frame; //Такты Z80 1/50 секунды если здесь поставить =0 то в BREAKSPACE DEMO НЕ БУДЕТ КРЫЛЬЕВ!
 		 	x=0;y=0;
 			draw_img_inx=0; //??????????

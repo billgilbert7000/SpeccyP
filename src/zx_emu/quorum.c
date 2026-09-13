@@ -506,12 +506,12 @@ void convertQuorumKbAccords(kb_u_state* kb_st,uint8_t* zx_kb)
 // INT_LINE here instead of after a blind 32T window; this implements the
 // level-triggered model: INT stays asserted until acknowledged, so
 // firmware running DI for >32T no longer silently drops the interrupt.
-static zuint8 __not_in_flash_func(inta_quorum)(void* ctx, zuint16 pc) {
+/* static zuint8 __not_in_flash_func(inta_quorum)(void* ctx, zuint16 pc) {
     (void)ctx; (void)pc;
     z80_int(&cpu_zx, Z_FALSE); // Сброс линии INT после обработки
     return 0xFF;  // IM0: RST 38h  |  IM2: vector at (I<<8)|0xFF = 0x17FF → ISR
 }
-
+ */
 void machine_Quorum1024(Z80 *cpu) {
     cpu->context      = cpu;
     #ifdef MURM1
@@ -535,7 +535,7 @@ void machine_Quorum1024(Z80 *cpu) {
     cpu->out          = (Z80Write)out_z80quorum;
     cpu->halt         = Z_NULL;
     cpu->nmia         = (Z80Read )nmi_Quorum1024;
-    cpu->inta         = (Z80Read )inta_quorum;
+    cpu->inta         = Z_NULL;//(Z80Read )inta_quorum; не работает из-за Unreal Demo сбрасывается TODO
     cpu->int_fetch    = Z_NULL;
     cpu->ld_i_a       = Z_NULL;
     cpu->ld_r_a       = Z_NULL;

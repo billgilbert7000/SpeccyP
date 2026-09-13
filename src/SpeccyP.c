@@ -1338,8 +1338,6 @@ void keyboard_and_other(void)
             };
         }
         
-        zx_input.sinclair1 = data2_joy;
-
   // ОПРОС КЛАВИАТУРЫ И ДЖОЙСТИКА
  if ((decode_PS2()) | (decode_key(is_menu_mode)) | (decode_joy()) )
     {

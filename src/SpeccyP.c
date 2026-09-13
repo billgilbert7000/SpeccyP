@@ -1000,6 +1000,15 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
           draw_text_len(10+XPOS,y_info,"NES Joy not found",CL_RED  ,CL_BLACK,20);
            } */
          #endif          
+
+         #ifdef D_JOY_DATA2_PIN
+	      if(gpio_get(D_JOY_DATA2_PIN))
+          {
+            y_info += 10;
+            draw_text_len(10+XPOS,y_info,"NES Joy2 present",CL_GREEN,CL_BLACK,20);
+          }
+         #endif          
+
      #endif  
 ////////////////////////////////////////////////////////////////
 	  //  это инициализация мыши ;)

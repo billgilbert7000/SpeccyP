@@ -191,6 +191,12 @@ void d_joy_init()
 
     gpio_init(D_JOY_DATA_PIN);
     gpio_set_dir(D_JOY_DATA_PIN, GPIO_IN);
+
+#ifdef D_JOY_DATA2_PIN
+    gpio_init(D_JOY_DATA2_PIN);
+    gpio_set_dir(D_JOY_DATA2_PIN, GPIO_IN);
+#endif
+
   // gpio_pull_up(D_JOY_DATA_PIN);// !!!!!!!!!!!!!!!!!!!
     // gpio_pull_down(D_JOY_DATA_PIN);
     gpio_put(D_JOY_LATCH_PIN, 0);

@@ -1000,6 +1000,15 @@ if (conf.mashine==QUORUM1024) conf.Disks[0][0] =0 ;
           draw_text_len(10+XPOS,y_info,"NES Joy not found",CL_RED  ,CL_BLACK,20);
            } */
          #endif          
+
+         #ifdef D_JOY_DATA2_PIN
+	      if(gpio_get(D_JOY_DATA2_PIN))
+          {
+            y_info += 10;
+            draw_text_len(10+XPOS,y_info,"NES Joy2 present",CL_GREEN,CL_BLACK,20);
+          }
+         #endif          
+
      #endif  
 ////////////////////////////////////////////////////////////////
 	  //  это инициализация мыши ;)
@@ -1328,7 +1337,7 @@ void keyboard_and_other(void)
                 else  zx_input.kempston = 0;
             };
         }
-
+        
   // ОПРОС КЛАВИАТУРЫ И ДЖОЙСТИКА
  if ((decode_PS2()) | (decode_key(is_menu_mode)) | (decode_joy()) )
     {
@@ -1538,6 +1547,13 @@ void keyboard_and_other(void)
                 }
  */
                 convert_kb_u_to_kb_zx(&kb_st_ps2, zx_input.kb_data);
+
+                zx_input.sinclair1 = data2_joy;
+
+                if (zx_input.sinclair1) 
+                    zx_input.kb_data[4] |= zx_input.sinclair1;
+                if (zx_input.sinclair2) 
+                    zx_input.kb_data[3] |= zx_input.sinclair2;
 
                 joy_scan(); // переопределление kempston joy на клавиши
 

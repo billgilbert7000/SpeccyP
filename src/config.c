@@ -179,7 +179,9 @@ __attribute__((aligned(4))) uint8_t RAM[16384*8]; //Реальная памят�
  uint8_t joy_key_ext;
   bool joy_connected;
    uint8_t data_joy;
+   uint8_t data2_joy;
  uint8_t old_data_joy;
+ uint8_t old_data2_joy;
 //--------------------------------------------------
 // fdd & trdos
  uint32_t sclDataOffset;

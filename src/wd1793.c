@@ -979,7 +979,7 @@ void ReadingAddressFDI()
 //-----------------------------------------------------------------------------
 void ReadingAddressTRD()
 {   
-    DiskSector = (DiskSector + 1) & 0x0f;
+  //  DiskSector = (DiskSector + 1) & 0x0f;
     uint8_t sector_table[] = {1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15, 8, 16};
 
     if((SectorPos != 0) && Requests & _BV(rqDRQ))
@@ -990,6 +990,7 @@ void ReadingAddressTRD()
     if (BufferPos >= 6)
     {
         CurrentCommand = WD1793_CmdStartIdle; // Завершение команды
+        DiskSector = (DiskSector + 1) & 0x0f;
         return;
     }
         
